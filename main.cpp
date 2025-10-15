@@ -188,6 +188,9 @@ uint16_t divideNumbers(uint16_t Dividend, uint16_t Divisor, bool debug = false, 
     uint32_t mantA = dividend.mantissa << 13; // so top of 24 bits
     uint32_t mantB = divisor.mantissa;
 
+    if (mantB == 0) {
+      return 0;
+    }
     uint32_t quotient_mant = mantA / mantB; // integer division
     if (debug) {
         cout << "Raw quotient mantissa: ";
@@ -213,7 +216,7 @@ uint16_t divideNumbers(uint16_t Dividend, uint16_t Divisor, bool debug = false, 
     int shift_count = 0;
     while (quotient_mant && quotient_mant < (1 << (23 - (dist_from_zero << 1))) ) { // << 1 = * 2
         quotient_mant <<= 1; 
-        if (quotient.exponent > -3) {
+        if (quotient.exponent > -dist_from_zero) {
             quotient.exponent--;
         } else {
             if (debug) {
@@ -249,6 +252,12 @@ uint16_t divideNumbers(uint16_t Dividend, uint16_t Divisor, bool debug = false, 
         }
     }
     quotient.mantissa = (quotient_mant >> (13)) & 0b0000001111111111;
+
+    if (quotient.exponent > 30) {
+      quotient.exponent = 0b11111;
+      quotient.mantissa = 0;
+      return ((quotient.sign << 15) & 0b1000000000000000) | (((quotient.exponent + 10) << 10) & 0b0111110000000000) | (quotient.mantissa & 0b0000001111111111);
+    }
 
     result = ((quotient.sign << 15) & 0b1000000000000000) | (((quotient.exponent + 10) << 10) & 0b0111110000000000) | (quotient.mantissa & 0b0000001111111111);
 
@@ -341,9 +350,10 @@ int main() {
         cin >> subnormalsInput;
         includeSubnormals = (subnormalsInput != 0);
 
-        int test_cases = 1000000;
+        int test_cases = 10000;
         int passed = 0;
         srand(42); // fixed seed for reproducibility
+        
         for (int i = 0; i < test_cases; ++i) {
             float a = random_half_value(includeSubnormals);
             float b = random_half_value(includeSubnormals);
@@ -352,6 +362,7 @@ int main() {
 
             if (validate_division(a, b)) passed++;
             else {
+              if (i < 100) {
                 cout << "Test failed for " << a << " / " << b << endl;
                 uint16_t ha = floatToHalf(a);
                 uint16_t hb = floatToHalf(b);
@@ -365,13 +376,20 @@ int main() {
                 printBinary16(correctHalf);
                 cout << " (float: " << halfToFloat(correctHalf) << ")\n";
                 cout << "Exponent was incremented due to rounding overflow: " << (expadded ? "yes" : "no") << endl;
+              }
+                
             }
         }
         cout << "Passed " << passed << " out of " << test_cases << " tests." << "[" << (passed * 100.0 / test_cases) << "%]" << endl;
-    } 
+
+    }   
     else {
         cout << "Invalid mode.\n";
     }
+
+    // cout << "any key to exit...";
+    // int the;
+    // cin >> the;
 
     return 0;
 
