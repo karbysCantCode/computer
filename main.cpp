@@ -216,7 +216,7 @@ uint16_t divideNumbers(uint16_t Dividend, uint16_t Divisor, bool debug = false, 
     int shift_count = 0;
     while (quotient_mant && quotient_mant < (1 << (23 - (dist_from_zero << 1))) ) { // << 1 = * 2
         quotient_mant <<= 1; 
-        if (quotient.exponent > -dist_from_zero) {
+        if (quotient.exponent > -3) {
             quotient.exponent--;
         } else {
             if (debug) {
