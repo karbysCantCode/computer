@@ -55620,15 +55620,15 @@
       <a name="spacing" val="4"/>
     </comp>
     <comp lib="0" loc="(860,1170)" name="Splitter">
+      <a name="fanout" val="16"/>
+      <a name="incoming" val="16"/>
+    </comp>
+    <comp lib="0" loc="(860,1170)" name="Splitter">
       <a name="appear" val="right"/>
       <a name="facing" val="west"/>
       <a name="fanout" val="16"/>
       <a name="incoming" val="16"/>
       <a name="spacing" val="4"/>
-    </comp>
-    <comp lib="0" loc="(860,1170)" name="Splitter">
-      <a name="fanout" val="16"/>
-      <a name="incoming" val="16"/>
     </comp>
     <comp lib="0" loc="(890,980)" name="Tunnel">
       <a name="label" val="Search_Enable"/>
@@ -57126,6 +57126,10 @@
     <comp lib="0" loc="(1450,230)" name="Tunnel">
       <a name="label" val="Out_Of_Bounds_Access"/>
     </comp>
+    <comp lib="0" loc="(1480,2300)" name="Constant">
+      <a name="value" val="0x13"/>
+      <a name="width" val="16"/>
+    </comp>
     <comp lib="0" loc="(1520,1620)" name="Tunnel">
       <a name="label" val="Reset"/>
     </comp>
@@ -58038,7 +58042,7 @@
     </comp>
     <comp lib="4" loc="(1500,2190)" name="Counter">
       <a name="appearance" val="logisim_evolution"/>
-      <a name="label" val="Highest_Page_Allocated"/>
+      <a name="label" val="Highest_Unassigned_Page"/>
       <a name="max" val="0xffff"/>
       <a name="width" val="16"/>
     </comp>
@@ -58206,14 +58210,15 @@
     <wire from="(1470,2680)" to="(1490,2680)"/>
     <wire from="(1470,2710)" to="(1490,2710)"/>
     <wire from="(1470,2770)" to="(1480,2770)"/>
+    <wire from="(1480,2300)" to="(1500,2300)"/>
     <wire from="(1480,2740)" to="(1480,2770)"/>
     <wire from="(1480,2740)" to="(1590,2740)"/>
     <wire from="(1490,1620)" to="(1490,1680)"/>
     <wire from="(1490,1620)" to="(1520,1620)"/>
     <wire from="(1490,1680)" to="(1500,1680)"/>
-    <wire from="(1490,2140)" to="(1490,2210)"/>
+    <wire from="(1490,2140)" to="(1490,2220)"/>
     <wire from="(1490,2140)" to="(1520,2140)"/>
-    <wire from="(1490,2210)" to="(1500,2210)"/>
+    <wire from="(1490,2220)" to="(1500,2220)"/>
     <wire from="(1490,2680)" to="(1490,2710)"/>
     <wire from="(1490,2710)" to="(1490,2720)"/>
     <wire from="(1490,2720)" to="(1590,2720)"/>
