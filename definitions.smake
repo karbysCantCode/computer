@@ -1,0 +1,28 @@
+.target [name] - creates a compilation object 
+.include_directory([target], comma-seperated quoted directories)
+.working_directory([target], "[directory name]") - sets working directory, otherwise defaults to same dir as smake file
+.flist [name] - creates a list of files object
+.search_set([flist name], search_type,"comma seperated file extensions (including .)", comma-seperated quoted directories to search) - sets an flist to the result of a search
+.search_add([flist name], search_type,"comma seperated file extensions (including .)", comma-seperated quoted directories to search) - adds the result to an flist
+        search types:
+          shallow - only explores directory, doesn't search folders in directory
+          cdepthN - searches N folders deep in directory (including directory) - for example, cdepth1 will search directory and 1 folder deep (ie folders in dir, but not folders in those folders)
+          all - searches ALL folders in directory (including directory)
+.add_target([target name], comma-seperated: quoted files OR non-quoted flist names)
+.define([target], "NAME", "value") - defines constant values for the preprocessor to replace (values ONLY, no code blocks, macros can be defined with @define in h/spasm files)
+.entry([target], "symbol_name") - defines entry symbol for target
+.output([target], "path/to/output/","target_output_name") - target is outputted to specified dir, target_output_name is optional but sets the file name, otherwise default is the target name
+.format([target], "bin" | "hex" | "elf") - target is set to be formatted as specified
+.depends([target], comma-seperated quoted names of targets that need to be built before specified target/target needs to be rebuilt if dependency changes)
+.label [label name] - defines a label for conditional execution
+.ifdef [label] {code block} - executes code block if label is defined
+.ifndef [label] {code block} - executes code block if label is NOT defined
+
+!!!!
+labels: _RELEASE and _DEBUG are defined
+if the respective flags are passed when
+calling the compiler
+
+target and flist names ARE labels! 
+ifdef and ifndef WILL function on flist
+and target names!
