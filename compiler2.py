@@ -16,7 +16,6 @@ class Compiler:
     self.workingDirectory: str = ""
     self.instructionSetDirectory: str = ""
     self.instructionSetParser = Compiler.InstructionSetParser(self)
-    self.libraryDirectories: List[str] = []
 
   def clearErrors(self):
     self.errors.clear()
@@ -26,6 +25,15 @@ class Compiler:
 
   def clearWarnings(self):
     self.warnings.clear()
+
+  def areErrors(self):
+    return len(self.errors) > 0
+  
+  def areWarnings(self):
+    return len(self.warnings) > 0
+  
+  def areDebugs(self):
+    return len(self.debugs) > 0
   
   def consumeWarning(self):
     if len(self.warnings) > 0:
@@ -51,39 +59,30 @@ class Compiler:
   def logDebug(self, message: str):
     self.debugs.append(message)
 
-  def findLibFilepath(self, filepath:str):
-    if os.path.isabs(filepath):
-      return filepath
-    else:
-      for library_directory in self.libraryDirectories:
-        path = os.path.join(library_directory, filepath)
-        if os.path.exists(path):
-          return path
-      return None
-
-
   def setWorkingDirectory(self, path: str):
     self.workingDirectory = path
 
-  def compile(self, target_file_path:str, isa_file_path:Optional[str]):
+  def compile(self, target:MakeParser.Target, isa_file_path:Optional[str]):
     if isa_file_path:
       self.instructionSetParser.setSource(isa_file_path)
     self.instructionSetParser.readISA()
 
     tksr = tokeniser(self)
     preproc = preprocessor(self, tksr)
-    filepath = self.findFilepath(target_file_path)
-    if filepath is None: self.logError("Target file was not found"); return
-    first_file_tokens, preprocessor_token_indexes = tksr.tokenise(filepath)
-    if first_file_tokens:
-      for token in first_file_tokens:
-        print(f"[R]{token.value}")
-    if preprocessor_token_indexes:
-      for token in preprocessor_token_indexes:
-        print(f"[{token}]: {first_file_tokens[token].value}")
-    processed_tokens = preproc.process(first_file_tokens,preprocessor_token_indexes)
-    for token in processed_tokens:
-      print(f"[P]{token.value}[P]")
+    target_tokens: List[Compiler.Token] = []
+    for filepath in target.build_files:
+      if filepath is None: self.logError("Target file was not found"); return False
+      first_file_tokens, preprocessor_token_indexes = tksr.tokenise(filepath)
+      if first_file_tokens:
+        for token in first_file_tokens:
+          print(f"[R]{token.value}")
+      if preprocessor_token_indexes:
+        for token in preprocessor_token_indexes:
+          print(f"[{token}]: {first_file_tokens[token].value}")
+      processed_tokens = preproc.process(first_file_tokens,preprocessor_token_indexes, target)
+      for token in processed_tokens:
+        print(f"[P]{token.value}[P]")
+      target_tokens.extend(processed_tokens)
     
 
   class Token:
@@ -94,7 +93,7 @@ class Compiler:
       self.dead = False
     
     def getFileLocation(self) -> str:
-      return f"{self.filepath} @ line {self.line}"
+      return f"\"{self.filepath}\" @ line {self.line}"
 
   class MakefileParser:
     def __init__(self, makefile_path:str):
@@ -125,12 +124,12 @@ class Compiler:
           try:
             arg_type_set.add(assembler.ArgumentType[match.group(1)])
           except KeyError:
-            compiler.logError(f"Invalid argument type in argument {argument_index} of row [dump]: {row}")
+            self.compiler.logError(f"Invalid argument type in argument {argument_index} of row [dump]: {row}")
         else:
           try:
             arg_type = assembler.ArgumentType[arg_string[index:]]
           except KeyError:
-            compiler.logError(f"Invalid argument type in argument {argument_index} of row [dump]: {row}")
+            self.compiler.logError(f"Invalid argument type in argument {argument_index} of row [dump]: {row}")
           break
       
       argument_range = assembler.ArgumentRange(assembler.ArgumentType.REGANDIMM)
@@ -151,21 +150,21 @@ class Compiler:
         if minmatch:
           min = minmatch.group(0)
         else:
-          compiler.logError(f"Invalid min range type in argument {argument_index} of row [dump]: {row}")
+          self.compiler.logError(f"Invalid min range type in argument {argument_index} of row [dump]: {row}")
           return
         
         maxmatch = re.search(number_pattern,immediate, pos=minmatch.end(0))
         if maxmatch:
           max = maxmatch.group(0)
         else:
-          compiler.logError(f"Invalid max range type in argument {argument_index} of row [dump]: {row}")
+          self.compiler.logError(f"Invalid max range type in argument {argument_index} of row [dump]: {row}")
           return
         
         try:
           min = int(min)
           max = int(max)
         except ValueError:
-          compiler.logError(f"Invalid immediate range in argument {argument_index} of row [dump]: {row}")
+          self.compiler.logError(f"Invalid immediate range in argument {argument_index} of row [dump]: {row}")
           return
         
         argument_range.addImmediateRange(min,max)
@@ -182,7 +181,7 @@ class Compiler:
                 min_gpr = int(match.group(2)[1:])
                 max_gpr = int(match.group(3)[1:])
               except ValueError:
-                compiler.logError(f"Invalid register range in argument {argument_index} of row [dump]: {row}")
+                self.compiler.logError(f"Invalid register range in argument {argument_index} of row [dump]: {row}")
                 return
               if min_gpr > max_gpr:
                 min_gpr,max_gpr = max_gpr,min_gpr
@@ -372,34 +371,65 @@ class preprocessor:
     self.entry_label_token: Optional[Compiler.Token] = None
 
 
-
-  def _swapDefined(self, swap_target:str, swap_value:Union[str,List[Compiler.Token]], define_index:int, tokens: List[Compiler.Token], pattern:str, swap_index:int, tokens_to_replace:dict[Compiler.Token,int]):
-    for token in tokens[define_index+2:]:
-      if re.search(pattern, token.value):
-        if isinstance(swap_value, str):
+  @staticmethod
+  def _swapDefined(swap_target:str, swap_value:Union[str,List[Compiler.Token]], define_index:int, tokens: List[Compiler.Token], pattern:str, swap_index:int, tokens_to_replace:dict[Compiler.Token,int]):
+    if isinstance(swap_value, str):
+      for token in tokens[define_index:]:
+        if re.search(pattern, token.value):
           token.value = re.sub(swap_target,lambda _: swap_value,token.value)
-        else:
+    else:
+      for token in tokens[define_index:]:
+        if re.search(pattern, token.value):
           tokens_to_replace[token] = swap_index
-
     return tokens
   
-  def process(self, tokens:List[Compiler.Token], preprocessor_token_indexes:set[int]):
+  def process(self, tokens:List[Compiler.Token], preprocessor_token_indexes:set[int], target:MakeParser.Target):
     tokens_to_replace: dict[Compiler.Token, int] = {}
     token_replacements: List[List[Compiler.Token]] = []
     new_tokens = tokens.copy()
+
+    if target.entry_symbol is not None:
+      self.entry_label_token = Compiler.Token(target.entry_symbol,-1,"SMAKE DEFINED")
+
+    for definition, label in target.definitions:
+      new_tokens = self._swapDefined(definition,label,0,new_tokens, f"\\b{definition}\\b", 0, {})
     for index in preprocessor_token_indexes:
       match tokens[index].value:
         case "@include":
           if len(new_tokens) < index+2:
-            self.compiler.logError(f"Not enough arguments for @include on line {tokens[index].line} of file {tokens[index].filepath}")
+            self.compiler.logError(f"Not enough arguments for @include in {tokens[index].getFileLocation()}")
             continue
           #tokenise and preprocess file
           filepath_token = tokens[index+1]
           filepath = filepath_token.value.strip().strip("\"")
           if os.path.splitext(filepath)[1] != ".spasm":
             filepath += ".spasm"
-          file_tokens, preproc_token_indexes = self.tokeniser.tokenise(os.path.join(self.compiler.workingDirectory,filepath))
-          processed_tokens = self.process(file_tokens, preproc_token_indexes)
+
+          found_file = False
+          if not os.path.exists(filepath):
+            
+            for include_directory in target.include_directories:
+              new_path = os.path.join(include_directory,filepath)
+              if os.path.exists(new_path):
+                filepath = new_path
+                found_file = True
+                break
+
+            if target.working_directory and not found_file:
+              new_path = os.path.join(target.working_directory, filepath)
+              if os.path.exists(new_path):
+                  filepath = new_path
+                  found_file = True
+          else:
+            found_file = True
+
+          if not found_file:
+            self.compiler.logError(f"Failed to find file from @include directive with filepath \"{filepath}\", from {tokens[index].getFileLocation()}") 
+            continue
+
+
+          file_tokens, preproc_token_indexes = self.tokeniser.tokenise(filepath)
+          processed_tokens = self.process(file_tokens, preproc_token_indexes,target)
           filepath_token.dead = True
           replacement_index = len(token_replacements)
           token_replacements.append(processed_tokens)
@@ -408,7 +438,7 @@ class preprocessor:
         case "@define":
           #define code replacements with @define LABEL \ {code} \
           if len(tokens) <= index+2:
-            self.compiler.logError(f"Not enough arguments for @define on line {tokens[index].line} in file {tokens[index].filepath}")
+            self.compiler.logError(f"Not enough arguments for @define in {tokens[index].getFileLocation()}")
             continue
           label_token = tokens[index+1]
           value_token = tokens[index+2]
@@ -422,27 +452,30 @@ class preprocessor:
               token_index += 1
               if not token_index < len(tokens):
                 token_index -= 1
-                self.compiler.logError(f"Ran out of tokens consuming block definition on line {tokens[index].line} in file {tokens[index].filepath}")
+                self.compiler.logError(f"Ran out of tokens consuming block definition in {tokens[index].getFileLocation()}")
                 break
             swap_index = len(token_replacements)
             token_replacements.append(swap_tokens) 
-            new_tokens = self._swapDefined(label_token.value,swap_tokens,index,new_tokens, f"^{label_token.value}$", swap_index,tokens_to_replace)
+            new_tokens = self._swapDefined(label_token.value,swap_tokens,index+2,new_tokens, f"^{label_token.value}$", swap_index,tokens_to_replace)
             for token in new_tokens[index:token_index+1]:
               token.dead = True
           else:
             #value swap
             if re.match(r"[A-Za-z_]\w*", label_token.value):
-              new_tokens = self._swapDefined(label_token.value,value_token.value,index,new_tokens, f"\\b{label_token.value}\\b", 0, {})
+              new_tokens = self._swapDefined(label_token.value,value_token.value,index+2,new_tokens, f"\\b{label_token.value}\\b", 0, {})
               for token in new_tokens[index:index+3]:
                 token.dead = True
+            else:
+              self.compiler.logError(f"@define swap target not correctly formatted in {tokens[index].getFileLocation()}")
         case "@entry":
           if self.entry_label_token:
-            self.compiler.logError(f"@entry redefinition on line {tokens[index].line} of file {tokens[index].filepath},\n    initial definition on line {self.entry_label_token.line} of file {self.entry_label_token.filepath}")
+            self.compiler.logError(f"@entry redefinition in {tokens[index].getFileLocation()},\n    initial definition in {self.entry_label_token.getFileLocation()}")
           else:
             if index+1 < len(tokens):
               self.entry_label_token = tokens[index+1]
+              target.entry_symbol = self.entry_label_token.value
             else:
-              self.compiler.logError(f"No arguments for @entry on line {tokens[index].line} of file {tokens[index].filepath}")
+              self.compiler.logError(f"No arguments for @entry in {tokens[index].getFileLocation()}")
           pass
     
     #handle replacement of defined blocks
@@ -742,6 +775,7 @@ class MakeParser:
       self.output_name: Optional[str] = None
       self.working_directory: Optional[str] = None
       self.definitions: set[Tuple[str,str]] = set()
+      '''definition, value'''
       self.format: Optional[MakeParser.Target.Format] = None
       pass
 
@@ -919,7 +953,7 @@ class MakeParser:
     
   def build(self, makefile_path: str, arg_labels:Optional[set[str]]=None, strict:bool=True, dump:bool=False, dump_to_file:bool=False):
     tokens = self._parse(makefile_path)
-    if tokens is None: return
+    if tokens is None: return None, None
     makefile_dir = os.path.dirname(os.path.abspath(makefile_path))
 
     labels:set[str] = set()
@@ -1066,7 +1100,7 @@ class MakeParser:
     moving_to_next_directive = False
     while len(tokens) > 0:
       token = self._consumeToken(tokens)
-      if token is None: errors.error("TOKEN WAS NONE?"); return
+      if token is None: errors.error("TOKEN WAS NONE?"); return None, errors
       if token.type is not MakeParser.Token.Type.DIRECTIVE:
         if not moving_to_next_directive:
           errors.error(f"EXPECTED DIRECTIVE, GOT {token.type.name}, AT {token.getLocation()}")
@@ -1385,7 +1419,15 @@ class MakeParser:
       if dump:
         print(dump_string)
       if dump_to_file:
-        pass
+        try:
+          path = os.path.join(makefile_dir,"_smake_build_dump_.txt")
+          with open(path, "w", encoding="utf-8") as f:
+            f.write(dump_string)
+            f.close()
+        except Exception as e:
+          errors.error(f"Failed to dump smake to file with error: {e}")
+    
+    return targets, errors
 
 
 
@@ -1409,38 +1451,32 @@ args = parser.parse_args()
 instruction_set_file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),"instructionset.csv")
       
 makefiler = MakeParser()
-makefiler.build("D:\\logisim prohects\\16bit cpu\\test.smake", dump=True)
-makeErrors = makefiler.last_task_error_holder
-if makeErrors:
+targets, errors = makefiler.build("D:\\logisim prohects\\16bit cpu\\test.smake", dump=True,dump_to_file=True)
+if targets is None:
+  print("NO TARGETS FROM MAKEFILE COMPILATION")
+  raise SystemExit
+if errors:
 
-  while makeErrors.areDebugs():
-    print(makeErrors.consumeDebug())
-  while makeErrors.areWarnings():
-    print(makeErrors.consumeWarning())
-  while makeErrors.areErrors():
-    print(makeErrors.consumeErrors())
+  while errors.areDebugs():
+    print(errors.consumeDebug())
+  while errors.areWarnings():
+    print(errors.consumeWarning())
+  while errors.areErrors():
+    print(errors.consumeErrors())
 
-raise SystemExit
 compiler = Compiler()
 compiler.setWorkingDirectory("D:\\logisim prohects\\16bit cpu")
-compiler.compile("test.spasm", instruction_set_file_path)
+for target_name, target in targets.items():
+  compiler.compile(target, instruction_set_file_path)
 
+while compiler.areWarnings():
+  print(f"[WARNING]: {compiler.consumeWarning()}")
 
+while compiler.areErrors():
+  print(f"[ERROR]: {compiler.consumeError()[0]}") # type: ignore
 
-warning = compiler.consumeWarning()
-error = compiler.consumeError()
-debug = compiler.consumeDebug()
-while warning is not None:
-  print(f"[WARNING]: {warning}")
-  warning = compiler.consumeWarning()
-
-while error is not None:
-  print(f"[ERROR]: {error[0]}")
-  error = compiler.consumeError()
-
-while debug is not None:
-  print(f"[DEBUG]: {debug}")
-  debug = compiler.consumeDebug()
+while compiler.areDebugs():
+  print(f"[DEBUG]: {compiler.consumeDebug()}")
 
 # pattern = r"(;)|(\")"
 # src = re.search(pattern,"(;)|(\")", pos=2)
