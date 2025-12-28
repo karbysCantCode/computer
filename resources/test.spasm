@@ -1,0 +1,42 @@
+@include "include.spasm" 
+;* hehehe *;
+@define Micheal 10
+@define PUSHALL \ push R1 push R2 push R4 HALT \
+@entry .main
+;* hehe
+   123
+*;
+; test ;* te" heello"st test *;
+; test2 test2
+;*
+
+therhge
+
+ryrgrg
+*;HELLO
+;";;tee"
+;";the"
+Micheal
+Micheal
+Micheal
+Micheal
+Micheal
+Micheal
+Micheal
+Micheal
+Micheal!
+!Micheal
+@include "include2"
+.global:
+IADD R1 R2 R3
+ISUB R2 R1 R4
+CHAR numberOfBoxes 0
+CHAR byte 255
+WORD byte2 0xffff
+DWORD byte4 0b10101010_10101010_10101010_10101010
+QWORD byte8 "ABEDECSDegeg"
+DWORD byte 29
+  DWORD PUSHALL 92
+  PUSHALL
+
+.main

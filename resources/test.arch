@@ -1,0 +1,78 @@
+; single line comments only with ';'
+; format as follows: INSTRUCTION_NAME BIT_FORMAT_NAME ARG_N_TYPE ARG_N_ALIAS ARG_N_RANGE 
+; register ranges as follows: rN-r(N+X) (ie r0-r13)
+; immediate ranges as follows: MIN:MAX (0:255)
+; types: REG (registers), IMM (immediates)
+; append multiple ranges via '<' between ranges
+; memory refs will collapse by compiler!
+; bit format as follows: .format NAME OPCODE_LENGTH ARG_N_LENGTH
+; max bitwidth set as follow: .bitwidth BITWIDTH
+; set instruction arg layouts via: .layout INSTRUCTION_NAME ARG_N_ALIAS (where order HERE determines arg layout)
+
+; beginning!
+.bitwidth 16
+
+; formats
+.format normal 6 4 3 3
+.format imm    6 4 6
+.format immS   6 4 4 2
+.format large  6 10
+
+
+
+; REG related
+SGET  imm    REG rd r0-r15 REG rs SPL<IPL<FPL<SPH<IPH<FPH<CR<PR<MR<wL0-wL3<wH0-wH3              ; special get (rs = rd) (L and H means low and high word)
+SPUT  imm    REG rs r0-r15 REG rd SPL<IPL<FPL<SPH<IPH<FPH<CR<PR<MR<wL0-wL3<wH0-wH3              ; special put (rs = rd) (L and H means low and high word)
+MOV   imm    REG rd r0-r15 REG rs r0-r15                               ; rs = rd
+            
+; ALU related            
+IADD  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int add,    rd = rA + rB
+ISUB  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int sub,    rd = rA - rB
+IMUL  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int mul,    rd = rA * rB
+IDIV  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int div,    rd = rA / rB
+IMOD  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int modulo, rd = rA % rB
+SIADD normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; signed int add,      rd = rA + rB
+SISUB normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; signed int sub,      rd = rA - rB
+SIMUL normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; signed int mul,      rd = rA * rB
+SIDIV normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; signed int div,      rd = rA / rB
+;SINEG imm    REG rd r0-r15 REG rA r0-r15                               ; signed int negation, rd = -rA DO SOMETHING FOR EXTENDED NEGATION
+XOR   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; bitwise XOR,         rd = rA ^ rB
+AND   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; bitwise AND,         rd = rA & rB
+OR    normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; bitwise OR,          rd = rA | rB
+NOT   imm    REG rd r0-r15 REG rs r0-r15                               ; bitwise NOT,         rd = !rs
+SHL   normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift left   rd = rs << imm (sets bit in temp reg to 0)
+SHR   normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift right  rd = rs >> imm (sets bit in temp reg to 0)
+SHLS  normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift left   rd = rs << imm (and store moved bit in temp reg)
+SHRS  normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift right  rd = rs >> imm (and store moved bit in temp reg)
+SHLUS normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift left   rd = rs << imm (and store moved bit in temp reg/use bit in temp reg)
+SHRUS normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift right  rd = rs >> imm (and store moved bit in temp reg/use bit in temp reg)
+SHLU  normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift left   rd = rs << imm (use bit in temp reg)
+SHRU  normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift right  rd = rs >> imm (use bit in temp reg)
+ROTL  imm    REG rd r0-r15 REG rs r0-r15 IMM immediate 0:15                  ; logical rotate left
+ROTR  imm    REG rd r0-r15 REG rs r0-r15 IMM immediate 0:15                  ; logical rotate right
+
+; control flow 
+HALT 
+NOP
+JMP   large REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                      ; jumps to address in rs, ip = rs
+BNAND imm   REG rs r0-r11<w0-w3 IMM condition 0:63                     ; jumps to address in rs if (imm && flags) is zero
+BAND  imm   REG rs r0-r11<w0-w3 IMM condition 0:63                     ; jumps to address in rs if !(imm && flags) is zero
+RET   large                                                            ; sets SP to FP, pops (what would be IP) into IP, then pops all registers back in
+CALL  large REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                      ; pushes all registers (except IP), pushes IP, sets FP to SP, jumps to address in rs 
+
+; OS related
+SIRR              ; software interrupt
+
+
+; memory related 
+LOAD   imm   REG rd r0-r15 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3         ; rd = memory[rs]
+STORE  imm   REG rs r0-r15 REG rd r0-r15<SP<IP<FP<CR<PR<MR<w0-w3         ; memory[rd] = rs
+PUSH   large REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                       ; memory[sp] = rs, sp decrement (push and pop auto manage bit width of register)
+POP    large REG rd r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                       ; sp increment, rs = memory[sp] 
+ALLOC  imm   IMM specific? 0:1 REG rs r0-r15
+DALLOC imm   IMM specific? 0:1 REG rs r0-r15
+MMUF                                                                     ; flush MMU TLB
+;-data and instr cache flush/inval isntructions?
+
+; offset in special reg?
+; .format .bitwidth .layout - testing line

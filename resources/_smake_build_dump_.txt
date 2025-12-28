@@ -1,0 +1,30 @@
+[[[]]] BUILD DUMP [[[]]]
+Labels:
+    re
+    test
+    main_files
+
+File lists:
+FileList "main_files"
+    Files:
+        NONE
+
+Targets:
+Target "test"
+    Built: False
+    Dependencies:
+        NONE
+    Include directories:
+        NONE
+    Entry symbol: "main"
+    Build files:
+        - "D:\logisim prohects\16bit cpu\software\hidy.spasm"
+    Name: "test"
+    Output directory: "/build"
+    Output name: "testexe.bin"
+    Working directory: "D:\logisim prohects\16bit cpu"
+    Definitions:
+        NONE
+    Format: "Format.BIN"
+
+[[[]]] END OF BUILD DUMP [[[]]]

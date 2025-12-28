@@ -1,0 +1,14 @@
+cmake_minimum_required(VERSION 3.10)
+project(cpu_software)
+
+# Find all C++ source files in src directory
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+
+# Create executable target
+add_executable(cpu_software ${SOURCES})
+
+# Optional: Set C++ standard
+set_target_properties(cpu_software PROPERTIES
+  CXX_STANDARD 17
+  CXX_STANDARD_REQUIRED ON
+)
