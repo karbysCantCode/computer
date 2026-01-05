@@ -26,3 +26,5 @@ calling the compiler
 target and flist names ARE labels! 
 ifdef and ifndef WILL function on flist
 and target names!
+
+ALSO the stuff enclosed in [] does not mean to enclose the name in [], just that that space should be a name

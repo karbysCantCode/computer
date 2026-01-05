@@ -73,25 +73,7 @@ std::vector<Token::Token> Lexer::lexAsm() {
       tokens.push_back(token);
     } else if (c == '\'' || c == '"') {
       Token::Token token(Token::TokenTypes::STRING, line, column);
-      std::string value;
-      advance();
-      const char start = c;
-      while (!isAtEnd() && peek() != start) {
-        char c = advance();
-        
-        if (c == '\\' && !isAtEnd()) {
-          char next = advance();
-          switch (next) {
-            case 'n':  c = '\n'; break;
-            case '\\': c = '\\'; break;
-            case '\'': c = '\''; break;
-            default: break;
-          }
-        }
-        value.push_back(c);
-      }
-      advance();
-      token.SetString(value);
+      token.SetString(consumeString(c));
       tokens.push_back(token);
     } else {
       Token::Token token(std::string(1, c),Token::TokenTypes::UNASSIGNED, line, column);
@@ -164,6 +146,69 @@ std::vector<ArchToken::ArchToken> Lexer::lexArch() {
   return tokens;
 }
 
+std::vector<SmakeToken::SmakeToken> Lexer::lexSmake() {
+  if (source == nullptr) {return {};}
+  keywords = std::make_shared<std::unordered_set<std::string>>(
+    "target",
+    "include_directory",
+    "working_directory",
+    "flist",
+    "search_set",
+    "search_add",
+    "add_target",
+    "define",
+    "entry",
+    "output",
+    "format",
+    "depends",
+    "label",
+    "ifdef",
+    "ifndef"
+  );
+
+  std::vector<SmakeToken::SmakeToken> tokens;
+  pos = 0;
+  line = 1;
+  column = 1;
+
+  while(!isAtEnd()) {
+    skipWhitespace();
+    if(isAtEnd()) {break;}
+
+    char c = peek();
+
+    switch (c) {
+      case '.':
+        advance();
+        if(isAtEnd()) {continue;}
+        tokens.emplace_back(getUntilWordBoundary(),SmakeToken::SmakeTokenTypes::KEYWORD,line,column);
+      break;
+      case '(':
+        tokens.emplace_back(advance(), SmakeToken::SmakeTokenTypes::OPENPAREN, line,column);
+      break;
+      case ')':
+        tokens.emplace_back(advance(), SmakeToken::SmakeTokenTypes::CLOSEPAREN, line,column);
+      break;
+      case '{':
+        tokens.emplace_back(advance(), SmakeToken::SmakeTokenTypes::OPENBLOCK, line,column);
+      break;
+      case '}':
+        tokens.emplace_back(advance(), SmakeToken::SmakeTokenTypes::CLOSEBLOCK, line,column);
+      break;
+      case '"':
+      case '\'':
+        tokens.emplace_back(consumeString(c), SmakeToken::SmakeTokenTypes::STRING, line, column);
+      break;
+      case ',':
+        tokens.emplace_back(advance(), SmakeToken::SmakeTokenTypes::COMMA, line,column);
+      break;
+      default: 
+        tokens.emplace_back(getUntilWordBoundary(),SmakeToken::SmakeTokenTypes::IDENTIFIER,line,column);
+      break;
+    }
+  }
+  return tokens;
+}
 char Lexer::peek(size_t lookAhead) const noexcept {
   size_t i = pos + lookAhead;
   return i < source->size() ? (*source)[i] : '\0';
@@ -174,6 +219,27 @@ void Lexer::setTokenFilePosition(Token::Token& token) const {
   token.column = column;
 }
 
+std::string Lexer::consumeString(const char delimiter) {
+  std::string value;
+  advance();
+  while (!isAtEnd() && peek() != delimiter) {
+    char c = advance();
+    
+    if (c == '\\' && !isAtEnd()) {
+      char next = advance();
+      switch (next) {
+        case 'n':  c = '\n'; break;
+        case '\\': c = '\\'; break;
+        case '\'': c = '\''; break;
+        case '"':  c = '"';  break;
+        default: assert(false); break; //should error somehow
+      }
+    }
+    value.push_back(c);
+  }
+  advance();
+  return value;
+}
 char Lexer::advance() noexcept {
 
   if (pos >= source->length()) {

@@ -18,6 +18,7 @@ class Lexer {
 
   std::vector<Token::Token> lexAsm();
   std::vector<ArchToken::ArchToken> lexArch();
+  std::vector<SmakeToken::SmakeToken> lexSmake();
 
   std::string readFile(const std::string& absFilePath);
   private:
@@ -33,6 +34,7 @@ class Lexer {
   char peek(size_t lookAhead = 0) const noexcept;
   std::string getUntilWordBoundary();
   std::string getUntilDelimiter(char delimiter);
+  std::string consumeString(const char delimiter);
 
   void setTokenFilePosition(Token::Token& token) const;
   bool skipWhitespace(bool insertOnNewline = false);
