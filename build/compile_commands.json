@@ -1,0 +1,38 @@
+[
+{
+  "directory": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -arch arm64 -o CMakeFiles/cpu_software.dir/src/arch.cpp.o -c \"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/arch.cpp\"",
+  "file": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/arch.cpp",
+  "output": "CMakeFiles/cpu_software.dir/src/arch.cpp.o"
+},
+{
+  "directory": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -arch arm64 -o CMakeFiles/cpu_software.dir/src/archBuilder.cpp.o -c \"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/archBuilder.cpp\"",
+  "file": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/archBuilder.cpp",
+  "output": "CMakeFiles/cpu_software.dir/src/archBuilder.cpp.o"
+},
+{
+  "directory": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -arch arm64 -o CMakeFiles/cpu_software.dir/src/lexer.cpp.o -c \"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/lexer.cpp\"",
+  "file": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/lexer.cpp",
+  "output": "CMakeFiles/cpu_software.dir/src/lexer.cpp.o"
+},
+{
+  "directory": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -arch arm64 -o CMakeFiles/cpu_software.dir/src/main.cpp.o -c \"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/main.cpp\"",
+  "file": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/main.cpp",
+  "output": "CMakeFiles/cpu_software.dir/src/main.cpp.o"
+},
+{
+  "directory": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -arch arm64 -o CMakeFiles/cpu_software.dir/src/smaker.cpp.o -c \"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/smaker.cpp\"",
+  "file": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/smaker.cpp",
+  "output": "CMakeFiles/cpu_software.dir/src/smaker.cpp.o"
+},
+{
+  "directory": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -arch arm64 -o CMakeFiles/cpu_software.dir/src/token.cpp.o -c \"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/token.cpp\"",
+  "file": "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/token.cpp",
+  "output": "CMakeFiles/cpu_software.dir/src/token.cpp.o"
+}
+]

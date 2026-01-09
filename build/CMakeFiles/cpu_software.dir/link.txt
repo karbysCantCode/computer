@@ -1,0 +1,1 @@
+/usr/bin/clang++ -g -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/cpu_software.dir/src/arch.cpp.o CMakeFiles/cpu_software.dir/src/archBuilder.cpp.o CMakeFiles/cpu_software.dir/src/lexer.cpp.o CMakeFiles/cpu_software.dir/src/main.cpp.o CMakeFiles/cpu_software.dir/src/smaker.cpp.o CMakeFiles/cpu_software.dir/src/token.cpp.o -o cpu_software

@@ -38,10 +38,10 @@ namespace SmakeToken {
     int line = -1;
     int column = -1;
 
-    inline void setString(const std::string& newString) {value=newString};
-    inline void setType(const SmakeTokenTypes& newType) {type=newType};
+    inline void setString(const std::string& newString) {value=newString;}
+    inline void setType(const SmakeTokenTypes& newType) {type=newType;}
     void print(size_t padding) const;
-    std::string positionToString() const {return "line " + std::to_string(line) + ", column " + std::to_string(column);}
+    std::string positionToString() const {return line < 0 || column < 0 ? std::string("END OF FILE") : "line " + std::to_string(line) + ", column " + std::to_string(column);}
   
     SmakeToken(const std::string& val, const SmakeTokenTypes t, int ln, int col) :
       value(val), type(t), line(ln), column(col) {}

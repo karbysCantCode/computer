@@ -1,0 +1,3 @@
+/Users/karbys/logisim projects/16bitcomputer/CppCompiler/build/CMakeFiles/cpu_software.dir
+/Users/karbys/logisim projects/16bitcomputer/CppCompiler/build/CMakeFiles/edit_cache.dir
+/Users/karbys/logisim projects/16bitcomputer/CppCompiler/build/CMakeFiles/rebuild_cache.dir
