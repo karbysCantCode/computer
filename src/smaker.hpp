@@ -2,22 +2,63 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <filesystem>
+#include <sstream>
 
 #include "token.hpp"
 
 namespace smake {
+
+enum class TargetFormats {
+  BIN,
+  HEX,
+  ELF
+};
+
+constexpr const char* targetFormatToString(TargetFormats format) {
+  switch (format)
+  {
+  case TargetFormats::BIN:
+    return "BIN";
+    break;
+  case TargetFormats::HEX:
+    return "HEX";
+    break;
+  case TargetFormats::ELF:
+    return "ELF";
+    break;
+  default:
+    return "INVALID";
+    break;
+  }
+}
+
+struct PreprocessorReplacement {
+  std::string replacementTarget;
+  std::string replacement;
+
+  std::string toString() const {
+    return "PreProcRep, target: \"" + replacementTarget + "\", replacment: \"" + replacement + "\"\n";
+  }
+
+  PreprocessorReplacement(const std::string& repTarget, const std::string& rep) : replacementTarget(repTarget), replacement(rep) {}
+};
+
 struct Target {
   std::string name;
+  bool isBuilt = false;
 
   std::unordered_set<std::filesystem::path> includeDirectories;
   std::string workingDirectory;
   
   std::unordered_set<std::filesystem::path> sourceFilepaths;
-  std::unordered_set<PreprocessorReplacement> preprocessorReplacements;
+  std::unordered_map<std::string, PreprocessorReplacement> preprocessorReplacements;
 
   std::string entrySymbol;
   TargetFormats outputFormat;
   std::string outputDirectory;
+  std::string outputName;
+
+  std::unordered_set<Target*> dependantTargets;
 
   Target(const std::string& nm) : name(nm) {}
 
@@ -26,19 +67,18 @@ struct Target {
 
 };
 
-enum class TargetFormats {
-  BIN,
-  HEX,
-  ELF
-};
-
-struct PreprocessorReplacement {
-  std::string replacementTarget;
-  std::string replacement;
-};
-
 struct FList {
   std::unordered_set<std::filesystem::path> filepaths;
+  std::string name;
+
+  std::string toString() const {
+    std::ostringstream oss;
+    oss << name << '\n';
+    for (const auto& path : filepaths) {
+      oss << "    \"" << path.u8string() << "\"\n";
+    }
+    return oss.str();
+  }
 };
 
 
@@ -53,6 +93,9 @@ class SMakeProject {
 
   int build(const std::vector<SmakeToken::SmakeToken>& tokens);
 
+  std::string toString() const {
+    return "";
+  }
   private:
 };
 
@@ -94,6 +137,8 @@ class SmakeTokenParser {
   bool isAtEnd() const;
 
   bool searchHandler(FList& targetList, std::unordered_set<std::string>& fileExtentions, std::filesystem::path pathToSearch, SmakeTokenParser::SearchType type, int searchDepth = -1);
+  void parseSearch(bool clear = false);
+  std::filesystem::path parsePath(std::string p);
 
   void parseKeywordTarget();
   void parseKeywordInclude_Directory();

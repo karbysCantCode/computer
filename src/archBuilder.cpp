@@ -36,6 +36,13 @@ Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
         }
       } else if (token.value == "layout") {
         advance();
+      } else if (token.value == "datatype") {
+        advance();
+        if (isAtEnd() || peek().type != ArchToken::ArchTokenTypes::IDENTIFIER) {this->logError("Invalid data typename at " + token.positionToString()); continue;}
+        const std::string dataTypeName = peek().value;
+        advance();
+        if (isAtEnd() || peek().type != ArchToken::ArchTokenTypes::IDENTIFIER) {this->logError("Invalid data type byte length at " + token.positionToString()); continue;}
+        if ()
       } else {
         std::cout << "ASSERTED_A" << std::endl;
         assert(false);
@@ -47,7 +54,7 @@ Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
       instruction.opcode = arch.m_instructionSet.size();
       const auto& nameToken = advance();
       if (nameToken.type == ArchToken::ArchTokenTypes::NEWLINE) {
-        arch.m_instructionNameSet.emplace(instruction.name);
+        arch.m_nameSet.emplace(instruction.name);
         arch.m_instructionSet.emplace(instruction.name, std::move(instruction));
         continue;
       }
@@ -56,7 +63,7 @@ Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
 
       const auto& formatToken = advance();
       if (formatToken.type == ArchToken::ArchTokenTypes::NEWLINE) {
-        arch.m_instructionNameSet.emplace(instruction.name);
+        arch.m_nameSet.emplace(instruction.name);
         arch.m_instructionSet.emplace(instruction.name, std::move(instruction));
         continue;
       }
@@ -65,7 +72,7 @@ Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
         instruction.arguments.emplace_back(parseArgument());
       }
 
-      arch.m_instructionNameSet.emplace(instruction.name);
+      arch.m_nameSet.emplace(instruction.name);
         arch.m_instructionSet.emplace(instruction.name, std::move(instruction));
     }
   }

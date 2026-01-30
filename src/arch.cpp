@@ -26,3 +26,13 @@ void Architecture::Format::print(size_t padding) const {
   }
   std::cout << std::endl;
 }
+
+void DataType::print(size_t padding = 0) const {
+  std::cout << std::setw(padding) << "Name: " << name << '\n';
+  if (autoLength) {
+    std::cout << std::setw(padding + 4) << "Length: Auto Length";
+  } else {
+    std::cout << std::setw(padding + 4) << "Length: " << length;
+  }
+  std::cout << std::endl;
+}
