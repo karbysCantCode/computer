@@ -8,7 +8,7 @@
 ; bit format as follows: .format NAME OPCODE_LENGTH ARG_N_LENGTH
 ; max bitwidth set as follow: .bitwidth BITWIDTH
 ; set instruction arg layouts via: .layout INSTRUCTION_NAME ARG_N_ALIAS (where order HERE determines arg layout)
-
+; .datatype TYPENAME INT_BYTE_LENGTH||"auto"
 ; beginning!
 .bitwidth 16
 

@@ -148,7 +148,7 @@ std::vector<ArchToken::ArchToken> Lexer::lexArch() {
 
 std::vector<SmakeToken::SmakeToken> Lexer::lexSmake() {
   if (source == nullptr) {return {};}
-  keywords = std::make_shared<std::unordered_set<std::string>>(
+  keywords = std::make_shared<std::unordered_set<std::string>>(std::initializer_list<std::string>{
     "target",
     "include_directory",
     "working_directory",
@@ -164,7 +164,7 @@ std::vector<SmakeToken::SmakeToken> Lexer::lexSmake() {
     "label",
     "ifdef",
     "ifndef"
-  );
+});
 
   std::vector<SmakeToken::SmakeToken> tokens;
   pos = 0;

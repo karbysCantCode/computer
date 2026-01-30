@@ -7,8 +7,8 @@
 #include "arch.hpp"
 
 int main(int argc, char* argv[]) {
-  const char* fpath = "D:\\logisim prohects\\16bit cpu\\test.spasm";
-  const char* archpath = "D:\\logisim prohects\\16bit cpu\\test.arch";
+  const char* fpath = "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/resources/test.spasm";
+  const char* archpath = "/Users/karbys/logisim projects/16bitcomputer/CppCompiler/resources/test.arch";
   
   ArchBuilder archBuilder;
   Lexer archLexer;

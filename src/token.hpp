@@ -45,6 +45,9 @@ namespace SmakeToken {
   
     SmakeToken(const std::string& val, const SmakeTokenTypes t, int ln, int col) :
       value(val), type(t), line(ln), column(col) {}
+    
+    SmakeToken(const char val, const SmakeTokenTypes t, int ln, int col) :
+      value{val}, type(t), line(ln), column(col) {}
   };
 }
 
