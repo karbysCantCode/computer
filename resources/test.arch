@@ -15,7 +15,7 @@
 ; formats
 .format normal 6 4 3 3
 .format imm    6 4 6
-.format immS   6 4 4 2
+.format immS   6 4 1 5
 .format large  6 10
 
 
@@ -23,40 +23,62 @@
 ; REG related
 SGET  imm    REG rd r0-r15 REG rs SPL<IPL<FPL<SPH<IPH<FPH<CR<PR<MR<wL0-wL3<wH0-wH3              ; special get (rs = rd) (L and H means low and high word)
 SPUT  imm    REG rs r0-r15 REG rd SPL<IPL<FPL<SPH<IPH<FPH<CR<PR<MR<wL0-wL3<wH0-wH3              ; special put (rs = rd) (L and H means low and high word)
-MOV   imm    REG rd r0-r15 REG rs r0-r15                               ; rs = rd
+MOV   imm    REG rd r0-r15 REG rs r0-r15                               ; rd = rs
+CMOV normal  REG condition 0:15 REG rd r0-r7 REG rs r0-r7              ; if (condition) {rd = rs}
             
 ; ALU related            
-IADD  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int add,    rd = rA + rB
-ISUB  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int sub,    rd = rA - rB
-IMUL  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int mul,    rd = rA * rB
-IDIV  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int div,    rd = rA / rB
-IMOD  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int modulo, rd = rA % rB
-SIADD normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; signed int add,      rd = rA + rB
-SISUB normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; signed int sub,      rd = rA - rB
-SIMUL normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; signed int mul,      rd = rA * rB
-SIDIV normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; signed int div,      rd = rA / rB
+ADD   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int add,    rd = rA + rB
+SUB   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int sub,    rd = rA - rB
+ADC   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int add,    rd = rA + rB
+SBB   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int sub,    rd = rA - rB
+MUL   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int mul,    rd = rA * rB
+DIV   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int div,    rd = rA / rB
+MOD   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; unsigned int modulo, rd = rA % rB
+SDIV  normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; signed int div,      rd = rA / rB
 ;SINEG imm    REG rd r0-r15 REG rA r0-r15                               ; signed int negation, rd = -rA DO SOMETHING FOR EXTENDED NEGATION
 XOR   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; bitwise XOR,         rd = rA ^ rB
 AND   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; bitwise AND,         rd = rA & rB
 OR    normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                   ; bitwise OR,          rd = rA | rB
-NOT   imm    REG rd r0-r15 REG rs r0-r15                               ; bitwise NOT,         rd = !rs
-SHL   normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift left   rd = rs << imm (sets bit in temp reg to 0)
-SHR   normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift right  rd = rs >> imm (sets bit in temp reg to 0)
-SHLS  normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift left   rd = rs << imm (and store moved bit in temp reg)
-SHRS  normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift right  rd = rs >> imm (and store moved bit in temp reg)
-SHLUS normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift left   rd = rs << imm (and store moved bit in temp reg/use bit in temp reg)
-SHRUS normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift right  rd = rs >> imm (and store moved bit in temp reg/use bit in temp reg)
-SHLU  normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift left   rd = rs << imm (use bit in temp reg)
-SHRU  normal IMM immediate 0:15  REG rd r0-r7 REG rs r0-r7                   ; logical shift right  rd = rs >> imm (use bit in temp reg)
-ROTL  imm    REG rd r0-r15 REG rs r0-r15 IMM immediate 0:15                  ; logical rotate left
-ROTR  imm    REG rd r0-r15 REG rs r0-r15 IMM immediate 0:15                  ; logical rotate right
+NOT   imm    REG rd r0-r15 REG rs r0-r15                               ; bitwise NOT,         rd = ~rs
+SHL   normal IMM immediate 0:15 REG rd r0-r7 REG rs r0-r7              ; logical shift left   rd = rs << imm (sets carry flag on bit out)
+SHR   normal IMM immediate 0:15 REG rd r0-r7 REG rs r0-r7              ; logical shift right  rd = rs >> imm (sets carry flag on bit out)
+SAR   normal IMM immediate 0:15 REG rd r0-r7 REG rs r0-r7              ; arithmeti shit right
+ROTL  imm    IMM immediate 0:15 REG rd r0-r7 REG rs r0-r7              ; logical rotate left
+ROTR  imm    IMM immediate 0:15 REG rd r0-r7 REG rs r0-r7              ; logical rotate right
 
 ; control flow 
 HALT 
 NOP
-JMP   large REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                      ; jumps to address in rs, ip = rs
-BNAND imm   REG rs r0-r11<w0-w3 IMM condition 0:63                     ; jumps to address in rs if (imm && flags) is zero
-BAND  imm   REG rs r0-r11<w0-w3 IMM condition 0:63                     ; jumps to address in rs if !(imm && flags) is zero
+;branches
+;relative, immediate (add and sub) and (16 and 27 bit reg) (add and sub)
+BRIA   imm IMM condition 0:15 IMM immediate 0:63                        ; branch immediate add
+BRIS   imm IMM condition 0:15 IMM immediate 0:63                        ; branch immediate sub
+BRRA   imm IMM condition 0:15 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3     ; branch register add
+BRRS   imm IMM condition 0:15 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3     ; branch register sub
+;absolute, 16 reg low bit, 27 bit reg full
+BRA    imm IMM condition 0:15 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3     ; branch register set
+;jumps
+;relative, immediate (add and sub) and (16 and 27 bit reg) (add and sub)
+JMPIA  large IMM immediate 0:1023                                       ; jump add immediate
+JMPIS  large IMM immediate 0:1023                                       ; jump sub immediate
+JMPRA  imm IMM isAbsolute 0:1 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3     ; jump add/set register
+JMPRS  imm IMM isAbsolute 0:1 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3     ; jump sub/set register
+;absolute, 16 reg low bit, 27 bit reg full
+
+
+;BREL   imm IMM condition 0:15 IMM immediate 0:63                        ; if (cond) {IP + imm} (imm unsigned)
+;BBREL  imm IMM condition 0:15 IMM immediate 0:63                        ; if (cont) {IP - imm} (imm unsigned)
+;BRELL  imm IMM condition 0:15 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3     ; if (cond) {IP + rs} (unsigned)
+;BBRELL imm IMM condition 0:15 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3     ; if (cont) {IP - rs} (unsigned)
+;JMPR   large IMM immediate 0:1023                                       ; IP + imm (imm unsgned)
+;JMPBR  large IMM immediate 0:1023                                       ; IP - imm (imm unsgned) 
+;JMPL   imm IMM high_low_set 0:3 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3   ; IP + rs ()
+;JMPBL  imm IMM high_low_set 0:3 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3   ; IP - rs ()
+;JMPH   large REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                      ; IP = rs (if rs is < 27 bit, then the MSB of IP get set for the bitwidth of rs)
+;JMPL   large REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                      ; IP = rs (if rs is < 27 bit, then the LSB of IP get set for the bitwidth of rs)
+
+
+
 RET   large                                                            ; sets SP to FP, pops (what would be IP) into IP, then pops all registers back in
 CALL  large REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                      ; pushes all registers (except IP), pushes IP, sets FP to SP, jumps to address in rs 
 
@@ -69,8 +91,6 @@ LOAD   imm   REG rd r0-r15 REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3         ; rd = 
 STORE  imm   REG rs r0-r15 REG rd r0-r15<SP<IP<FP<CR<PR<MR<w0-w3         ; memory[rd] = rs
 PUSH   large REG rs r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                       ; memory[sp] = rs, sp decrement (push and pop auto manage bit width of register)
 POP    large REG rd r0-r15<SP<IP<FP<CR<PR<MR<w0-w3                       ; sp increment, rs = memory[sp] 
-ALLOC  imm   IMM specific? 0:1 REG rs r0-r15
-DALLOC imm   IMM specific? 0:1 REG rs r0-r15
 MMUF                                                                     ; flush MMU TLB
 ;-data and instr cache flush/inval isntructions?
 
