@@ -106,6 +106,7 @@ class Architecture {
   };
 
   std::unordered_map<std::string, Instruction::Instruction> m_instructionSet;
+  std::unordered_set<std::string> m_instructionNameSet;
   std::unordered_set<std::string> m_nameSet;
   std::unordered_map<std::string, DataType> m_dataTypes;
   std::unordered_map<std::string, Format> m_formats;

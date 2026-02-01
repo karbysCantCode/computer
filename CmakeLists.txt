@@ -12,3 +12,6 @@ set_target_properties(cpu_software PROPERTIES
   CXX_STANDARD 17
   CXX_STANDARD_REQUIRED ON
 )
+
+file(COPY ${CMAKE_SOURCE_DIR}/resources
+     DESTINATION ${CMAKE_BINARY_DIR})

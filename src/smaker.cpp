@@ -36,7 +36,7 @@ SmakeToken::SmakeToken smake::SmakeTokenParser::peek(const size_t dist) const {
 }
 
 bool smake::SmakeTokenParser::isAtEnd() const {
-  return !(pos < tokens.size());
+  return !(pos < (int)tokens.size());
 }
 
 void smake::SmakeTokenParser::advanceUntilAfterType(SmakeToken::SmakeTokenTypes type) {
@@ -430,9 +430,9 @@ void smake::SmakeTokenParser::parseKeywordOutput() {
     logWarning("Output directory \"" + targetIterator->second.outputDirectory + "\" is being replaced by \"" + peek(4).value + "\" at " + peek(4).positionToString());
   }
 
-  const auto path = parsePath(peek(4).value);
+  auto path = parsePath(peek(4).value);
   if (!path.empty()) {
-    targetIterator->second.outputDirectory = path;
+    targetIterator->second.outputDirectory = path.string();
   }
 
   if (peek(5).type == SmakeToken::SmakeTokenTypes::CLOSEPAREN) {

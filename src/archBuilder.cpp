@@ -42,7 +42,9 @@ Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
         const std::string dataTypeName = peek().value;
         advance();
         if (isAtEnd() || peek().type != ArchToken::ArchTokenTypes::IDENTIFIER) {this->logError("Invalid data type byte length at " + token.positionToString()); continue;}
-        if ()
+        //if ()
+        assert(false);
+        // uncomplete
       } else {
         std::cout << "ASSERTED_A" << std::endl;
         assert(false);

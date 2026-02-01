@@ -9,11 +9,11 @@
 
 class Lexer {
   public:
-  std::shared_ptr<std::string> source = nullptr;
+  std::string* source = nullptr;
 
 
-  Lexer(std::shared_ptr<std::string> source, const std::shared_ptr<std::unordered_set<std::string>> Keywords);
-  Lexer(const std::shared_ptr<std::unordered_set<std::string>> Keywords);
+  Lexer(std::string* source, std::unordered_set<std::string>* Keywords);
+  Lexer(std::unordered_set<std::string>* Keywords);
   Lexer() {}
 
   std::vector<Token::Token> lexAsm();
@@ -23,7 +23,7 @@ class Lexer {
   std::string readFile(const std::string& absFilePath);
   private:
   
-  std::shared_ptr<std::unordered_set<std::string>> keywords = nullptr;
+  std::unordered_set<std::string>* keywords = nullptr;
   size_t pos = 0;
   size_t line = 1;
   size_t column = 1;

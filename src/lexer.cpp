@@ -5,13 +5,16 @@
 #include <cassert>
 #include <fstream>
 
-Lexer::Lexer(std::shared_ptr<std::string> src, const std::shared_ptr<std::unordered_set<std::string>> Keywords) : source(src) {
+Lexer::Lexer(std::string* src, std::unordered_set<std::string>* Keywords) {
   if (Keywords != nullptr) {
     keywords = Keywords;
   }
+  if (source != nullptr) {
+    source = src;
+  }
 }
 
-Lexer::Lexer(const std::shared_ptr<std::unordered_set<std::string>> Keywords) {
+Lexer::Lexer(std::unordered_set<std::string>* Keywords) {
   if (Keywords != nullptr) {
     keywords = Keywords;
   }
@@ -148,7 +151,7 @@ std::vector<ArchToken::ArchToken> Lexer::lexArch() {
 
 std::vector<SmakeToken::SmakeToken> Lexer::lexSmake() {
   if (source == nullptr) {return {};}
-  keywords = std::make_shared<std::unordered_set<std::string>>(std::initializer_list<std::string>{
+  std::unordered_set<std::string> kwords = {
     "target",
     "include_directory",
     "working_directory",
@@ -164,7 +167,8 @@ std::vector<SmakeToken::SmakeToken> Lexer::lexSmake() {
     "label",
     "ifdef",
     "ifndef"
-});
+  };
+  keywords = &kwords;
 
   std::vector<SmakeToken::SmakeToken> tokens;
   pos = 0;
@@ -207,6 +211,7 @@ std::vector<SmakeToken::SmakeToken> Lexer::lexSmake() {
       break;
     }
   }
+  keywords = nullptr;
   return tokens;
 }
 char Lexer::peek(size_t lookAhead) const noexcept {
