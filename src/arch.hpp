@@ -8,7 +8,18 @@
 #include <cassert>
 #include <iostream>
 
+namespace Architecture {
+
+namespace Registers {
+  struct RegisterIdentity {
+    std::string name;
+    size_t bitWidth = 0;
+    size_t machineCodeOperandValue = 0;
+  };
+}
+
 namespace Instruction {
+
   enum class RangeType {
     IMMEDIATE,
     REGISTER
@@ -116,3 +127,5 @@ class Architecture {
     return m_instructionSet.find(instructionName) != m_instructionSet.end();
   }
 };
+
+}

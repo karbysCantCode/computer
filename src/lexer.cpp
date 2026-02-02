@@ -34,7 +34,7 @@ std::vector<Token::Token> Lexer::lexAsm() {
     if (isAtEnd()) {break;}
 
     char c = peek();
-    std::cout << c << std::endl;
+    //std::cout << c << std::endl;
     
     if (isdigit(c)) {
       //number
@@ -316,7 +316,7 @@ std::string Lexer::getUntilWordBoundary() {
 
 bool Lexer::isKeyword(std::string& str) {
   bool iskword = std::find(keywords->begin(), keywords->end(), str) != keywords->end();
-  std::cout << "is keyword? \"" << str << '\"' << '=' << iskword << std::endl;
+  //std::cout << "is keyword? \"" << str << '\"' << '=' << iskword << std::endl;
   return iskword;
 }
 

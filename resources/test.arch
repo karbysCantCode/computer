@@ -9,8 +9,33 @@
 ; max bitwidth set as follow: .bitwidth BITWIDTH
 ; set instruction arg layouts via: .layout INSTRUCTION_NAME ARG_N_ALIAS (where order HERE determines arg layout)
 ; .datatype TYPENAME INT_BYTE_LENGTH||"auto"
+
+; define registers by .reg [REGISTER NAME] [REGISTER BITWIDTH (POS INT)]
+; alternatively: .reg [REGISTER PREFIX][LOWEST INDEX (POS INT)]-[REGISTER PREFIX][HIGHEST INDEX (POS INT)] [REGISTER BITWIDTH (POS INT)]
 ; beginning!
 .bitwidth 16
+
+.reg r0-15 16
+.reg w0-w3 32
+.reg wL0-wL3 16
+.reg wH0-wH3 16
+
+.reg SP 27
+.reg IP 27
+.reg FP 27
+
+.reg SPL 16
+.reg SPH 11
+.reg IPL 16
+.reg IPH 11
+.reg FPL 16
+.reg FPH 11
+
+.reg CR 8
+.reg PR 8
+.reg MR 8
+
+
 
 ; formats
 .format normal 6 4 3 3

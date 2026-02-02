@@ -2,9 +2,13 @@
 #include <cassert>
 #include <algorithm>
 
+#define tokenisingError(tokenType, ErrorMessage)          \
+  if (isAtEnd() || peek().type != tokenType)        \
+  {this->logError(ErrorMessage); continue;}
 
-Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
-  Architecture arch;
+
+Architecture::Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
+  Architecture::Architecture arch;
   tokens = &tks;
   pos = 0;
 
@@ -12,11 +16,11 @@ Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
     const auto& token = peek();
     std::cout << "ARCHBUILDER.CPP ANNOUNCE: the following if statements need to be completed so that the offsets arent all out of wack for the instr" << std::endl;
     if (token.type == ArchToken::ArchTokenTypes::KEYWORD) {
+
       if (token.value == "format") {
         advance();
-        Architecture::Format format;
-        if (isAtEnd() || peek().type != ArchToken::ArchTokenTypes::IDENTIFIER) {this->logError("Invalid format at " + token.positionToString()); continue;}
-        
+        Architecture::Architecture::Format format;
+        tokenisingError(ArchToken::ArchTokenTypes::IDENTIFIER,"Invalid format at " + token.positionToString())
         const auto& formatToken = advance();
         format.alias = formatToken.value;
         
@@ -36,15 +40,21 @@ Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
         }
       } else if (token.value == "layout") {
         advance();
+        assert(false);
+        // not implemented
       } else if (token.value == "datatype") {
         advance();
-        if (isAtEnd() || peek().type != ArchToken::ArchTokenTypes::IDENTIFIER) {this->logError("Invalid data typename at " + token.positionToString()); continue;}
+        tokenisingError(ArchToken::ArchTokenTypes::IDENTIFIER,"Invalid data typename at " + token.positionToString());
         const std::string dataTypeName = peek().value;
         advance();
-        if (isAtEnd() || peek().type != ArchToken::ArchTokenTypes::IDENTIFIER) {this->logError("Invalid data type byte length at " + token.positionToString()); continue;}
+        tokenisingError(ArchToken::ArchTokenTypes::IDENTIFIER,"Invalid data type byte length at " + token.positionToString());
         //if ()
         assert(false);
-        // uncomplete
+        // not implemented
+      } else if (token.value == "reg") {
+        advance();
+        tokenisingError(ArchToken::ArchTokenTypes::IDENTIFIER,"Invalid register identifier at " + token.positionToString());
+        
       } else {
         std::cout << "ASSERTED_A" << std::endl;
         assert(false);
@@ -52,7 +62,7 @@ Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
       }
     } else {
       //new instruction hopefully
-      Instruction::Instruction instruction;
+      Architecture::Instruction::Instruction instruction;
       instruction.opcode = arch.m_instructionSet.size();
       const auto& nameToken = advance();
       if (nameToken.type == ArchToken::ArchTokenTypes::NEWLINE) {
@@ -82,19 +92,19 @@ Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
   return arch;
 }
 
-Instruction::Argument ArchBuilder::parseArgument() {
-  Instruction::Argument argument;
+Architecture::Instruction::Argument ArchBuilder::parseArgument() {
+  Architecture::Instruction::Argument argument;
   const ArchToken::ArchToken& typeToken = advance();
   if (typeToken.value == "REG") {
-    argument.type = Instruction::ArgumentTypes::REGISTER;
+    argument.type = Architecture::Instruction::ArgumentTypes::REGISTER;
   } else if (typeToken.value == "IMM") {
-    argument.type = Instruction::ArgumentTypes::IMMEDIATE;
+    argument.type = Architecture::Instruction::ArgumentTypes::IMMEDIATE;
   } else {
-    argument.type = Instruction::ArgumentTypes::INVALID;
+    argument.type = Architecture::Instruction::ArgumentTypes::INVALID;
   }
 
   if (isAtEnd() || peek().type != ArchToken::ArchTokenTypes::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
-
+  
   argument.alias = advance().value;
 
   if (isAtEnd() || peek().type != ArchToken::ArchTokenTypes::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
@@ -103,7 +113,7 @@ Instruction::Argument ArchBuilder::parseArgument() {
 
   const ArchToken::ArchToken& rangeToken = advance();
   size_t tokenPos = 0;
-  argument.range = std::make_shared<Instruction::RegisterRange>();
+  argument.range = std::make_shared<Architecture::Instruction::RegisterRange>();
   while (tokenPos < rangeToken.value.length()) {
     const std::string currentRange = parseRange(rangeToken.value,&tokenPos);
     std::string lowerStr;

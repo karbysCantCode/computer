@@ -6,7 +6,7 @@
 class ArchBuilder {
   public:
   ArchBuilder() {};
-  Architecture build(std::vector<ArchToken::ArchToken>& tks);
+  Architecture::Architecture build(std::vector<ArchToken::ArchToken>& tks);
 
   std::string consumeError();
   std::string consumeWarning();
@@ -27,7 +27,7 @@ class ArchBuilder {
   const ArchToken::ArchToken peek(size_t t = 0) {if (tokens == nullptr) return ArchToken::ArchToken(); return (pos+t < tokens->size()) ? (*tokens)[pos+t] : ArchToken::ArchToken();}
   const ArchToken::ArchToken advance() {if (tokens == nullptr) return ArchToken::ArchToken(); const auto token = (*tokens)[pos]; pos++; return token;}
 
-  Instruction::Argument parseArgument();
+  Architecture::Instruction::Argument parseArgument();
 
   const std::string parseRange(const std::string& str, size_t* pos) const;
 };

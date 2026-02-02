@@ -5,8 +5,17 @@
 
 namespace Spasm {
 
-  // a struct that represents a line of assembly- 
+  // a struct that represents a line of assembly- not neccesarily an instruction due to datatype declarations
   struct IntermediateLine {
+
+    // the type of assembly the object represents
+    enum class Type {
+      UNASSIGNED,
+      INSTRUCTION,
+      DATADECLARACTION
+    };
+
+    Type lineType = Type::UNASSIGNED;
 
   };
 
@@ -25,7 +34,7 @@ namespace Spasm {
     std::vector<IntermediateLine> assembly;
 
     size_t byteLength() const {return BYTES_PER_INSTRUCTION * assembly.size();}
-  }
+  };
 
 
 }

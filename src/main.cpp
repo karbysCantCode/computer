@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     token.print(0);
   }
 
-  Architecture arch = archBuilder.build(archTokens);
+  Architecture::Architecture arch = archBuilder.build(archTokens);
   for (const auto& instr : arch.m_instructionSet) {
     instr.second.print(0);
   }
@@ -31,7 +31,8 @@ int main(int argc, char* argv[]) {
   std::cout << "name end with: " << arch.m_instructionSet.size() << " instructions."<< std::endl;
 
   Lexer asmLexer(&arch.m_instructionNameSet);
-  asmLexer.source = &asmLexer.readFile(fpath.string());
+  std::string asmSource = asmLexer.readFile(fpath.string());
+  asmLexer.source = &asmSource;
   auto asmTokens = asmLexer.lexAsm();
   for (const auto& token : asmTokens) {
     token.print(0);
