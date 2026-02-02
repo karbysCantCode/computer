@@ -47,7 +47,7 @@ namespace Instruction {
     bool isInRange(int value) const override {return min <= value && value <= max;}
     void setMinimum(int value) override {min = value;}
     void setMaximum(int value) override {max = value;}
-    std::string toString() override {return "min: " + std::to_string(min) + "\n max: " + std::to_string(max);}
+    std::string toString() override {return "min: " + std::to_string(min) + ", max: " + std::to_string(max);}
 
     ImmediateRange(int min, int max)
       : Range(RangeType::IMMEDIATE), min(min), max(max) {};

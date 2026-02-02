@@ -1,5 +1,8 @@
 #include <string>
 #include <vector>
+#include <arch.hpp>
+
+// spasm goes from lexer > preprocessor > parser > machine code
 
 #define BYTES_PER_INSTRUCTION 2
 
@@ -16,8 +19,12 @@ namespace Spasm {
     };
 
     Type lineType = Type::UNASSIGNED;
-
+    InstructionLiteral instruction;
   };
+
+  struct InstructionLiteral {
+    Architecture::Instruction::Instruction& coreInstruction;
+  }
 
   struct Variable {
     bool locationResolved = false;

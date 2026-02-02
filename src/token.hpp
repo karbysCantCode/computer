@@ -106,7 +106,20 @@ namespace Token {
     OPENSQUARE,
     CLOSESQUARE,
     UNASSIGNED,
-    DIRECTIVE
+    DIRECTIVE,
+
+    ADD,
+    SUBTRACT,
+    MULTIPLY,
+    DIVIDE,
+    BITWISEAND,
+    BITWISEOR,
+    BITWISEXOR,
+    BITWISENOT,
+    LEFTSHIFT,
+    RIGHTSHIFT,
+
+    MACRONEWLINE
   };
 
   constexpr const char* toString(TokenTypes t) {

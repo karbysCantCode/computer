@@ -103,9 +103,43 @@ std::vector<Token::Token> Lexer::lexAsm() {
         case '}':
           token.type = Token::TokenTypes::CLOSEBLOCK;
           break;
+        case '+':
+          token.type = Token::TokenTypes::ADD;
+          break;
+        case '-':
+          token.type = Token::TokenTypes::SUBTRACT;
+          break;
+        case '*':
+          token.type = Token::TokenTypes::MULTIPLY;
+          break;
+        case '/':
+          token.type = Token::TokenTypes::DIVIDE;
+          break;
+        case '|':
+          token.type = Token::TokenTypes::BITWISEOR;
+          break;
+        case '&':
+          token.type = Token::TokenTypes::BITWISEAND;
+          break;
+        case '^':
+          token.type = Token::TokenTypes::BITWISEXOR;
+          break;
+        case '~':
+          token.type = Token::TokenTypes::BITWISENOT;
+          break;
+        case '<':
+          if (peek(1) != '<') {break;}
+          token.type = Token::TokenTypes::LEFTSHIFT;
+          break;
+        case '>':
+        if (peek(1) != '>') {break;}
+          token.type = Token::TokenTypes::RIGHTSHIFT;
+          break;
+        case '\\':
+          token.type = Token::TokenTypes::MACRONEWLINE;
+          break;
         default:
           break;
-      
       }
 
       tokens.push_back(token);

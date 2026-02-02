@@ -23,7 +23,7 @@ struct parsedSpasm {
 };
 
 
-static parsedSpasm parseSpasm(std::vector<Token::Token>& spasmTokens, Architecture& architecture) {
+parsedSpasm parseSpasm(std::vector<Token::Token>& spasmTokens, Architecture::Architecture& architecture) {
   parsedSpasm parsed;
   size_t index = 0;
   auto isAtEnd = [&]() {

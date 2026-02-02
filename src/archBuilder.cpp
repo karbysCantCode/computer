@@ -1,11 +1,16 @@
 #include "archBuilder.hpp"
 #include <cassert>
 #include <algorithm>
+#include <charconv>
 
 #define tokenisingError(tokenType, ErrorMessage)          \
   if (isAtEnd() || peek().type != tokenType)        \
   {this->logError(ErrorMessage); continue;}
 
+bool safe_stoi(const std::string&s, int& out) {
+  auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), out);
+  return ec == std::errc() && ptr == s.data() + s.size();
+}
 
 Architecture::Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>& tks) {
   Architecture::Architecture arch;
@@ -110,42 +115,78 @@ Architecture::Instruction::Argument ArchBuilder::parseArgument() {
   if (isAtEnd() || peek().type != ArchToken::ArchTokenTypes::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
 
   //parse the range :(
-
   const ArchToken::ArchToken& rangeToken = advance();
-  size_t tokenPos = 0;
-  argument.range = std::make_shared<Architecture::Instruction::RegisterRange>();
-  while (tokenPos < rangeToken.value.length()) {
-    const std::string currentRange = parseRange(rangeToken.value,&tokenPos);
-    std::string lowerStr;
-    std::string lowerNumber;
-    std::string higherNumber;
-    std::string prefix;
-    std::string postfix;
-    size_t dashPos = 0;
-    bool isRange = false;
-    while (dashPos < currentRange.length()) {
-      const char c = currentRange[dashPos];
-      if (c == '-') {isRange = true;}
-      else if (!isdigit(c) && !isRange) {prefix.push_back(c);}
-      else if (!isdigit(c) && isRange) {postfix.push_back(c);}
-      else if (isdigit(c) && !isRange) {lowerNumber.push_back(c);}
-      else if (isdigit(c) && isRange) {higherNumber.push_back(c);}
-      lowerStr.push_back(c);
-      dashPos++;
-    }
-    
-    if (isRange) {
-      if (prefix != postfix) {logError("mismatched range prefix \"" + prefix + "\" and \"" + postfix + "\" @ " + rangeToken.positionToString()); return argument;}
-      
-      const int minReg = std::stoi(lowerNumber);
-      const int maxReg = std::stoi(higherNumber);
-      if (minReg > maxReg) {logError("invalid range of registers (err is: min > max) @ " + rangeToken.positionToString()); return argument;}
-      
-      for (int i = minReg; i <= maxReg; i++) {
-        argument.range.get()->addToRegisterRange(prefix + std::to_string(i));
+  switch (argument.type) {
+    //register range
+    case Architecture::Instruction::ArgumentTypes::REGISTER: {
+      size_t tokenPos = 0;
+      argument.range = std::make_shared<Architecture::Instruction::RegisterRange>();
+      while (tokenPos < rangeToken.value.length()) {
+        const std::string currentRange = parseRange(rangeToken.value,&tokenPos);
+        std::string lowerStr;
+        std::string lowerNumber;
+        std::string higherNumber;
+        std::string prefix;
+        std::string postfix;
+        size_t dashPos = 0;
+        bool isRange = false;
+        while (dashPos < currentRange.length()) {
+          const char c = currentRange[dashPos];
+          if (c == '-') {isRange = true;}
+          else if (!isdigit(c) && !isRange) {prefix.push_back(c);}
+          else if (!isdigit(c) && isRange) {postfix.push_back(c);}
+          else if (isdigit(c) && !isRange) {lowerNumber.push_back(c);}
+          else if (isdigit(c) && isRange) {higherNumber.push_back(c);}
+          lowerStr.push_back(c);
+          dashPos++;
+        }
+        
+        if (isRange) {
+          if (prefix != postfix) {logError("mismatched range prefix \"" + prefix + "\" and \"" + postfix + "\" @ " + rangeToken.positionToString()); return argument;}
+          
+          const int minReg = std::stoi(lowerNumber);
+          const int maxReg = std::stoi(higherNumber);
+          if (minReg > maxReg) {logError("invalid range of registers (err is: min > max) @ " + rangeToken.positionToString()); return argument;}
+          
+          for (int i = minReg; i <= maxReg; i++) {
+            argument.range.get()->addToRegisterRange(prefix + std::to_string(i));
+          }
+        } else {
+          argument.range.get()->addToRegisterRange(currentRange);
+        }
       }
-    } else {
-      argument.range.get()->addToRegisterRange(currentRange);
+      break;
+    }
+    // immediate range
+    case Architecture::Instruction::ArgumentTypes::IMMEDIATE: {
+      size_t tokenPos = 0;
+      int leftValue = 0;
+      int rightValue = 0;
+      bool secondHalf = false;
+      std::string left;
+      std::string current;
+      while (tokenPos < rangeToken.value.length()) {
+        const char c = rangeToken.value[tokenPos];
+        tokenPos++;
+        if (c == ':') {
+          left = current;
+          secondHalf = true;
+          continue;
+        }
+        current.push_back(c);
+      }
+
+      if (!(safe_stoi(left,leftValue) && safe_stoi(current,rightValue))) {
+        logError("Could not parse string to integers at " + rangeToken.positionToString());
+        break;
+      }
+
+      if (leftValue > rightValue) {
+        argument.range = std::make_shared<Architecture::Instruction::ImmediateRange>(rightValue,leftValue);
+      } else {
+        argument.range = std::make_shared<Architecture::Instruction::ImmediateRange>(leftValue,rightValue);
+      }
+      break;
     }
   }
 

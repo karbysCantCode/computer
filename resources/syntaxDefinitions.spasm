@@ -1,0 +1,21 @@
+little endian!!!
+
+to reference the memory address of a variable:
+  variable name
+the compiler will keep track of variables as their memory address
+
+immediates can be replaced for (math) expressions
+
+all math is signed integer (for math expressions expected to be collapsed by compiler)
+
+macros as follows:
+
+; single replacement
+@define macroName macroValue
+
+; function replacement
+;replacement continues until a newline character not preceeded by a macro newline -> '\'
+@define macroName(argN, ...) \
+  ADD argN, r0, 1 \
+  SUB argN, r0, 1 
+  
