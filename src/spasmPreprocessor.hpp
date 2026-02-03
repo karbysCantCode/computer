@@ -1,5 +1,8 @@
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
+#include <variant>
+
 //#include "arch.hpp"
 #include "token.hpp"
 
@@ -10,15 +13,20 @@ struct LineColPair {
   LineColPair(int ln, int cl) : line(ln), col(cl) {}
 };
 
-struct macro {
+struct Macro {
   std::string target;
+
+  virtual ~Macro() = default;
+
+  //returns the index after the replacement
+  virtual size_t replace(size_t fillIndex, std::vector<Token::Token>& replacementStream);
 };
 
-struct functionMacro : macro {
+struct FunctionMacro : Macro {
   std::unordered_map<std::string, size_t> args;
   std::vector<Token::Token> replacement;
 
-  size_t fillWithArgs(size_t fillIndex, std::vector<Token::Token>& replacementStream) {
+  size_t replace(size_t fillIndex, std::vector<Token::Token>& replacementStream) override {
     std::vector<std::vector<Token::Token>> localArgs;
     std::vector<LineColPair> localArgBlame;
 
@@ -50,15 +58,21 @@ struct functionMacro : macro {
       }
     }
 
-    return currentIndex - fillIndex;
+    return currentIndex;
   }
 };
 
-struct replacementMacro : macro {
-  std::string replacement;
+struct ReplacementMacro : Macro {
+  Token::Token replacementToken;
+
+  size_t replace(size_t fillIndex, std::vector<Token::Token>& replacementStream) override {
+    replacementStream[fillIndex] = replacementToken;
+    return fillIndex + 1;
+  }
 };  
 
-bool preprocessSpasm(std::vector<Token::Token>& spasmTokens) {
+// 
+bool preprocessSpasm(std::vector<Token::Token>& spasmTokens, std::vector<std::string>* errList = nullptr) {
   size_t index = 0;
   auto isAtEnd = [&]() {
     return !index<spasmTokens.size();
@@ -72,14 +86,61 @@ bool preprocessSpasm(std::vector<Token::Token>& spasmTokens) {
     return retVal;
   };
 
-  std::unordered_map<std::string, macro*> macroMap;
+  auto logError = [&](std::string err) {
+    if (errList != nullptr) {errList->push_back(err);}
+  };
+
+  std::unordered_map<std::string, std::unique_ptr<Macro>> macroMap;
+  
+  #define ContinueAndLogIfAtEnd(errorMessage) \
+  if (!isAtEnd()) {logError(errorMessage); continue;}
+  #define EOF_BEFORE_COMPLETE_ERR "Macro \"" + macroName + "\" hit EOF before definition finished."
+
 
   while (!isAtEnd()) {
-    Token::Token& token = peek();
+    Token::Token token = peek();
     advance();
-    if (!(token.type == Token::TokenTypes::DIRECTIVE && token.value == "@define")) {continue;}
+    auto macroIt = macroMap.find(token.value);
+    if (macroIt != macroMap.end()) 
+      {index = macroIt->second->replace(index, spasmTokens); continue;}
+    if (token.type == Token::TokenTypes::DIRECTIVE && token.value == "@define" && !isAtEnd()) {
+      size_t defineStartIndex = index;
+      std::string macroName = advance().value;
+      ContinueAndLogIfAtEnd(EOF_BEFORE_COMPLETE_ERR);
+      if (peek().type == Token::TokenTypes::OPENPAREN) {
+        // is a function macro
+        std::unique_ptr<FunctionMacro> macro = std::make_unique<FunctionMacro>();
+        bool isEnd = false;
+        size_t argCount = 0;
+        while (!isAtEnd() && !isEnd) {
+          //get args
+          macro->args[advance().value] = argCount;
+          argCount++;
+          switch (peek().type) {
+            case Token::TokenTypes::COMMA:
+            continue;
+            break;
+            case Token::TokenTypes::CLOSEPAREN:
+            isEnd = true;
+            break;
+            default:
+            isEnd = true;
+            logError("Unexpected token type (comma or close paren expected), got " + peek().positionToString());
+            break;
+          } 
+        }
+        macroMap[macroName] = std::move(macro);
+      } else {
+        // is a replacement macro
+        ContinueAndLogIfAtEnd(EOF_BEFORE_COMPLETE_ERR);
+        std::unique_ptr<ReplacementMacro> macro; 
+        macro->replacementToken = advance();
+        macroMap[macroName] = std::move(macro);
+      }
 
-    
+      spasmTokens.erase(spasmTokens.begin() + defineStartIndex, spasmTokens.begin() + index);
+      index = defineStartIndex;
+    }
   }
 
 

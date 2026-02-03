@@ -6,6 +6,7 @@
 #include "lexer.hpp"
 #include "archBuilder.hpp"
 #include "arch.hpp"
+#include "spasmPreprocessor.hpp"
 
 int main(int argc, char* argv[]) {
   std::filesystem::path fpath("../resources/test.spasm"); //"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/resources/test.spasm";
@@ -37,6 +38,19 @@ int main(int argc, char* argv[]) {
   for (const auto& token : asmTokens) {
     token.print(0);
   }
+
+  std::vector<std::string> preprocessorErrors;
+  bool success = preprocessSpasm(asmTokens, &preprocessorErrors);
+  if (preprocessorErrors.size() != 0) {
+    std::cout << "Preprocessor errors:" << std::endl;
+    for (const auto& err : preprocessorErrors) {
+      std::cout << err << std::endl;
+    }
+  }
+
+  
+  
+  
 
   return 0;
 }
