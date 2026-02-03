@@ -40,12 +40,19 @@ int main(int argc, char* argv[]) {
   }
 
   std::vector<std::string> preprocessorErrors;
+  std::cout << "S" << std::endl;
   bool success = preprocessSpasm(asmTokens, &preprocessorErrors);
+  std::cout << "S" << std::endl;
+  std::cout << preprocessorErrors.size() << std::endl;
   if (preprocessorErrors.size() != 0) {
     std::cout << "Preprocessor errors:" << std::endl;
     for (const auto& err : preprocessorErrors) {
       std::cout << err << std::endl;
     }
+  }
+
+  for (const auto& token : asmTokens) {
+    std::cout << token.value << '\n';
   }
 
   

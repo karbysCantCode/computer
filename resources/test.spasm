@@ -1,7 +1,7 @@
 @include "include.spasm" 
 ;* hehehe *;
 @define Micheal 10
-@define PUSHALL \ push R1 push R2 push R4 HALT \
+@define PUSHALL() {push R1 push R2 push R4 HALT} 
 @entry .main
 ;* hehe
    123

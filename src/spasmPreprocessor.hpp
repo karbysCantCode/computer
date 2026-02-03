@@ -19,7 +19,7 @@ struct Macro {
   virtual ~Macro() = default;
 
   //returns the index after the replacement
-  virtual size_t replace(size_t fillIndex, std::vector<Token::Token>& replacementStream);
+  virtual size_t replace(size_t fillIndex, std::vector<Token::Token>& replacementStream) {return 0;}
 };
 
 struct FunctionMacro : Macro {
@@ -75,7 +75,7 @@ struct ReplacementMacro : Macro {
 bool preprocessSpasm(std::vector<Token::Token>& spasmTokens, std::vector<std::string>* errList = nullptr) {
   size_t index = 0;
   auto isAtEnd = [&]() {
-    return !index<spasmTokens.size();
+    return !(index<spasmTokens.size());
   };
   auto peek = [&](size_t peekDistance = 0) {
     return index+peekDistance < spasmTokens.size() ? spasmTokens[index+peekDistance] : Token::Token("EOF", Token::TokenTypes::UNASSIGNED, -1,-1);
@@ -93,56 +93,93 @@ bool preprocessSpasm(std::vector<Token::Token>& spasmTokens, std::vector<std::st
   std::unordered_map<std::string, std::unique_ptr<Macro>> macroMap;
   
   #define ContinueAndLogIfAtEnd(errorMessage) \
-  if (!isAtEnd()) {logError(errorMessage); continue;}
+  if (isAtEnd()) {logError(errorMessage); continue;}
   #define EOF_BEFORE_COMPLETE_ERR "Macro \"" + macroName + "\" hit EOF before definition finished."
 
-
+  std::cout << "S2" << std::endl;
   while (!isAtEnd()) {
     Token::Token token = peek();
-    advance();
+
+
     auto macroIt = macroMap.find(token.value);
     if (macroIt != macroMap.end()) 
       {index = macroIt->second->replace(index, spasmTokens); continue;}
-    if (token.type == Token::TokenTypes::DIRECTIVE && token.value == "@define" && !isAtEnd()) {
-      size_t defineStartIndex = index;
-      std::string macroName = advance().value;
-      ContinueAndLogIfAtEnd(EOF_BEFORE_COMPLETE_ERR);
-      if (peek().type == Token::TokenTypes::OPENPAREN) {
-        // is a function macro
-        std::unique_ptr<FunctionMacro> macro = std::make_unique<FunctionMacro>();
-        bool isEnd = false;
-        size_t argCount = 0;
-        while (!isAtEnd() && !isEnd) {
-          //get args
-          macro->args[advance().value] = argCount;
-          argCount++;
-          switch (peek().type) {
-            case Token::TokenTypes::COMMA:
-            continue;
-            break;
-            case Token::TokenTypes::CLOSEPAREN:
-            isEnd = true;
-            break;
-            default:
-            isEnd = true;
-            logError("Unexpected token type (comma or close paren expected), got " + peek().positionToString());
-            break;
-          } 
-        }
-        macroMap[macroName] = std::move(macro);
-      } else {
-        // is a replacement macro
-        ContinueAndLogIfAtEnd(EOF_BEFORE_COMPLETE_ERR);
-        std::unique_ptr<ReplacementMacro> macro; 
-        macro->replacementToken = advance();
-        macroMap[macroName] = std::move(macro);
-      }
 
-      spasmTokens.erase(spasmTokens.begin() + defineStartIndex, spasmTokens.begin() + index);
-      index = defineStartIndex;
+    if (token.type == Token::TokenTypes::DIRECTIVE && !isAtEnd()) {
+      switch (token.nicheType) {
+
+        case Token::NicheType::DIRECTIVE_DEFINE: {
+          size_t defineStartIndex = index;
+          advance();
+          std::string macroName = advance().value;
+          ContinueAndLogIfAtEnd(EOF_BEFORE_COMPLETE_ERR);
+          if (peek().type == Token::TokenTypes::OPENPAREN) {
+            // is a function macro
+            auto macro = std::make_unique<FunctionMacro>();
+            bool isEnd = false;
+            size_t argCount = 0;
+            while (!isAtEnd() && !isEnd) {
+              //get args
+              if (peek(1).type == Token::TokenTypes::CLOSEPAREN) {index += 2; break;}
+              macro->args[advance().value] = argCount;
+              argCount++;
+              switch (peek().type) {
+                case Token::TokenTypes::COMMA:
+                continue;
+                break;
+                case Token::TokenTypes::CLOSEPAREN:
+                advance();
+                isEnd = true;
+                break;
+                default:
+                isEnd = true;
+                logError("Unexpected token type (comma or close paren expected), got " + peek().positionToString());
+                break;
+              } 
+            }
+            //
+            if (peek().type == Token::TokenTypes::OPENBLOCK) {
+              advance();
+              while (peek().type != Token::TokenTypes::CLOSEBLOCK && !isAtEnd()) {
+                macro->replacement.push_back(advance());
+              }
+              advance();
+            } else {
+              logError("Function block missing, expected curly brace, got " + std::string(Token::toString(peek().type)) + " at " + peek().positionToString() + " value: \"" + peek().value + "\"");
+            }
+            macroMap[macroName] = std::move(macro);
+          } else {
+            // is a replacement macro
+            ContinueAndLogIfAtEnd(EOF_BEFORE_COMPLETE_ERR);
+            auto macro = std::make_unique<ReplacementMacro>();
+            macro->replacementToken = advance();
+            macroMap[macroName] = std::move(macro);
+          }
+
+          spasmTokens.erase(spasmTokens.begin() + defineStartIndex, spasmTokens.begin() + index);
+          index = defineStartIndex;}
+        break;
+
+        case Token::NicheType::DIRECTIVE_INCLUDE: {
+          logError("INCLUDE DIRECTIVE NOT IMPLEMENTED FOR PREPROCESSOR");
+          advance();
+        }
+        break;
+        case Token::NicheType::DIRECTIVE_ENTRY: {
+          logError("ENTRY DIRECTIVE NOT IMPLEMENTED FOR PREPROCESSOR");
+          advance();
+        }
+        break;
+        default:
+          logError("Unrecognise directive \"" + token.value + "\" at " + token.positionToString());
+        break;
+      }
+    } else {
+      advance();
     }
   }
 
+  std::cout << "S3" << std::endl;
 
 
   return true;

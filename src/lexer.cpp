@@ -72,6 +72,13 @@ std::vector<Token::Token> Lexer::lexAsm() {
       while (!isAtEnd() && !isWordBoundary(peek())) {
         value.push_back(advance());
       }
+      if (value == "@entry") {
+        token.nicheType = Token::NicheType::DIRECTIVE_ENTRY;
+      } else if (value == "@define") {
+        token.nicheType = Token::NicheType::DIRECTIVE_DEFINE;
+      } else if (value == "@include") {
+        token.nicheType = Token::NicheType::DIRECTIVE_INCLUDE;
+      }
       token.SetString(value);
       tokens.push_back(token);
     } else if (c == '\'' || c == '"') {

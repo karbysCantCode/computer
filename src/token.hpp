@@ -122,6 +122,13 @@ namespace Token {
     MACRONEWLINE
   };
 
+  enum class NicheType {
+    UNKNOWN_TOO_UNDERGROUND,
+    DIRECTIVE_DEFINE,
+    DIRECTIVE_ENTRY,
+    DIRECTIVE_INCLUDE
+  };
+
   constexpr const char* toString(TokenTypes t) {
     switch (t) {
         case TokenTypes::IDENTIFIER: return "IDENTIFIER";
@@ -144,6 +151,7 @@ namespace Token {
   struct Token {
     std::string value;
     TokenTypes type = TokenTypes::UNASSIGNED;
+    NicheType nicheType = NicheType::UNKNOWN_TOO_UNDERGROUND;
     int line = -1;
     int column = -1;
 
