@@ -1,3 +1,0 @@
-D:/logisim prohects/16bit cpu/software2/build/CMakeFiles/cpu_software.dir
-D:/logisim prohects/16bit cpu/software2/build/CMakeFiles/ALL_BUILD.dir
-D:/logisim prohects/16bit cpu/software2/build/CMakeFiles/ZERO_CHECK.dir
