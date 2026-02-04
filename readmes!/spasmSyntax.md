@@ -45,6 +45,31 @@
 
 - ### Data Declaraction
 
+  Data can be declared in multiple ways.  
+  First by keywords with constant size:
+
+  ```
+  >BYTE isTrue, 0            ; 8 bits  / 1 byte  
+  >WORD number, 0xffff       ; 16 bits / 2 bytes 
+  >DWORD fullInt, 0xffffffff ; 32 bits / 4 bytes
+  ```
+
+  Alternatively you can declare a set number of bytes:
+  ```
+  TEXT byteArray, 64, 0                  ; sets all 64 bytes to 0
+  TEXT byteArray, 16, "Hello World!!!!!" ; parsed as ascii
+  ARRAY  numbers, 8, 2, [52,385,209,295]
+  AUTO 
+  ```
+
+  Where the arguments for TEXT are:  
+  >TEXT variableName, byteLength, initialisingValue/characterArray (if quoted)
+
+  The arguments for ARRAY are:
+  >ARRAY variableName, byteLength, bytesPerElement, [Element0, Element1, ..., ElementN]  
+
+  *for a maximum of byteLength/bytesPerElement elements.*
+
 ## Macros
 
 - ### Function Macros
