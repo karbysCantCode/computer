@@ -15,7 +15,7 @@
 
   The format is as follows:
 
-  InstructionName Arg1, Arg2, ..., ArgN
+  >InstructionName Arg1, Arg2, ..., ArgN
 
   Specifically, the first arg is seperated from the instruction by whitespace, where following arguments are comma seperated.
 
@@ -23,13 +23,25 @@
 
   Labels are defined by an identifier followed by a colon, for example:
 
-  LabelName:
+  >LabelName:
 
-  Labels local to other labels are defined by prefixing a the parent label followed by a dot to the label declaration -- for example:
+  Labels local to other labels are defined by prefixing a the parent label followed by a dot to the label declaration - for example:
 
-  *declaration of loop*\n
+  >; *declaration of loop*  
   main.loop:
 
+  This can be repeated with no limit, ie:
+
+  >Main.Helper.Save:
+
+  or
+
+  >Main.MainRoutine.SaveProcess.IOHelper.DeviceScan.RecieveRoutine:
+
+  *The point being there is no limit to how deep this can go.*  
+    
+  #### A Note About Scopes
+  variables theoretically have a local scope but um lowkey why arent you just managing it urself u lazy twat
 
 - ### Data Declaraction
 
