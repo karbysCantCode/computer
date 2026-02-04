@@ -1,0 +1,15 @@
+; single line comments only with ';'
+; format as follows: INSTRUCTION_NAME BIT_FORMAT_NAME ARG_N_TYPE ARG_N_ALIAS ARG_N_RANGE 
+; register ranges as follows: rN-r(N+X) (ie r0-r13)
+; immediate ranges as follows: MIN:MAX (0:255)
+; types: REG (registers), IMM (immediates)
+; append multiple ranges via '<' between ranges
+; memory refs will collapse by compiler!
+; bit format as follows: .format NAME OPCODE_LENGTH ARG_N_LENGTH
+; max bitwidth set as follow: .bitwidth BITWIDTH
+; set instruction arg layouts via: .layout INSTRUCTION_NAME ARG_N_ALIAS (where order HERE determines arg layout)
+; .datatype TYPENAME INT_BYTE_LENGTH||"auto"
+
+; define registers by .reg [REGISTER NAME] [REGISTER BITWIDTH (POS INT)]
+; alternatively: .reg [REGISTER PREFIX][LOWEST INDEX (POS INT)]-[REGISTER PREFIX][HIGHEST INDEX (POS INT)] [REGISTER BITWIDTH (POS INT)]
+; beginning!
