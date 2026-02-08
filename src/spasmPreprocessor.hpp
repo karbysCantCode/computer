@@ -35,7 +35,7 @@ struct FunctionMacro : Macro {
     size_t currentIndex = fillIndex + 1;
 
     std::vector<Token::Token> currentArg;
-    while (argCount < args.size() && currentIndex < replacementStream.size()) {
+    while (localArgs.size() < args.size() && currentIndex < replacementStream.size()) {
       const Token::Token& token = replacementStream[currentIndex];
       currentIndex++;
       if (token.type == Token::TokenTypes::COMMA) {argCount++; isBlame = true; localArgs.push_back(currentArg); currentArg.clear(); continue;}
@@ -114,13 +114,14 @@ bool preprocessSpasm(std::vector<Token::Token>& spasmTokens, std::vector<std::st
           std::string macroName = advance().value;
           ContinueAndLogIfAtEnd(EOF_BEFORE_COMPLETE_ERR);
           if (peek().type == Token::TokenTypes::OPENPAREN) {
+            advance();
             // is a function macro
             auto macro = std::make_unique<FunctionMacro>();
             bool isEnd = false;
             size_t argCount = 0;
             while (!isAtEnd() && !isEnd) {
               //get args
-              if (peek(1).type == Token::TokenTypes::CLOSEPAREN) {index += 2; break;}
+              if (peek().type == Token::TokenTypes::CLOSEPAREN) {advance(); break;}
               macro->args[advance().value] = argCount;
               argCount++;
               switch (peek().type) {
@@ -133,7 +134,7 @@ bool preprocessSpasm(std::vector<Token::Token>& spasmTokens, std::vector<std::st
                 break;
                 default:
                 isEnd = true;
-                logError("Unexpected token type (comma or close paren expected), got " + peek().positionToString());
+                logError("Unexpected token type (comma or close paren expected), got " + std::string(Token::toString(peek().type)) + " at " + peek().positionToString());
                 break;
               } 
             }
@@ -157,7 +158,8 @@ bool preprocessSpasm(std::vector<Token::Token>& spasmTokens, std::vector<std::st
           }
 
           spasmTokens.erase(spasmTokens.begin() + defineStartIndex, spasmTokens.begin() + index);
-          index = defineStartIndex;}
+          index = defineStartIndex;
+        }
         break;
 
         case Token::NicheType::DIRECTIVE_INCLUDE: {
@@ -177,6 +179,10 @@ bool preprocessSpasm(std::vector<Token::Token>& spasmTokens, std::vector<std::st
     } else {
       advance();
     }
+  }
+  std::cout << "Start" << std::endl;
+  for (const auto& entry : macroMap) {
+    std::cout << entry.first << std::endl;
   }
 
   std::cout << "S3" << std::endl;

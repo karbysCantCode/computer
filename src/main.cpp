@@ -9,7 +9,7 @@
 #include "spasmPreprocessor.hpp"
 
 int main(int argc, char* argv[]) {
-  std::filesystem::path fpath("resources/test.spasm"); //"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/resources/test.spasm";
+  std::filesystem::path fpath("resources/macroTest.spasm"); //"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/resources/test.spasm";
   std::filesystem::path archpath("resources/test.arch");
   
   ArchBuilder archBuilder;

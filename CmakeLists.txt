@@ -1,12 +1,19 @@
 cmake_minimum_required(VERSION 3.10)
 project(cpu_software)
 
+
+
 # Find all C++ source files in src directory
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 # Create executable target
 add_executable(cpu_software ${SOURCES})
 
+if (WIN32)
+  target_compile_definitions(cpu_software PRIVATE RELATIVE_FILE_PREFIX=../)
+elseif (APPLE)
+  target_compile_definitions(cpu_software PRIVATE RELATIVE_FILE_PREFIX=)
+endif()
 # Optional: Set C++ standard
 set_target_properties(cpu_software PROPERTIES
   CXX_STANDARD 17
@@ -16,5 +23,5 @@ set_target_properties(cpu_software PROPERTIES
 add_custom_target(copy_resources ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/resources
-            ${CMAKE_BINARY_DIR}/resources
+            $<TARGET_FILE_DIR:cpu_software>/resources
 )

@@ -1,0 +1,5 @@
+@define noArg() {NOARG1 NOARG2 NOARG3}
+@define args(rd,rs) {MOV rd, rs PUSH rd}
+
+noArg
+args r2, r0

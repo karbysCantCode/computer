@@ -61,7 +61,7 @@
   ```
   TEXT byteArray, 64, 0                  ; sets all 64 bytes to 0
   TEXT byteArray, 16, "Hello World!!!!!" ; parsed as ascii
-  ARRAY  numbers, 8, 2, [52,385,209,295}
+  ARRAY  numbers, 8, 2, {52,385,209,295}
   ```
 
   Where the arguments for TEXT are:  
