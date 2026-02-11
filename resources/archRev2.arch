@@ -1,0 +1,87 @@
+.bitwidth 16
+
+.format normal         6 4  3 3
+.format two            6 5  5     ;implies 32 unique registers
+.format immediate      6 4  6
+.format smallImmediate 6 3  3 4
+.format fullImmediate  6 10 
+.format special        6 2  3 5
+
+;normal regs
+.reg r0-r15  16   ; 16
+.reg sp      27   ;  1
+.reg fp      27   ;  1
+.reg w0-w3   32   ;  4
+.reg wl0-wl4 16   ;  4
+.reg wh0-wh4 16   ;  4
+
+;control regs
+.reg ctx     8    ;  1
+.reg mmio    8    ;  1
+.reg priv    8    ;  1
+
+
+;Arithmetic and logic
+  add normal REG rd r0-r15
+             REG ra r0-r7
+             REG rb r0-r7 ;add
+  adc normal REG rd r0-r15
+             REG ra r0-r7
+             REG rb r0-r7  ;add with carry
+  adi immediate REG rd r0-r15
+                IMM immediate 0:63 ;add immediate
+
+  sub 
+  sbc
+  sbi
+
+  mul
+
+  and  ;and
+  andi ;and immediate
+  or   ;or
+  ori  ;or immediate
+  not  ;not
+  xor  ;xor
+  xori ;xor immediate
+
+  shl   normal REG rd ... REG rA ... REG rB ...                    ; rd = rA << rB
+  shli  smallImmediate REG rd ... REG rA ... IMM immediate 0:15    ; rd = rA << immediate
+  shr   normal REG rd ... REG rA ... REG rB ...                    ; rd = rA >> rB
+  shri  smallImmediate REG rd ... REG rA ... IMM immediate 0:15    ; rd = rA >> immediate
+  ror   normal REG rd ... REG rA ... REG rB ...       ; rotate right
+  rori          ; rotate right immediate
+
+;memory
+  lod  normal
+  lodi immediate  ;rd = [memoryOffset << 6 | immediate]
+  sto  normal
+  stoi immediate
+
+  push two
+  pop  two
+
+
+;moves
+  cmov   normal
+  mov    two    REG rd ... REG rs ...      ;rd = rs
+
+  movi   two REG rd ... IMM mode 0:15 
+  ; first arg rd, and the 2nd arg describes how the bytes are loaded
+  ; modes:
+  ; 0 = two bytes (little endian)
+  ; 1 = 16 Bus A low byte
+  ; 2 = 16 Bus A high byte
+  ; 3 = special Bus
+  ; 4 = 32 bit bus (4 bytes little endian)
+  ; 5 = 32 bit bus lowest byte
+  ; 6 = 32 bit bus lower word
+  ; 7 = 32 bit bus upper word
+
+  ctlmv  special IMM mode 0:3 REG rN r0-r7 REG ... rS ;if lsb mode set, then it is storing (otherwise load) TO the control, if MSB set 
+
+;branches
+cmp  ;
+tst  ;
+
+;state
