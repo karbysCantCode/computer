@@ -121,6 +121,7 @@ class SMakeProject {
   std::unordered_map<std::string, Target> targets;
   std::unordered_map<std::string, FList> flists;
   std::unordered_set<std::string> labels;
+  std::filesystem::path makefilePath;
 
 
 
@@ -129,6 +130,8 @@ class SMakeProject {
   int build(const std::vector<Token>& tokens);
 
   std::string toString() const {
+    std::ostringstream str;
+    // str << "SMake File \"" << 
     return "";
   }
   private:

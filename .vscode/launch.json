@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "Launch",
       "type": "lldb",
@@ -18,7 +19,7 @@
       "stopAtEntry": false,
       "cwd": "${fileDirname}",
       "environment": [],
-      "externalConsole": false,
+      "externalConsole": true,
       "MIMode": "lldb",
       "preLaunchTask": "C/C++: clang build active file"
     },

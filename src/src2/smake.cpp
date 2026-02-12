@@ -1,7 +1,11 @@
 #include "smake.hpp"
 
+#include <iostream>
+
 #include "lexHelper.hpp"
 #include "fileHelper.hpp"
+
+SMake::SMakeProject::SMakeProject() {}
 
 std::vector<SMake::Token> SMake::lex(std::filesystem::path path, Debug::FullLogger* logger) {
   LexHelper lexHelper(FileHelper::openFileToString(path, logger));
@@ -611,4 +615,13 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       return;
     }
   };
+
+  while (!isAtEnd()) {
+    if (peek().m_type != Token::Type::KEYWORD) {logError("Unexpected token \"" + peek().m_value + "\", type: " + peek().typeToString() + " at " + peek().positionToString());advance();}
+    std::cout << advance().m_value << std::endl;
+    // switch (peek().m_value) {
+    //   case 
+    // }
+  }
+
 }
