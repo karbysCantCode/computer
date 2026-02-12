@@ -164,5 +164,5 @@ std::vector<Spasm::Lexer::Token> Spasm::Lexer::lex(std::filesystem::path path, s
 
     
   }
-  
+  return tokens;
 }

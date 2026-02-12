@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(cpu_software)
+project(spasm)
 
 
 
@@ -7,15 +7,15 @@ project(cpu_software)
 file(GLOB_RECURSE SOURCES "src/src2/*.cpp")
 
 # Create executable target
-add_executable(cpu_software ${SOURCES})
+add_executable(spasm ${SOURCES})
 
 if (WIN32)
-  target_compile_definitions(cpu_software PRIVATE RELATIVE_FILE_PREFIX=../)
+  target_compile_definitions(spasm PRIVATE RELATIVE_FILE_PREFIX=../)
 elseif (APPLE)
-  target_compile_definitions(cpu_software PRIVATE RELATIVE_FILE_PREFIX=)
+  target_compile_definitions(spasm PRIVATE RELATIVE_FILE_PREFIX=)
 endif()
 # Optional: Set C++ standard
-set_target_properties(cpu_software PROPERTIES
+set_target_properties(spasm PROPERTIES
   CXX_STANDARD 17
   CXX_STANDARD_REQUIRED ON
 )
@@ -23,5 +23,5 @@ set_target_properties(cpu_software PROPERTIES
 add_custom_target(copy_resources ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/resources
-            $<TARGET_FILE_DIR:cpu_software>/resources
+            $<TARGET_FILE_DIR:spasm>/resources
 )

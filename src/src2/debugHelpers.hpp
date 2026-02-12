@@ -1,4 +1,5 @@
 #pragma once
+
 #include <vector>
 #include <string>
 
@@ -22,3 +23,7 @@ namespace Debug {
 #define logError(message)   if (logger != nullptr) logger->Errors.logMessage(message);
 #define logWarning(message) if (logger != nullptr) logger->Warnings.logMessage(message);
 #define logDebug(message)   if (logger != nullptr) logger->Debugs.logMessage(message);
+
+#undef logError
+#undef logWarning
+#undef logDebug

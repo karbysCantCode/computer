@@ -1,6 +1,10 @@
 #include "arch.hpp"
 
 #include <sstream>
+#include <charconv>
+
+#include "lexHelper.hpp"
+#include "fileHelper.hpp"
 
 std::string Arch::Instruction::Instruction::toString(size_t padding) const {
   std::ostringstream str;
@@ -48,27 +52,289 @@ std::string Arch::DataType::toString(size_t padding) const {
   return str.str();
 }
 
-constexpr const char* Arch::Token::typeToString() {
+constexpr const char* Arch::Token::typeToString() const {
   switch (m_type) {
-    case Type::UNASSIGNED: return "UNASSIGNED";
     case Type::KEYWORD:    return "KEYWORD";
-    case Type::OPENPAREN:  return "OPENPAREN";
-    case Type::CLOSEPAREN: return "CLOSEPAREN";
-    case Type::OPENBLOCK:  return "OPENBLOCK";
-    case Type::CLOSEBLOCK: return "CLOSEBLOCK";
-    case Type::STRING:     return "STRING";
-    case Type::IDENTIFIER: return "IDENTIFIER";
-    case Type::COMMA:      return "COMMA";
-    case Type::INVALID:    return "INVALID";
-    default: return "UNKNOWN";
+    case Type::IDENTIFIER:    return "IDENTIFIER";
+    case Type::ARGUMENTTYPE:     return "ARGUMENTTYPE";
+    case Type::UNASSIGNED:     return "UNASSIGNED";
+    case Type::NEWLINE:     return "NEWLINE";
+    default:                    return "UNKNOWN";
   }
 }
 
 std::string Arch::Token::toString(size_t padding) const {
-  std::
-  std::cout << std::setw(padding) << "Token Type: " << toString(this->type) << '\n'
-            << std::setw(padding) << "    " << "Token Value: \"" << this->value << "\"" << '\n'
-            << std::setw(padding) << "    " << "Line: " << this->line << '\n'
-            << std::setw(padding) << "    " << "Col:  " << this->column << std::endl;
+  std::ostringstream str;
+  std::string indent(padding, ' ');
+  str << indent << "Token Type: " << this->typeToString() << '\n'
+            << indent << "    " << "Token Value: \"" << this->m_value << "\"" << '\n'
+            << indent << "    " << "Line: " << this->m_line << '\n'
+            << indent << "    " << "Col:  " << this->m_column << std::endl;
+  return str.str();
 }
 
+std::vector<Arch::Token> Arch::lex(std::filesystem::path& sourcePath, Debug::FullLogger* logger) {
+  LexHelper lexHelper(FileHelper::openFileToString(sourcePath));
+  if (lexHelper.m_source.empty()) {return {};}
+  std::vector<Token> tokens;
+
+  #define notAtEnd() lexHelper.notAtEnd()
+  #define skipWhitespace(arg) lexHelper.skipWhitespace(arg)
+  #define peek(arg) lexHelper.peek(arg)
+  #define line lexHelper.m_line
+  #define column lexHelper.m_column
+  #define consume() lexHelper.consume()
+  #define skipComment(arg) lexHelper.skipComment(arg)
+  #define getUntilWordBoundary() lexHelper.getUntilWordBoundary()
+
+  while (notAtEnd()) {
+    if (skipWhitespace(true)) {tokens.emplace_back(std::string{'\n'}, Token::Type::NEWLINE, line, column);}
+    if (!notAtEnd()) {break;}
+
+    char c = peek();
+    
+    if (c == ';') {
+      skipComment(false);
+    } else if (c == '.') {
+      consume();
+      tokens.emplace_back(getUntilWordBoundary(),Token::Type::KEYWORD, line, column);
+    } else if (c == '\n') {
+      tokens.emplace_back(std::string{'\n'}, Token::Type::NEWLINE, line, column);
+    } else {
+      const std::string value = getUntilWordBoundary();
+      if (value == "REG" || value == "IMM") {
+        tokens.emplace_back(value,Token::Type::ARGUMENTTYPE, line, column);
+      } else {
+        tokens.emplace_back(value,Token::Type::IDENTIFIER, line, column);
+      }
+      
+    }
+  }
+  return tokens;
+  
+  #undef notAtEnd
+  #undef skipWhitespace
+  #undef peek
+  #undef line 
+  #undef column 
+  #undef consume
+  #undef skipComment
+  #undef getUntilWordBoundary
+}
+
+void Arch::assembleTokens(std::vector<Token>& tokens, Architecture& targetArch, Debug::FullLogger* logger) {
+  size_t pos = 0;  
+
+  #define logError(ErrorMessage) \
+  if (logger != nullptr) (logger->Errors.logMessage(ErrorMessage))
+
+  #define tokenisingError(tokenType, ErrorMessage)          \
+  if (!notAtEnd() || peek().m_type != tokenType)        \
+  {logError(ErrorMessage); continue;}
+
+  auto safe_stoi = [&](const std::string&s, int& out) -> bool {
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), out);
+    return ec == std::errc() && ptr == s.data() + s.size();
+  };
+  auto notAtEnd = [&]() -> bool {
+    return pos < tokens.size();
+  };
+  auto peek = [&](size_t t = 0) -> Token {
+    return (pos+t < tokens.size()) ? 
+      tokens[pos+t] 
+      : 
+      Token();
+  };
+  auto consume = [&]() -> Token {
+    const auto token = tokens[pos]; 
+    pos++; 
+    return token;
+  };
+  auto parseRange = [&](const std::string& str, size_t* pos) -> std::string {
+    std::string range;
+    while ((*pos) < str.length() && str[*pos] != '<') {
+      range.push_back(str[*pos]);
+      (*pos)++;
+    }
+    if (*pos < str.length() && str[*pos] == '<') {(*pos)++;}
+    return range;
+  };
+  auto parseArgument = [&]() -> Arch::Instruction::Argument {
+  Arch::Instruction::Argument argument;
+  const Token& typeToken = consume();
+  if (typeToken.m_value == "REG") {
+    argument.m_type = Arch::Instruction::Argument::Type::REGISTER;
+  } else if (typeToken.m_value == "IMM") {
+    argument.m_type = Arch::Instruction::Argument::Type::IMMEDIATE;
+  } else if (typeToken.m_value == "NON") {
+    argument.m_type = Arch::Instruction::Argument::Type::NONE;
+    return argument;
+  } else {
+    argument.m_type = Arch::Instruction::Argument::Type::INVALID;
+  }
+
+  if (!notAtEnd() || peek().m_type != Token::Type::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
+  
+  argument.m_alias = consume().m_value;
+
+  if (!notAtEnd() || peek().m_type != Token::Type::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
+
+  //parse the range :(
+  const Token& rangeToken = consume();
+  switch (argument.m_type) {
+    //register range
+    case Arch::Instruction::Argument::Type::REGISTER: {
+      size_t tokenPos = 0;
+      argument.m_range = std::make_shared<Arch::Instruction::RegisterRange>();
+      while (tokenPos < rangeToken.m_value.length()) {
+        const std::string currentRange = parseRange(rangeToken.m_value,&tokenPos);
+        std::string lowerStr;
+        std::string lowerNumber;
+        std::string higherNumber;
+        std::string prefix;
+        std::string postfix;
+        size_t dashPos = 0;
+        bool isRange = false;
+        while (dashPos < currentRange.length()) {
+          const char c = currentRange[dashPos];
+          if (c == '-') {isRange = true;}
+          else if (!isdigit(c) && !isRange) {prefix.push_back(c);}
+          else if (!isdigit(c) && isRange) {postfix.push_back(c);}
+          else if (isdigit(c) && !isRange) {lowerNumber.push_back(c);}
+          else if (isdigit(c) && isRange) {higherNumber.push_back(c);}
+          lowerStr.push_back(c);
+          dashPos++;
+        }
+        
+        if (isRange) {
+          if (prefix != postfix) {logError("mismatched range prefix \"" + prefix + "\" and \"" + postfix + "\" @ " + rangeToken.positionToString()); return argument;}
+          
+          const int minReg = std::stoi(lowerNumber);
+          const int maxReg = std::stoi(higherNumber);
+          if (minReg > maxReg) {logError("invalid range of registers (err is: min > max) @ " + rangeToken.positionToString()); return argument;}
+          
+          for (int i = minReg; i <= maxReg; i++) {
+            argument.m_range.get()->addToRegisterRange(prefix + std::to_string(i));
+          }
+        } else {
+          argument.m_range.get()->addToRegisterRange(currentRange);
+        }
+      }
+      break;
+    }
+    // immediate range
+    case Arch::Instruction::Argument::Type::IMMEDIATE: {
+      size_t tokenPos = 0;
+      int leftValue = 0;
+      int rightValue = 0;
+      bool secondHalf = false;
+      std::string left;
+      std::string current;
+      while (tokenPos < rangeToken.m_value.length()) {
+        const char c = rangeToken.m_value[tokenPos];
+        tokenPos++;
+        if (c == ':') {
+          left = current;
+          secondHalf = true;
+          continue;
+        }
+        current.push_back(c);
+      }
+
+      if (!(safe_stoi(left,leftValue) && safe_stoi(current,rightValue))) {
+        logError("Could not parse string to integers at " + rangeToken.positionToString());
+        break;
+      }
+
+      if (leftValue > rightValue) {
+        argument.m_range = std::make_shared<Arch::Instruction::ImmediateRange>(rightValue,leftValue);
+      } else {
+        argument.m_range = std::make_shared<Arch::Instruction::ImmediateRange>(leftValue,rightValue);
+      }
+      break;
+    }
+    default: 
+    logError("Expected range type, got " + std::string(argument.typeToString()) + " at " + rangeToken.positionToString());
+    break;
+  }
+
+  return argument;
+  };
+
+  while (notAtEnd()) {
+    const auto& token = peek();
+    if (token.m_type == Token::Type::KEYWORD) {
+
+      if (token.m_value == "format") {
+        consume();
+        Arch::Format format;
+        tokenisingError(Token::Type::IDENTIFIER,"Invalid format at " + token.positionToString())
+        const auto& formatToken = consume();
+        format.m_alias = formatToken.m_value;
+        
+        int bitwidth = 0;
+        while (notAtEnd() && peek().m_type == Token::Type::IDENTIFIER) {
+          const int operandBitwidth = std::stoi(consume().m_value);
+          bitwidth += operandBitwidth;
+          format.m_operandBitwidth.push_back(operandBitwidth);
+        }
+        if (bitwidth != targetArch.m_bitwidth) {logError("Invalid bitwidth of format \"" + format.m_alias + "\" at " + formatToken.positionToString());}
+        targetArch.m_formats.emplace(format.m_alias, std::move(format));
+
+      } else if (token.m_value == "bitwidth") {
+        consume();
+        if (notAtEnd() && peek().m_type == Token::Type::IDENTIFIER) {
+          targetArch.m_bitwidth = std::stoi(consume().m_value);
+        }
+      } else if (token.m_value == "layout") {
+        consume();
+        assert(false);
+        // not implemented
+      } else if (token.m_value == "datatype") {
+        consume();
+        tokenisingError(Token::Type::IDENTIFIER,"Invalid data typename at " + token.positionToString());
+        const std::string dataTypeName = peek().m_value;
+        consume();
+        tokenisingError(Token::Type::IDENTIFIER,"Invalid data type byte length at " + token.positionToString());
+        //if ()
+        assert(false);
+        // not implemented
+      } else if (token.m_value == "reg") {
+        consume();
+        tokenisingError(Token::Type::IDENTIFIER,"Invalid register identifier at " + token.positionToString());
+        
+      } else {
+        std::cout << "ASSERTED_A" << std::endl;
+        std::cout << token.m_value << std::endl;
+        assert(false);
+        //bad!
+      }
+    } else {
+      //new instruction hopefully
+      Arch::Instruction::Instruction instruction;
+      instruction.m_opcode = targetArch.m_instructionSet.size();
+      const auto& nameToken = consume();
+      if (nameToken.m_type == Token::Type::NEWLINE) {
+        targetArch.m_nameSet.emplace(instruction.m_name);
+        targetArch.m_instructionSet.emplace(instruction.m_name, std::move(instruction));
+        continue;
+      }
+      instruction.m_name = nameToken.m_value;
+      if (!notAtEnd()) {logError("incomplete instruction @ " + token.positionToString()); continue;}
+
+      const auto& formatToken = consume();
+      if (formatToken.m_type == Token::Type::NEWLINE) {
+        targetArch.m_nameSet.emplace(instruction.m_name);
+        targetArch.m_instructionSet.emplace(instruction.m_name, std::move(instruction));
+        continue;
+      }
+      instruction.m_formatAlias = formatToken.m_value;
+      while (peek().m_type == Token::Type::ARGUMENTTYPE) {
+        instruction.m_arguments.emplace_back(parseArgument());
+      }
+
+      targetArch.m_nameSet.emplace(instruction.m_name);
+        targetArch.m_instructionSet.emplace(instruction.m_name, std::move(instruction));
+    }
+  }
+}

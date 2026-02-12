@@ -114,3 +114,15 @@ class LexHelper {
 #define skipComment(arg) lexHelper.skipComment(arg)
 #define consumeString(arg) lexHelper.consumeString(arg)
 #define getUntilWordBoundary() lexHelper.getUntilWordBoundary()
+
+#undef notAtEnd
+#undef skipWhitespace
+#undef peek
+#undef line 
+#undef column 
+#undef isWordBoundary
+#undef consume
+#undef isKeyword
+#undef skipComment
+#undef consumeString
+#undef getUntilWordBoundary

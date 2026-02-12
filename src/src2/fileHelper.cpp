@@ -14,7 +14,7 @@ std::string FileHelper::openFileToString(const std::filesystem::path& path) {
   std::string file_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   return file_contents;
 }
-std::string openFileToString(const std::filesystem::path& path, Debug::FullLogger* logger) {
+std::string FileHelper::openFileToString(const std::filesystem::path& path, Debug::FullLogger* logger) {
   std::ifstream file(path.generic_string());
   if (!file.is_open()) {
       if (logger != nullptr) {logger->Errors.logMessage("Lexer failed to open the file \"" + path.generic_string() + '\"');}
@@ -25,7 +25,7 @@ std::string openFileToString(const std::filesystem::path& path, Debug::FullLogge
   std::string file_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   return file_contents;
 }
-std::string openFileToString(const std::filesystem::path& path, Debug::MessageLogger* mlogger) {
+std::string FileHelper::openFileToString(const std::filesystem::path& path, Debug::MessageLogger* mlogger) {
   {
   std::ifstream file(path.generic_string());
   if (!file.is_open()) {

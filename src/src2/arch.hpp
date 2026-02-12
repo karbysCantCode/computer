@@ -6,21 +6,19 @@
 #include <unordered_map>
 #include <iostream>
 #include <cassert>
+#include <filesystem>
+
+#include "debugHelpers.hpp"
 
 namespace Arch {
 
 struct Token {
   enum class Type {
-    UNASSIGNED,
     KEYWORD,
-    OPENPAREN,
-    CLOSEPAREN,
-    OPENBLOCK,
-    CLOSEBLOCK,
-    STRING,
+    ARGUMENTTYPE,
     IDENTIFIER,
-    COMMA,
-    INVALID
+    NEWLINE,
+    UNASSIGNED
   };
   std::string m_value;
   Type m_type = Type::UNASSIGNED;
@@ -31,9 +29,9 @@ struct Token {
   inline void setType(const Type& newType) {m_type=newType;}
   std::string toString(size_t padding) const;
   std::string positionToString() const {return m_line < 0 || m_column < 0 ? std::string("END OF FILE") : "line " + std::to_string(m_line) + ", column " + std::to_string(m_column);}
-  constexpr const char* typeToString();
+  constexpr const char* typeToString() const;
   
-  Token(const std::string& val, const Type t, int ln, int col) :
+  Token(const std::string& val = {}, const Type t = Type::UNASSIGNED, int ln = -1, int col = -1) :
     m_value(val), m_type(t), m_line(ln), m_column(col) {}
   
   Token(const char val, const Type t, int ln, int col) :
@@ -158,5 +156,6 @@ class Architecture {
   }
 };
 
-std::vector<
+std::vector<Token> lex(std::filesystem::path& sourcePath, Debug::FullLogger* logger = nullptr);
+void assembleTokens(std::vector<Token>& tokens, Architecture& targetArch, Debug::FullLogger* logger = nullptr);
 }

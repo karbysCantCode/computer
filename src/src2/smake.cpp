@@ -1,5 +1,3 @@
-#pragma once
-
 #include "smake.hpp"
 
 #include "lexHelper.hpp"
@@ -131,7 +129,7 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       if (ec) {success = false; continue;} 
       if (std::filesystem::is_directory(it->path())) {
         if ((type == SearchType::CDEPTH && searchDepth < 1) || type == SearchType::SHALLOW) {continue;}
-        if (!searchHandler(targetList,fileExtentions, it->path(), type, searchDepth - 1)) {logError("Error while searching path \"" + it->path().u8string() + "\" from string at " + peek().positionToString()); success = false;}
+        if (!self(self, targetList,fileExtentions, it->path(), type, searchDepth - 1)) {logError("Error while searching path \"" + it->path().u8string() + "\" from string at " + peek().positionToString()); success = false;}
       } else {
         targetList.m_filepaths.insert(it->path());
       }
@@ -429,12 +427,12 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       pos += 8;
       return;
     }
-
-    if (targetIterator->second.preprocessorReplacements.find(peek(4).m_value) != targetIterator->second.preprocessorReplacements.end()) {
-      logError("Redeclaration of preprocessor definition (replacment target:) \"" + peek(4).m_value + "\" at " + peek(4).positionToString());
-      return;
-    }
-    targetIterator->second.preprocessorReplacements.emplace(peek(4).m_value, PreprocessorReplacement{peek(4).m_value, peek(6).m_value});
+    //TODO
+    // if (targetIterator->second.preprocessorReplacements.find(peek(4).m_value) != targetIterator->second.preprocessorReplacements.end()) {
+    //   logError("Redeclaration of preprocessor definition (replacment target:) \"" + peek(4).m_value + "\" at " + peek(4).positionToString());
+    //   return;
+    // }
+    // targetIterator->second.preprocessorReplacements.emplace(peek(4).m_value, PreprocessorReplacement{peek(4).m_value, peek(6).m_value});
   };
   auto parseKeywordEntry = [&]() {
     int tokenError = validateTokenTypes({
