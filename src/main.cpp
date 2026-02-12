@@ -7,10 +7,12 @@
 #include "archBuilder.hpp"
 #include "arch.hpp"
 #include "spasmPreprocessor.hpp"
+#include "fileHelper.hpp"
 
 int main(int argc, char* argv[]) {
   std::filesystem::path fpath("resources/macroTest.spasm"); //"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/resources/test.spasm";
-  std::filesystem::path archpath("resources/test.arch");
+  std::filesystem::path archpath("resources/archRev2.arch");
+  std::filesystem::path archdumppath("resources/archDump.arch");
   
   ArchBuilder archBuilder;
   Lexer archLexer;
@@ -21,16 +23,18 @@ int main(int argc, char* argv[]) {
     token.print(0);
   }
 
+  std::string compArchStr;
   Architecture::Architecture arch = archBuilder.build(archTokens);
   for (const auto& instr : arch.m_instructionSet) {
-    instr.second.print(0);
+    compArchStr.append(instr.second.toString(0));
   }
-  std::cout << "name set" << std::endl;
+  compArchStr.append("name set\n");
   for (const auto& thing : arch.m_instructionSet) {
-    std::cout << thing.second.name << std::endl;
+    compArchStr.append(thing.second.name + '\n');
   }
-  std::cout << "name end with: " << arch.m_instructionSet.size() << " instructions."<< std::endl;
-
+  compArchStr.append("name end with: " + std::to_string(arch.m_instructionSet.size()) + " instructions.\n");
+  std::cout << "Dump";
+  dumpString(archdumppath,compArchStr);
   Lexer asmLexer(&arch.m_instructionNameSet);
   std::string asmSource = asmLexer.readFile(fpath.string());
   asmLexer.source = &asmSource;

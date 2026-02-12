@@ -62,6 +62,7 @@ Architecture::Architecture ArchBuilder::build(std::vector<ArchToken::ArchToken>&
         
       } else {
         std::cout << "ASSERTED_A" << std::endl;
+        std::cout << token.value << std::endl;
         assert(false);
         //bad!
       }
@@ -104,6 +105,9 @@ Architecture::Instruction::Argument ArchBuilder::parseArgument() {
     argument.type = Architecture::Instruction::ArgumentTypes::REGISTER;
   } else if (typeToken.value == "IMM") {
     argument.type = Architecture::Instruction::ArgumentTypes::IMMEDIATE;
+  } else if (typeToken.value == "NON") {
+    argument.type = Architecture::Instruction::ArgumentTypes::NONE;
+    return argument;
   } else {
     argument.type = Architecture::Instruction::ArgumentTypes::INVALID;
   }

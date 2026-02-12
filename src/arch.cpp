@@ -1,22 +1,27 @@
 #include "arch.hpp"
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 
-void Architecture::Instruction::Instruction::print(size_t padding) const {
-  std::cout << std::setw(padding) << "Instruction name: " << this->name << '\n'
-            << std::setw(padding) << "    " << "Opcode: \"" << this->opcode << "\"" << '\n'
-            << std::setw(padding) << "    " << "Format alias: " << this->formatAlias << '\n'
-            << std::setw(padding) << "    " << "Arguments: " << '\n';
+std::string Architecture::Instruction::Instruction::toString(size_t padding) const {
+  std::ostringstream str;
+  std::string indent(padding, ' ');
+  std::string indentArg(padding + 8, ' ');
+  str <<       indent << "Instruction name: " << this->name << '\n'
+            << indent << "    " << "Opcode: \"" << this->opcode << "\"" << '\n'
+            << indent << "    " << "Format alias: " << this->formatAlias << '\n'
+            << indent << "    " << "Arguments: " << '\n'; 
 
   for (const auto& arg : this->arguments) {
-    std::cout << std::setw(padding + 8) << "    " << arg.toString(padding + 8);
+    str << indentArg << "    " << arg.toString(padding + 8);
   }
 
-  std::cout << std::endl;
+  str << std::endl;
+  return str.str();
 }
 
 std::string Architecture::Instruction::Argument::toString(size_t padding) const {
-  return "Argument Alias: " + this->alias + '\n' + std::string(padding, ' ') + "    Type: " + this->typeToString() + '\n' + std::string(padding, ' ') + "    Range: " + this->range.get()->toString() + '\n';
+  return "Argument Alias: " + alias + '\n' + std::string(padding, ' ') + "    Type: " + typeToString() + '\n' + std::string(padding, ' ') + "    Range: " + range.get()->toString() + '\n';
 }
 
 void Architecture::Architecture::Format::print(size_t padding) const {

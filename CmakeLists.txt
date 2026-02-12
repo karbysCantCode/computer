@@ -4,7 +4,7 @@ project(cpu_software)
 
 
 # Find all C++ source files in src directory
-file(GLOB_RECURSE SOURCES "src/*.cpp")
+file(GLOB_RECURSE SOURCES "src/src2/*.cpp")
 
 # Create executable target
 add_executable(cpu_software ${SOURCES})

@@ -5,68 +5,75 @@
 .format immediate      6 4  6
 .format smallImmediate 6 3  3 4
 .format fullImmediate  6 10 
-.format special        6 2  3 5
+.format special        6 1  4 
+.format special2        6 2  4 4
 
 ;normal regs
 .reg r0-r15  16   ; 16
-.reg sp      27   ;  1
-.reg fp      27   ;  1
+.reg sp      27   ;  1  (32 bits, but only the bottom 27 are read by any instruction) 
+.reg fp      27   ;  1  (32 bits, but only the bottom 27 are read by any instruction) 
+.reg ip      27   ;  1  (32 bits, but only the bottom 27 are read by any instruction) 
+.reg mem     11   ;  1  (16 bits, but only the bottom 11 are read by any instruction) 
 .reg w0-w3   32   ;  4
-.reg wl0-wl4 16   ;  4
-.reg wh0-wh4 16   ;  4
+.reg wl0-wl3 16   ;  4
+.reg wh0-wh3 16   ;  4
 
 ;control regs
 .reg ctx     8    ;  1
 .reg mmio    8    ;  1
 .reg priv    8    ;  1
+.reg state  10    ;  1
 
 
 ;Arithmetic and logic
-  add normal REG rd r0-r15
-             REG ra r0-r7
-             REG rb r0-r7 ;add
-  adc normal REG rd r0-r15
-             REG ra r0-r7
-             REG rb r0-r7  ;add with carry
-  adi immediate REG rd r0-r15
-                IMM immediate 0:63 ;add immediate
+  add normal REG rd r0-r15 ;add REG ra r0-r7 REG rb r0-r7 
+  adc normal REG rd r0-r15 ;add with carry REG ra r0-r7 REG rb r0-r7  
+  adi immediate REG rd r0-r15 IMM immediate 0:63 ;add immediate
+  adli two   REG rd r0-r15<wl0-wl3<wh0-wh3  IMM immediate 0:65535  ;add 16 bit immediate
 
-  sub 
-  sbc
-  sbi
+  sub normal REG rd r0-r15                       ;sub REG ra r0-r7 REG rb r0-r7 
+  sbc normal REG rd r0-r15                       ;sub with carry REG ra r0-r7 REG rb r0-r7  
+  sbi immediate REG rd r0-r15 IMM immediate 0:63 ;sub immediate
+  sbli two   REG rd r0-r15<wl0-wl3<wh0-wh3 IMM immediate 0:65535  ;sub 16 bit immediate
 
-  mul
+  mull normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
+  mulh normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
 
-  and  ;and
-  andi ;and immediate
-  or   ;or
-  ori  ;or immediate
-  not  ;not
-  xor  ;xor
-  xori ;xor immediate
+  and  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;and
+  andi normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;and immediate (stored in next 2 bytes)
+  or   normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;or
+  ori  normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;or immediate (stored in next 2 bytes)
+  not  normal REG rd r0-r15 REG ra r0-r7  ;not
+  xor  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;xor
+  xori normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;xor immediate (stored in next 2 bytes)
 
-  shl   normal REG rd ... REG rA ... REG rB ...                    ; rd = rA << rB
-  shli  smallImmediate REG rd ... REG rA ... IMM immediate 0:15    ; rd = rA << immediate
-  shr   normal REG rd ... REG rA ... REG rB ...                    ; rd = rA >> rB
-  shri  smallImmediate REG rd ... REG rA ... IMM immediate 0:15    ; rd = rA >> immediate
-  ror   normal REG rd ... REG rA ... REG rB ...       ; rotate right
-  rori          ; rotate right immediate
+  shl   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA << rB
+  shli  smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA << immediate
+  shr   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA >> rB
+  shri  smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA >> immediate
+  ror   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rotate right
+  rori  smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rotate right immediate
+
+  clz   normal REG rd r0-r15 REG rA r0-r7       ; count leading zeros
 
 ;memory
-  lod  normal
-  lodi immediate  ;rd = [memoryOffset << 6 | immediate]
-  sto  normal
-  stoi immediate
 
-  push two
-  pop  two
+  ;mode 0: full 2bytes little endian
+  ;mode 1: low  byte
+  ;mode 2: high byte
+  lod  special2 REG rd r0-r15 REG ra r0-r15 IMM mode 0:2     ; rd = [mem << 16 | ra]
+  sto  special2 REG rs r0-r15 REG ra r0-r15 IMM mode 0:2     ; [mem << 16 ra] = rs
+
+  push two REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; [sp] = rs, sp -= 2
+  pop  two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; sp += 2  , rs = [sp]
 
 
 ;moves
   cmov   normal
-  mov    two    REG rd ... REG rs ...      ;rd = rs
+  swap
+  mov    two    REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ;rd = rs (truncates or discards MSB's for mismatched bitwidths)
 
-  movi   two REG rd ... IMM mode 0:15 
+  movi   two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp IMM mode 0:15 
   ; first arg rd, and the 2nd arg describes how the bytes are loaded
   ; modes:
   ; 0 = two bytes (little endian)
@@ -78,10 +85,29 @@
   ; 6 = 32 bit bus lower word
   ; 7 = 32 bit bus upper word
 
-  ctlmv  special IMM mode 0:3 REG rN r0-r7 REG ... rS ;if lsb mode set, then it is storing (otherwise load) TO the control, if MSB set 
+  ctlmv  special IMM mode 0:3 REG rN r0-r7 REG ctx<mmio<<priv<<state rS ;if mode set, then it is storing (otherwise load) TO the control
 
-;branches
+;control flow
+nop  fullImmediate 
+halt fullImmediate
+sint fullImmediate NON
 cmp  ;
 tst  ;
 
+brc  two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch register
+brca immediate IMM condition 0:15 IMM offset 0:63 ; branch add
+brcs immediate IMM condition 0:15 IMM offset 0:63 ; branch sub
+bala immediate IMM condition 0:15 IMM offset 0:63 ; branch and link add
+bals immediate IMM condition 0:15 IMM offset 0:63 ; branch and link sub
+balr two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch and link register
+
+jmpa fullImmediate IMM offset 0:1023 ; jump add
+jmps fullImmediate IMM offset 0:1023 ; jump sub
+jala fullImmediate IMM offset 0:1023 ; jump and link add
+jals fullImmediate IMM offset 0:1023 ; jump and link sub
+jalr two       REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp ; jump and link register
+
+
 ;state
+sset fullImmediate 0:1023 ;IMM | stateRegister  sets the bits in the immediate
+sclr fullImmediate 0:1023 ;~IMM & stateRegister clears the bits in the immediate

@@ -68,6 +68,7 @@ namespace Instruction {
   enum class ArgumentTypes {
     REGISTER,
     IMMEDIATE,
+    NONE,
     INVALID,
     UNKNOWN
   };
@@ -95,7 +96,7 @@ namespace Instruction {
     std::string formatAlias;
     int opcode = -1;
 
-    void print(size_t padding = 0) const;
+    std::string toString(size_t padding = 0) const;
   };
 }
 
