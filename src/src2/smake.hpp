@@ -82,7 +82,9 @@ struct Target {
 
   Target(std::string name) : m_name(name) {}
 
-  constexpr const char* formatToString() {
+  std::string toString(size_t padding = 0, size_t indnt = 0) const;
+
+  constexpr const char* formatToString() const {
     switch (m_outputFormat)
     {
     case Format::BIN:
@@ -106,9 +108,10 @@ struct FList {
   std::unordered_set<std::filesystem::path> m_filepaths;
   std::string m_name;
 
-  std::string toString() const {
+  std::string toString(size_t ) const {
     std::ostringstream oss;
-    oss << m_name << '\n';
+    oss << "Name:" << m_name << '\n';
+
     for (const auto& path : m_filepaths) {
       oss << "    \"" << path.u8string() << "\"\n";
     }
@@ -118,10 +121,10 @@ struct FList {
 
 class SMakeProject {
   public:
-  std::unordered_map<std::string, Target> targets;
-  std::unordered_map<std::string, FList> flists;
-  std::unordered_set<std::string> labels;
-  std::filesystem::path makefilePath;
+  std::unordered_map<std::string, Target> m_targets;
+  std::unordered_map<std::string, FList> m_flists;
+  std::unordered_set<std::string> m_labels;
+  std::filesystem::path m_makefilePath;
 
 
 
@@ -129,11 +132,8 @@ class SMakeProject {
 
   int build(const std::vector<Token>& tokens);
 
-  std::string toString() const {
-    std::ostringstream str;
-    // str << "SMake File \"" << 
-    return "";
-  }
+  std::string toString() const;
+  
   private:
 };
 

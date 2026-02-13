@@ -5,11 +5,16 @@
 #include "lexHelper.hpp"
 #include "fileHelper.hpp"
 
+
+
 SMake::SMakeProject::SMakeProject() {}
 
 std::vector<SMake::Token> SMake::lex(std::filesystem::path path, Debug::FullLogger* logger) {
   LexHelper lexHelper(FileHelper::openFileToString(path, logger));
   if (lexHelper.m_source.empty()) {return {};}
+
+  std::cout << "[file start]" << lexHelper.m_source << "[file end]" << std::endl;
+
   std::unordered_set<std::string> kwords = {
     "target",
     "include_directory",
@@ -49,36 +54,48 @@ std::vector<SMake::Token> SMake::lex(std::filesystem::path path, Debug::FullLogg
 
     char c = peek();
 
+    std::string val;
     switch (c) {
       case '.':
         consume();
         if(!notAtEnd()) {continue;}
-        tokens.emplace_back(getUntilWordBoundary(),SMake::Token::Type::KEYWORD,line,column);
+        val = getUntilWordBoundary();
+        tokens.emplace_back(val,SMake::Token::Type::KEYWORD,line,column);
       break;
       case '(':
-        tokens.emplace_back(consume(), SMake::Token::Type::OPENPAREN, line,column);
+        val = std::to_string(consume());
+        tokens.emplace_back(val, SMake::Token::Type::OPENPAREN, line,column);
       break;
       case ')':
-        tokens.emplace_back(consume(), SMake::Token::Type::CLOSEPAREN, line,column);
+        val = std::to_string(consume());
+        tokens.emplace_back(val, SMake::Token::Type::CLOSEPAREN, line,column);
       break;
       case '{':
-        tokens.emplace_back(consume(), SMake::Token::Type::OPENBLOCK, line,column);
+        val = std::to_string(consume());
+        tokens.emplace_back(val, SMake::Token::Type::OPENBLOCK, line,column);
       break;
       case '}':
-        tokens.emplace_back(consume(), SMake::Token::Type::CLOSEBLOCK, line,column);
+        val = std::to_string(consume());
+        tokens.emplace_back(val, SMake::Token::Type::CLOSEBLOCK, line,column);
       break;
       case '"':
       case '\'':
-        tokens.emplace_back(consumeString(c), SMake::Token::Type::STRING, line, column);
+        val = consumeString(c);
+        tokens.emplace_back(val, SMake::Token::Type::STRING, line, column);
       break;
       case ',':
-        tokens.emplace_back(consume(), SMake::Token::Type::COMMA, line,column);
+        val = std::to_string(consume());
+        tokens.emplace_back(val, SMake::Token::Type::COMMA, line,column);
       break;
       default: 
-        tokens.emplace_back(getUntilWordBoundary(),SMake::Token::Type::IDENTIFIER,line,column);
+        val = getUntilWordBoundary();
+        tokens.emplace_back(val,SMake::Token::Type::IDENTIFIER,line,column);
       break;
     }
+
+    std::cout << val << std::endl;
   }
+  std::cout << "LEXING END" << std::endl;
   return tokens;
 
   #undef notAtEnd
@@ -616,12 +633,86 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     }
   };
 
+  std::unordered_map<std::string, std::function<void()>> tokenParseHashMap = {
+  {"target", parseKeywordTarget},
+  {"include_directory", parseKeywordInclude_Directory},
+  {"working_directory", parseKeywordWorking_Directory},
+  {"flist", parseKeywordFlist},
+  {"search_set", parseKeywordSearchSet},
+  {"search_add", parseKeywordSearchAdd},
+  {"add_target", parseKeywordAddTarget},
+  {"define", parseKeywordDefine},
+  {"entry", parseKeywordEntry},
+  {"output", parseKeywordOutput},
+  {"format", parseKeywordFormat},
+  {"depends", parseKeywordDepends},
+  {"label", parseKeywordLabel},
+  {"ifdef", parseKeywordIfdef},
+  {"ifndef", parseKeywordIfndef}
+  };
+
+  targetProject.m_makefilePath = makefilePath;
+
   while (!isAtEnd()) {
-    if (peek().m_type != Token::Type::KEYWORD) {logError("Unexpected token \"" + peek().m_value + "\", type: " + peek().typeToString() + " at " + peek().positionToString());advance();}
-    std::cout << advance().m_value << std::endl;
-    // switch (peek().m_value) {
-    //   case 
-    // }
+    if (peek().m_type != Token::Type::KEYWORD) {logError("Unexpected token \"" + peek().m_value + "\", type: " + peek().typeToString() + " at " + peek().positionToString());advance(); continue;}
+    const auto& token = advance();
+    auto it = tokenParseHashMap.find(token.m_value);
+    if (it == tokenParseHashMap.end()) {logError("Unknown keyword \"" + token.m_value + "\" at " + token.positionToString());continue;}
+    it->second();
   }
 
+}
+
+std::string SMake::SMakeProject::toString() const {
+  std::ostringstream str;
+  str << "SMake file path: \"" << m_makefilePath.generic_string() << "\"\n"
+      << "  Targets:\n";
+  for (const auto& target : m_targets) {
+    str << target.second.toString(4,2);
+  }
+  str << "  File lists (FLists):\n";
+  for (const auto& flist : m_flists) {
+    str << flist.second.toString(4,2);
+    static_assert(false); // complete the flist tostring, aswell as this tostring. then return to debug the SMAKE from the main()
+  }
+
+  return str.str();
+
+}
+
+std::string SMake::Target::toString(size_t padding, size_t indnt) const {
+  std::ostringstream str;
+  const std::string indent(indnt + padding, ' ');
+  const std::string indent2(indnt + padding * 2, ' ');
+  const std::string indent3(indnt + padding * 3, ' ');
+  str << indent << "Target name: \"" << m_name << "\"\n"
+      << indent2 << "Is built?" << (m_isBuilt ? "True" : "False")
+      << indent2 << "Working directory: \"" << m_workingDirectory << "\"\n"
+      << indent2 << "Entry symbol: \"" << m_entrySymbol << "\"\n"
+      << indent2 << "Output format: \"" << formatToString() << "\"\n"
+      << indent2 << "Output directory: \"" << m_outputDirectory << "\"\n"
+      << indent2 << "Output name: \"" << m_outputName << "\"\n"
+      << indent2 << "Collated Included Directories\n";
+  
+  for (const auto& path : m_includeDirectories) {
+    str << indent3 << path.generic_string() << '\n';
+  }
+
+  str << indent2 << "Source file paths\n";
+  for (const auto& path : m_sourceFilepaths) {
+    str << indent3 << path.generic_string() << '\n';
+  }
+
+  str << indent2 << "Dependant targets\n";
+  for (const auto& targetPtr : m_dependantTargets) {
+    if (targetPtr != nullptr) {
+      str << indent3 << '"' << targetPtr->m_name << '"\n';
+    }
+  }
+
+
+      //static_assert(false); //not finished
+
+    return str.str();
+      
 }

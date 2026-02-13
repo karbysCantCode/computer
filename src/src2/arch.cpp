@@ -74,7 +74,8 @@ std::string Arch::Token::toString(size_t padding) const {
 }
 
 std::vector<Arch::Token> Arch::lex(std::filesystem::path& sourcePath, Debug::FullLogger* logger) {
-  LexHelper lexHelper(FileHelper::openFileToString(sourcePath));
+  auto errptr = logger == nullptr ? nullptr : &logger->Errors;
+  LexHelper lexHelper(FileHelper::openFileToString(sourcePath),nullptr,errptr);
   if (lexHelper.m_source.empty()) {return {};}
   std::vector<Token> tokens;
 

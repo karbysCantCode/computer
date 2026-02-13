@@ -4,27 +4,31 @@
 #include <unordered_set>
 #include <cassert>
 
+#include "debugHelpers.hpp"
+
 class LexHelper {
   public:
   size_t m_index = 0;
-  size_t m_column = 0;
-  size_t m_line = 0;
-  const std::string& m_source;
+  size_t m_column = 1;
+  size_t m_line = 1;
+  const std::string m_source;
   const std::unordered_set<std::string>* m_keywords;
+  Debug::MessageLogger* m_errorLogger;
 
-  LexHelper(const std::string& source, const std::unordered_set<std::string>* keywords = nullptr) : 
+  LexHelper(const std::string source, const std::unordered_set<std::string>* keywords = nullptr, Debug::MessageLogger* errorLogger = nullptr) : 
     m_source(source),
-    m_keywords(keywords) {}
+    m_keywords(keywords),
+    m_errorLogger(errorLogger) {}
 
   inline char peek(size_t distance = 0) {
     return m_index + distance < m_source.size() ? m_source[m_index+distance] : '\0';
   };
   inline char consume() {
     bool notOutOfRange = m_index < m_source.size();
-    m_index += notOutOfRange ? 1 : 0;
     m_column += notOutOfRange ? 1 : 0;
     char c = notOutOfRange ? m_source[m_index] : '\0';
-    if (c == '\n') {m_column = 0; m_line++;}
+    m_index += notOutOfRange ? 1 : 0;
+    if (c == '\n') {m_column = 1; m_line++;}
     return c;
   };
   inline bool notAtEnd() const {return m_index<m_source.size();}
@@ -55,7 +59,7 @@ class LexHelper {
       case '}':
         return true;
       default:
-        return (bool)std::isspace(c);
+        return std::isspace(c);
     }
   };
   inline void skipComment(bool isMultiline) {
@@ -85,7 +89,7 @@ class LexHelper {
         case '\\': c = '\\'; break;
         case '\'': c = '\''; break;
         case '"':  c = '"';  break;
-        default: assert(false); break; //should error somehow
+        default: if (m_errorLogger!=nullptr) {m_errorLogger->logMessage("Unknown escaped character \"\\" + std::to_string(next) + "\" at line " + std::to_string(m_line) + " column " + std::to_string(m_column));}; break; //should error somehow
       }
     }
     value.push_back(c);
@@ -103,26 +107,26 @@ class LexHelper {
 };
 
 // defines to shorthand lexHelper!
-#define notAtEnd() lexHelper.notAtEnd()
-#define skipWhitespace(arg) lexHelper.skipWhitespace(arg)
-#define peek(arg) lexHelper.peek(arg)
-#define line lexHelper.m_line
-#define column lexHelper.m_column
-#define isWordBoundary(arg) lexHelper.isWordBoundary(arg)
-#define consume() lexHelper.consume()
-#define isKeyword(arg) lexHelper.isKeyword(arg)
-#define skipComment(arg) lexHelper.skipComment(arg)
-#define consumeString(arg) lexHelper.consumeString(arg)
-#define getUntilWordBoundary() lexHelper.getUntilWordBoundary()
+// #define notAtEnd() lexHelper.notAtEnd()
+// #define skipWhitespace(arg) lexHelper.skipWhitespace(arg)
+// #define peek(arg) lexHelper.peek(arg)
+// #define line lexHelper.m_line
+// #define column lexHelper.m_column
+// #define isWordBoundary(arg) lexHelper.isWordBoundary(arg)
+// #define consume() lexHelper.consume()
+// #define isKeyword(arg) lexHelper.isKeyword(arg)
+// #define skipComment(arg) lexHelper.skipComment(arg)
+// #define consumeString(arg) lexHelper.consumeString(arg)
+// #define getUntilWordBoundary() lexHelper.getUntilWordBoundary()
 
-#undef notAtEnd
-#undef skipWhitespace
-#undef peek
-#undef line 
-#undef column 
-#undef isWordBoundary
-#undef consume
-#undef isKeyword
-#undef skipComment
-#undef consumeString
-#undef getUntilWordBoundary
+// #undef notAtEnd
+// #undef skipWhitespace
+// #undef peek
+// #undef line 
+// #undef column 
+// #undef isWordBoundary
+// #undef consume
+// #undef isKeyword
+// #undef skipComment
+// #undef consumeString
+// #undef getUntilWordBoundary

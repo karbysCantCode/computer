@@ -4,7 +4,7 @@
 .ifdef DEBUG {
     .search_add(main_files, shallow, ".spasm","")
 }
-.add_target(test, main_files, "software\hidy.spasm")
+.add_target(test, main_files, "software/hidy.spasm")
 .entry(test, "main")
 .output(test, "/build", "testexe.bin")
 .format(test, "bin")

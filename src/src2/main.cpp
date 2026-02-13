@@ -79,6 +79,9 @@ int main(int argc, char* argv[]) {
     Debug::FullLogger logger;
     SMake::SMakeProject project;
     const auto tokens = SMake::lex(smakePath, &logger);
+    for (const auto& token : tokens) {
+      std::cout << token.m_value << ":";
+    }
     SMake::parseTokensToProject(tokens, project, smakePath, &logger);
 
     std::cout << project.toString() << std::endl;

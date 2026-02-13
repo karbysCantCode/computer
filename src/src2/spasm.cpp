@@ -165,4 +165,16 @@ std::vector<Spasm::Lexer::Token> Spasm::Lexer::lex(std::filesystem::path path, s
     
   }
   return tokens;
+
+  #undef notAtEnd
+  #undef skipWhitespace
+  #undef peek
+  #undef line 
+  #undef column 
+  #undef isWordBoundary
+  #undef consume
+  #undef isKeyword
+  #undef skipComment
+  #undef consumeString
+  #undef getUntilWordBoundary
 }
