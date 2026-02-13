@@ -108,12 +108,16 @@ struct FList {
   std::unordered_set<std::filesystem::path> m_filepaths;
   std::string m_name;
 
-  std::string toString(size_t ) const {
+  std::string toString(size_t padding = 0, size_t indnt = 0) const {
     std::ostringstream oss;
-    oss << "Name:" << m_name << '\n';
+    const std::string indent(padding + indnt, ' ');
+    const std::string indent2(padding * 2 + indnt, ' ');
+    const std::string indent3(padding * 3 + indnt, ' ');
+    oss << indent << "Name:" << m_name << '\n'
+        << indent2 << "Paths:" << '\n';
 
     for (const auto& path : m_filepaths) {
-      oss << "    \"" << path.u8string() << "\"\n";
+      oss << indent3 << '"' << path.generic_string() << "\"\n";
     }
     return oss.str();
   }

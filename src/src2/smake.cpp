@@ -1,6 +1,7 @@
 #include "smake.hpp"
 
 #include <iostream>
+#include <functional>
 
 #include "lexHelper.hpp"
 #include "fileHelper.hpp"
@@ -63,19 +64,19 @@ std::vector<SMake::Token> SMake::lex(std::filesystem::path path, Debug::FullLogg
         tokens.emplace_back(val,SMake::Token::Type::KEYWORD,line,column);
       break;
       case '(':
-        val = std::to_string(consume());
+        val = std::string(1,consume());
         tokens.emplace_back(val, SMake::Token::Type::OPENPAREN, line,column);
       break;
       case ')':
-        val = std::to_string(consume());
+        val = std::string(1,consume());
         tokens.emplace_back(val, SMake::Token::Type::CLOSEPAREN, line,column);
       break;
       case '{':
-        val = std::to_string(consume());
+        val = std::string(1,consume());
         tokens.emplace_back(val, SMake::Token::Type::OPENBLOCK, line,column);
       break;
       case '}':
-        val = std::to_string(consume());
+        val = std::string(1,consume());
         tokens.emplace_back(val, SMake::Token::Type::CLOSEBLOCK, line,column);
       break;
       case '"':
@@ -84,7 +85,7 @@ std::vector<SMake::Token> SMake::lex(std::filesystem::path path, Debug::FullLogg
         tokens.emplace_back(val, SMake::Token::Type::STRING, line, column);
       break;
       case ',':
-        val = std::to_string(consume());
+        val = std::string(1,consume());
         tokens.emplace_back(val, SMake::Token::Type::COMMA, line,column);
       break;
       default: 
@@ -199,8 +200,8 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
-    auto flistIterator = targetProject.flists.find(peek(2).m_value);
-    if (flistIterator == targetProject.flists.end()) {
+    auto flistIterator = targetProject.m_flists.find(peek(2).m_value);
+    if (flistIterator == targetProject.m_flists.end()) {
       logError("Undeclared Flist \"" + peek(2).m_value + "\" referenced at " + peek(2).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
@@ -266,17 +267,17 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     });
     if (tokenError) {
       logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
-      pos ++;
+      advance();
       return;
     }
-    const auto identifier = peek(1);
-    if (targetProject.labels.find(identifier.m_value) != targetProject.labels.end()) {
+    const auto identifier = peek();
+    if (targetProject.m_labels.find(identifier.m_value) != targetProject.m_labels.end()) {
       logError("Redefinition of target (or label/flist by target) \"" + identifier.m_value + "\" at " + identifier.positionToString());
-      pos += 2;
+      advance();
       return;
     }
-    targetProject.targets.emplace(identifier.m_value, SMake::Target{identifier.m_value});
-    targetProject.labels.insert(identifier.m_value);
+    targetProject.m_targets.emplace(identifier.m_value, SMake::Target{identifier.m_value});
+    targetProject.m_labels.insert(identifier.m_value);
     pos += 2;
   };
   auto parseKeywordInclude_Directory = [&]() {
@@ -292,8 +293,8 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       return;
     }
     const std::string& targetName = peek(2).m_value;
-    auto targetIterator = targetProject.targets.find(targetName);
-    if (targetIterator == targetProject.targets.end()) {
+    auto targetIterator = targetProject.m_targets.find(targetName);
+    if (targetIterator == targetProject.m_targets.end()) {
       logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
@@ -352,14 +353,14 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       return;
     }
     const auto& identifier = peek(1);
-    if (targetProject.labels.find(identifier.m_value) != targetProject.labels.end()) {
+    if (targetProject.m_labels.find(identifier.m_value) != targetProject.m_labels.end()) {
       logError("Redefinition of flist (or label/target by flist) \"" + identifier.m_value + "\" at " + identifier.positionToString());
       pos += 2;
       return;
     }
 
-    targetProject.flists.emplace(identifier.m_value, FList());
-    targetProject.labels.insert(identifier.m_value);
+    targetProject.m_flists.emplace(identifier.m_value, FList());
+    targetProject.m_labels.insert(identifier.m_value);
     pos += 2;
   };
   auto parseKeywordSearchSet = [&]() {
@@ -382,8 +383,8 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     }
 
     const std::string& targetName = peek(2).m_value;
-    auto targetIterator = targetProject.targets.find(targetName);
-    if (targetIterator == targetProject.targets.end()) {
+    auto targetIterator = targetProject.m_targets.find(targetName);
+    if (targetIterator == targetProject.m_targets.end()) {
       logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
@@ -393,8 +394,8 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     bool isGathering = true;
     while (isGathering && !isAtEnd() && (peek().m_type == SMake::Token::Type::IDENTIFIER || peek().m_type == SMake::Token::Type::STRING)) {
       if (peek().m_type == SMake::Token::Type::IDENTIFIER) {
-        auto flistIterator = targetProject.flists.find(peek().m_value);
-        if (flistIterator!= targetProject.flists.end()) {
+        auto flistIterator = targetProject.m_flists.find(peek().m_value);
+        if (flistIterator!= targetProject.m_flists.end()) {
           for (const auto& path : flistIterator->second.m_filepaths) {
             targetIterator->second.m_sourceFilepaths.insert(path);
           }
@@ -442,8 +443,8 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     }
 
     const std::string& targetName = peek(2).m_value;
-    auto targetIterator = targetProject.targets.find(targetName);
-    if (targetIterator == targetProject.targets.end()) {
+    auto targetIterator = targetProject.m_targets.find(targetName);
+    if (targetIterator == targetProject.m_targets.end()) {
       logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
       pos += 8;
       return;
@@ -471,8 +472,8 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     }
 
     const std::string& targetName = peek(2).m_value;
-    auto targetIterator = targetProject.targets.find(targetName);
-    if (targetIterator == targetProject.targets.end()) {
+    auto targetIterator = targetProject.m_targets.find(targetName);
+    if (targetIterator == targetProject.m_targets.end()) {
       logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
       pos += 6;
       return;
@@ -498,8 +499,8 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     }
 
     const std::string& targetName = peek(2).m_value;
-    auto targetIterator = targetProject.targets.find(targetName);
-    if (targetIterator == targetProject.targets.end()) {
+    auto targetIterator = targetProject.m_targets.find(targetName);
+    if (targetIterator == targetProject.m_targets.end()) {
       logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
@@ -548,8 +549,8 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     }
 
     const std::string& targetName = peek(2).m_value;
-    auto targetIterator = targetProject.targets.find(targetName);
-    if (targetIterator == targetProject.targets.end()) {
+    auto targetIterator = targetProject.m_targets.find(targetName);
+    if (targetIterator == targetProject.m_targets.end()) {
       logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
@@ -585,8 +586,8 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     }
 
     const std::string& targetName = peek(2).m_value;
-    auto targetIterator = targetProject.targets.find(targetName);
-    if (targetIterator == targetProject.targets.end()) {
+    auto targetIterator = targetProject.m_targets.find(targetName);
+    if (targetIterator == targetProject.m_targets.end()) {
       logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
@@ -634,21 +635,21 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
   };
 
   std::unordered_map<std::string, std::function<void()>> tokenParseHashMap = {
-  {"target", parseKeywordTarget},
-  {"include_directory", parseKeywordInclude_Directory},
-  {"working_directory", parseKeywordWorking_Directory},
-  {"flist", parseKeywordFlist},
-  {"search_set", parseKeywordSearchSet},
-  {"search_add", parseKeywordSearchAdd},
-  {"add_target", parseKeywordAddTarget},
-  {"define", parseKeywordDefine},
-  {"entry", parseKeywordEntry},
-  {"output", parseKeywordOutput},
-  {"format", parseKeywordFormat},
-  {"depends", parseKeywordDepends},
-  {"label", parseKeywordLabel},
-  {"ifdef", parseKeywordIfdef},
-  {"ifndef", parseKeywordIfndef}
+    {"target", parseKeywordTarget},
+    {"include_directory", parseKeywordInclude_Directory},
+    {"working_directory", parseKeywordWorking_Directory},
+    {"flist", parseKeywordFlist},
+    {"search_set", parseKeywordSearchSet},
+    {"search_add", parseKeywordSearchAdd},
+    {"add_target", parseKeywordAddTarget},
+    {"define", parseKeywordDefine},
+    {"entry", parseKeywordEntry},
+    {"output", parseKeywordOutput},
+    {"format", parseKeywordFormat},
+    {"depends", parseKeywordDepends},
+    {"label", parseKeywordLabel},
+    {"ifdef", parseKeywordIfdef},
+    {"ifndef", parseKeywordIfndef}
   };
 
   targetProject.m_makefilePath = makefilePath;
@@ -658,6 +659,7 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     const auto& token = advance();
     auto it = tokenParseHashMap.find(token.m_value);
     if (it == tokenParseHashMap.end()) {logError("Unknown keyword \"" + token.m_value + "\" at " + token.positionToString());continue;}
+    std::cout << "[SMAKE] tk value:" << token.m_value << std::endl;
     it->second();
   }
 
@@ -668,13 +670,19 @@ std::string SMake::SMakeProject::toString() const {
   str << "SMake file path: \"" << m_makefilePath.generic_string() << "\"\n"
       << "  Targets:\n";
   for (const auto& target : m_targets) {
-    str << target.second.toString(4,2);
+    str << target.second.toString(2,2);
   }
   str << "  File lists (FLists):\n";
   for (const auto& flist : m_flists) {
-    str << flist.second.toString(4,2);
-    static_assert(false); // complete the flist tostring, aswell as this tostring. then return to debug the SMAKE from the main()
+    str << flist.second.toString(2,2);
+    //static_assert(false); // complete the flist tostring, aswell as this tostring. then return to debug the SMAKE from the main()
   }
+
+  str << "  Labels:\n";
+  for (const auto& label : m_labels) {
+    str << label << '\n';
+  }
+
 
   return str.str();
 
@@ -686,32 +694,29 @@ std::string SMake::Target::toString(size_t padding, size_t indnt) const {
   const std::string indent2(indnt + padding * 2, ' ');
   const std::string indent3(indnt + padding * 3, ' ');
   str << indent << "Target name: \"" << m_name << "\"\n"
-      << indent2 << "Is built?" << (m_isBuilt ? "True" : "False")
+      << indent2 << "Is built? " << (m_isBuilt ? "True" : "False") << '\n'
       << indent2 << "Working directory: \"" << m_workingDirectory << "\"\n"
       << indent2 << "Entry symbol: \"" << m_entrySymbol << "\"\n"
       << indent2 << "Output format: \"" << formatToString() << "\"\n"
       << indent2 << "Output directory: \"" << m_outputDirectory << "\"\n"
       << indent2 << "Output name: \"" << m_outputName << "\"\n"
-      << indent2 << "Collated Included Directories\n";
+      << indent2 << "Collated Included Directories:\n";
   
   for (const auto& path : m_includeDirectories) {
     str << indent3 << path.generic_string() << '\n';
   }
 
-  str << indent2 << "Source file paths\n";
+  str << indent2 << "Source file paths:\n";
   for (const auto& path : m_sourceFilepaths) {
     str << indent3 << path.generic_string() << '\n';
   }
 
-  str << indent2 << "Dependant targets\n";
+  str << indent2 << "Dependant targets:\n";
   for (const auto& targetPtr : m_dependantTargets) {
     if (targetPtr != nullptr) {
       str << indent3 << '"' << targetPtr->m_name << '"\n';
     }
   }
-
-
-      //static_assert(false); //not finished
 
     return str.str();
       
