@@ -121,6 +121,9 @@ struct FList {
     }
     return oss.str();
   }
+
+  FList(const std::string& name) : m_name(name) {}
+  FList() {}
 };
 
 class SMakeProject {
@@ -141,6 +144,6 @@ class SMakeProject {
   private:
 };
 
-void parseTokensToProject(const std::vector<Token>& tokens, SMakeProject& targetProject, std::filesystem::path makefilePath, Debug::FullLogger* logger);
+void parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targetProject, std::filesystem::path makefilePath, Debug::FullLogger* logger);
 std::vector<Token> lex(std::filesystem::path path, Debug::FullLogger* logger = nullptr);
 }

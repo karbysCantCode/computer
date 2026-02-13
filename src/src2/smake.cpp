@@ -14,8 +14,6 @@ std::vector<SMake::Token> SMake::lex(std::filesystem::path path, Debug::FullLogg
   LexHelper lexHelper(FileHelper::openFileToString(path, logger));
   if (lexHelper.m_source.empty()) {return {};}
 
-  std::cout << "[file start]" << lexHelper.m_source << "[file end]" << std::endl;
-
   std::unordered_set<std::string> kwords = {
     "target",
     "include_directory",
@@ -93,10 +91,7 @@ std::vector<SMake::Token> SMake::lex(std::filesystem::path path, Debug::FullLogg
         tokens.emplace_back(val,SMake::Token::Type::IDENTIFIER,line,column);
       break;
     }
-
-    std::cout << val << std::endl;
   }
-  std::cout << "LEXING END" << std::endl;
   return tokens;
 
   #undef notAtEnd
@@ -112,7 +107,7 @@ std::vector<SMake::Token> SMake::lex(std::filesystem::path path, Debug::FullLogg
   #undef getUntilWordBoundary
 }
 
-void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject& targetProject, std::filesystem::path makefilePath, Debug::FullLogger* logger) {
+void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targetProject, std::filesystem::path makefilePath, Debug::FullLogger* logger) {
   size_t pos = 0;
 
   #define logError(message)   if (logger != nullptr) logger->Errors.logMessage(message);
@@ -186,30 +181,30 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
 
   auto parseSearch = [&](bool clear)  {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
-      SMake::Token::Type::OPENPAREN,
-      SMake::Token::Type::IDENTIFIER,
-      SMake::Token::Type::COMMA,
-      SMake::Token::Type::IDENTIFIER,
-      SMake::Token::Type::COMMA,
-      SMake::Token::Type::STRING,
-      SMake::Token::Type::COMMA
+      SMake::Token::Type::OPENPAREN,  //0
+      SMake::Token::Type::IDENTIFIER, //1
+      SMake::Token::Type::COMMA,      //2
+      SMake::Token::Type::IDENTIFIER, //3
+      SMake::Token::Type::COMMA,      //4
+      SMake::Token::Type::STRING,     //5
+      SMake::Token::Type::COMMA       //6
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
-    auto flistIterator = targetProject.m_flists.find(peek(2).m_value);
+    auto flistIterator = targetProject.m_flists.find(peek(1).m_value);
     if (flistIterator == targetProject.m_flists.end()) {
-      logError("Undeclared Flist \"" + peek(2).m_value + "\" referenced at " + peek(2).positionToString());
+      logError("Undeclared Flist \"" + peek(1).m_value + "\" referenced at " + peek(1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     } 
+    std::cout << "pre filetpye parse" << std::endl;
     std::unordered_set<std::string> fileTypes;
     std::string currentRun;
     size_t index = 0;
-    std::string fileTypeString = peek(6).m_value;
+    std::string fileTypeString = peek(5).m_value;
     while (index < fileTypeString.length()) {
       const char c = fileTypeString[index];
       if (c == ',') {
@@ -220,11 +215,12 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       }
       index++;
     }
+    std::cout << "post filetpye parse" << std::endl;
     if (clear) {
       flistIterator->second.m_filepaths.clear();
     }
 
-    std::string searchString = peek(4).m_value;
+    std::string searchString = peek(3).m_value;
     SearchType searchType = SearchType::SHALLOW;
     int searchDepth = -1;
     if (searchString == "all") {
@@ -236,10 +232,12 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       searchType = SearchType::CDEPTH;
       searchDepth = std::stoi(std::string(6,searchString.size()));
     } else {
-      logError("Unknown search type at " + peek(4).positionToString());
+      logError("Unknown search type at " + peek(3).positionToString());
       return;
     }
-    pos += 7;
+    pos += 6;
+
+    std::cout << "pre directory parse" << std::endl;
 
     while (peek().m_type != SMake::Token::Type::CLOSEPAREN && !isAtEnd()) {
       if (peek().m_type != SMake::Token::Type::COMMA) {
@@ -248,25 +246,27 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
         pos++;
       }
       if (peek(1).m_type != SMake::Token::Type::STRING) {
-        logError("Expected string, got \"" + std::string(peek().typeToString()) + "\" at " + peek().positionToString());
+        logError("Expected string, got \"" + std::string(peek(1).typeToString()) + "\" at " + peek(1).positionToString());
         if (peek(1).m_type == SMake::Token::Type::CLOSEPAREN) {break;}
         pos += 2;
         continue;
       }
 
       searchHandler(searchHandler, flistIterator->second, fileTypes, std::filesystem::path(peek(1).m_value), searchType, searchDepth);
+      pos += 2;
     }
+
+    std::cout << "pre directory parse" << std::endl;
 
   };
 
 
   auto parseKeywordTarget = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::IDENTIFIER
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       advance();
       return;
     }
@@ -278,28 +278,27 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     }
     targetProject.m_targets.emplace(identifier.m_value, SMake::Target{identifier.m_value});
     targetProject.m_labels.insert(identifier.m_value);
-    pos += 2;
+    advance();
   };
   auto parseKeywordInclude_Directory = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
-      SMake::Token::Type::OPENPAREN,
-      SMake::Token::Type::IDENTIFIER,
-      SMake::Token::Type::COMMA
+      SMake::Token::Type::OPENPAREN,   
+      SMake::Token::Type::IDENTIFIER,  
+      SMake::Token::Type::COMMA  
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
-    const std::string& targetName = peek(2).m_value;
+    const std::string& targetName = peek(1).m_value;
     auto targetIterator = targetProject.m_targets.find(targetName);
     if (targetIterator == targetProject.m_targets.end()) {
       logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
-    pos += 4;
+    pos += 3;
 
     bool isAtEndOfGathering = false;
     while (!isAtEnd() || isAtEndOfGathering) {
@@ -315,21 +314,23 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       }
       switch (peek(1).m_type) {
         case SMake::Token::Type::COMMA:
+        pos += 2;
         continue;
         break;
         case SMake::Token::Type::CLOSEPAREN:
         isAtEndOfGathering = true;
+        pos += 2;
         break;
         default:
         isAtEndOfGathering = true;
-        logError("Expected token type COMMA or CLOSEPARENTHESESE, got \"" + std::string(peek(2).typeToString()) + "\" at " + peek(2).positionToString());
+        logError("Expected token type COMMA or CLOSEPARENTHESESE, got \"" + std::string(peek(1).typeToString()) + "\" at " + peek(1).positionToString());
+        advanceUntilAfterType(Token::Type::CLOSEPAREN);
         break;
       }
     }
   };
   auto parseKeywordWorking_Directory = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::OPENPAREN,
       SMake::Token::Type::IDENTIFIER,
       SMake::Token::Type::COMMA,
@@ -337,31 +338,30 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       SMake::Token::Type::CLOSEPAREN
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
   };
   auto parseKeywordFlist = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::IDENTIFIER
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       pos++;
       return;
     }
-    const auto& identifier = peek(1);
+    const auto& identifier = peek();
     if (targetProject.m_labels.find(identifier.m_value) != targetProject.m_labels.end()) {
       logError("Redefinition of flist (or label/target by flist) \"" + identifier.m_value + "\" at " + identifier.positionToString());
-      pos += 2;
+      pos += 1;
       return;
     }
 
-    targetProject.m_flists.emplace(identifier.m_value, FList());
+    targetProject.m_flists.emplace(identifier.m_value, FList(identifier.m_value));
     targetProject.m_labels.insert(identifier.m_value);
-    pos += 2;
+    pos += 1;
   };
   auto parseKeywordSearchSet = [&]() {
     parseSearch(true);
@@ -371,28 +371,29 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
   };
   auto parseKeywordAddTarget = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::OPENPAREN,
       SMake::Token::Type::IDENTIFIER,
       SMake::Token::Type::COMMA
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
 
-    const std::string& targetName = peek(2).m_value;
+    const std::string& targetName = peek(1).m_value;
     auto targetIterator = targetProject.m_targets.find(targetName);
     if (targetIterator == targetProject.m_targets.end()) {
-      logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
+      logError("Undeclared target \"" + targetName + "\" at " + peek(1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
-    pos += 4;
+    pos += 3;
 
     bool isGathering = true;
-    while (isGathering && !isAtEnd() && (peek().m_type == SMake::Token::Type::IDENTIFIER || peek().m_type == SMake::Token::Type::STRING)) {
+    while (isGathering && !isAtEnd() && 
+                                        (peek().m_type == SMake::Token::Type::IDENTIFIER 
+                                      || peek().m_type == SMake::Token::Type::STRING)) {
       if (peek().m_type == SMake::Token::Type::IDENTIFIER) {
         auto flistIterator = targetProject.m_flists.find(peek().m_value);
         if (flistIterator!= targetProject.m_flists.end()) {
@@ -419,15 +420,13 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
         default:
           isGathering = false;
           logError("Expected comma or close parentheses, got \"" + peek(1).m_value + "\" at " + peek(1).positionToString());
+          advanceUntilAfterType(Token::Type::CLOSEPAREN);
         break;
       }
     }
-    advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
-
   };
   auto parseKeywordDefine = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::OPENPAREN,
       SMake::Token::Type::IDENTIFIER,
       SMake::Token::Type::COMMA,
@@ -437,28 +436,30 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       SMake::Token::Type::CLOSEPAREN
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
 
-    const std::string& targetName = peek(2).m_value;
+    const std::string& targetName = peek(1).m_value;
     auto targetIterator = targetProject.m_targets.find(targetName);
     if (targetIterator == targetProject.m_targets.end()) {
-      logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
-      pos += 8;
+      logError("Undeclared target \"" + targetName + "\" at " + peek(1).positionToString());
+      pos += 7;
       return;
     }
+
+    assert(false); //define not linked to preprocessor
     //TODO
     // if (targetIterator->second.preprocessorReplacements.find(peek(4).m_value) != targetIterator->second.preprocessorReplacements.end()) {
     //   logError("Redeclaration of preprocessor definition (replacment target:) \"" + peek(4).m_value + "\" at " + peek(4).positionToString());
     //   return;
     // }
     // targetIterator->second.preprocessorReplacements.emplace(peek(4).m_value, PreprocessorReplacement{peek(4).m_value, peek(6).m_value});
+    pos += 7;
   };
   auto parseKeywordEntry = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::OPENPAREN,
       SMake::Token::Type::IDENTIFIER,
       SMake::Token::Type::COMMA,
@@ -466,67 +467,69 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       SMake::Token::Type::CLOSEPAREN
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
 
-    const std::string& targetName = peek(2).m_value;
+    const std::string& targetName = peek(1).m_value;
     auto targetIterator = targetProject.m_targets.find(targetName);
     if (targetIterator == targetProject.m_targets.end()) {
-      logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
-      pos += 6;
+      logError("Undeclared target \"" + targetName + "\" at " + peek(1).positionToString());
+      pos += 5;
       return;
     }
 
     if (targetIterator->second.m_entrySymbol.length() != 0) {
-      logWarning("Entry symbol \"" + targetIterator->second.m_entrySymbol + "\" is being replaced by \"" + peek(4).m_value + "\" at " + peek(4).positionToString());
+      logWarning("Entry symbol \"" + targetIterator->second.m_entrySymbol + "\" is being replaced by \"" + peek(3).m_value + "\" at " + peek(3).positionToString());
     }
-    targetIterator->second.m_entrySymbol = peek(4).m_value;
+    targetIterator->second.m_entrySymbol = peek(3).m_value;
+
+    pos += 5;
   };
   auto parseKeywordOutput = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::OPENPAREN,
       SMake::Token::Type::IDENTIFIER,
       SMake::Token::Type::COMMA,
       SMake::Token::Type::STRING,
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       pos++;
       return;
     }
 
-    const std::string& targetName = peek(2).m_value;
+    const std::string& targetName = peek(1).m_value;
     auto targetIterator = targetProject.m_targets.find(targetName);
     if (targetIterator == targetProject.m_targets.end()) {
-      logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
+      logError("Undeclared target \"" + targetName + "\" at " + peek(1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
 
     if (targetIterator->second.m_outputDirectory.length() != 0) {
-      logWarning("Output directory \"" + targetIterator->second.m_outputDirectory + "\" is being replaced by \"" + peek(4).m_value + "\" at " + peek(4).positionToString());
+      logWarning("Output directory \"" + targetIterator->second.m_outputDirectory + "\" is being replaced by \"" + peek(3).m_value + "\" at " + peek(3).positionToString());
     }
 
-    auto path = parsePath(peek(4).m_value);
+    auto path = parsePath(peek(3).m_value);
     if (!path.empty()) {
       targetIterator->second.m_outputDirectory = path.string();
     }
-
-    if (peek(5).m_type == SMake::Token::Type::CLOSEPAREN) {
-      pos += 6;
+    pos += 4;
+    if (isAtEnd()) {return;}
+    if (peek().m_type == SMake::Token::Type::CLOSEPAREN) {
+      pos += 1;
       return;
-    } else if (peek(5).m_type == SMake::Token::Type::COMMA 
-            && peek(6).m_type == SMake::Token::Type::STRING 
-            && peek(7).m_type == SMake::Token::Type::CLOSEPAREN) 
+    } else if (peek().m_type == SMake::Token::Type::COMMA 
+            && peek(1).m_type == SMake::Token::Type::STRING 
+            && peek(2).m_type == SMake::Token::Type::CLOSEPAREN) 
     {
       if (targetIterator->second.m_outputName.length() != 0) {
-        logWarning("Output directory \"" + targetIterator->second.m_outputName + "\" is being replaced by \"" + peek(6).m_value + "\" at " + peek(6).positionToString());
+        logWarning("Output directory \"" + targetIterator->second.m_outputName + "\" is being replaced by \"" + peek(1).m_value + "\" at " + peek(1).positionToString());
       }
-      targetIterator->second.m_outputName = peek(6).m_value;  
-      pos += 8;
+      targetIterator->second.m_outputName = peek(1).m_value;  
+      pos += 3;
     } else {
       logError("Invalid sequence of tokens (comma, string, close parentheses, expected) at " +peek(5).positionToString());
       return;
@@ -535,7 +538,6 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
   };
   auto parseKeywordFormat = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::OPENPAREN,
       SMake::Token::Type::IDENTIFIER,
       SMake::Token::Type::COMMA,
@@ -543,83 +545,118 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
       SMake::Token::Type::CLOSEPAREN
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       pos++;
       return;
     }
 
-    const std::string& targetName = peek(2).m_value;
+    const std::string& targetName = peek(1).m_value;
     auto targetIterator = targetProject.m_targets.find(targetName);
     if (targetIterator == targetProject.m_targets.end()) {
-      logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
+      logError("Undeclared target \"" + targetName + "\" at " + peek(1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
 
     SMake::Target::Format format;
-    if (peek(4).m_value == "bin") {
+    if (peek(3).m_value == "bin") {
       format = SMake::Target::Format::BIN;
-    } else if (peek(4).m_value == "hex") {
+    } else if (peek(3).m_value == "hex") {
       format = SMake::Target::Format::HEX;
-    } else if (peek(4).m_value == "elf") {
+    } else if (peek(3).m_value == "elf") {
       format = SMake::Target::Format::ELF;
     } else {
-      logError("Unknown output format specified at " + peek(4).positionToString());
+      logError("Unknown output format specified at " + peek(3).positionToString());
       return;
     }
-    logDebug("Target \"" + targetName + "\" output format being changed from \"" + targetIterator->second.formatToString() + "\" to \"" + peek(4).m_value + "\" at " + peek(4).positionToString());
+    logDebug("Target \"" + targetName + "\" output format being changed from \"" + targetIterator->second.formatToString() + "\" to \"" + peek(3).m_value + "\" at " + peek(3).positionToString());
     targetIterator->second.m_outputFormat = format;
 
-    pos += 6;
+    pos += 5;
   };
   auto parseKeywordDepends = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::OPENPAREN,
       SMake::Token::Type::IDENTIFIER,
       SMake::Token::Type::COMMA
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       pos++;
       return;
     }
 
-    const std::string& targetName = peek(2).m_value;
+    const std::string& targetName = peek(1).m_value;
     auto targetIterator = targetProject.m_targets.find(targetName);
     if (targetIterator == targetProject.m_targets.end()) {
-      logError("Undeclared target \"" + targetName + "\" at " + peek(tokenError).positionToString());
+      logError("Undeclared target \"" + targetName + "\" at " + peek(1).positionToString());
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     }
 
-    pos+=4;
+    pos+=3;
+    bool consumingDependencies = true;
+    while (!isAtEnd() && consumingDependencies && peek().m_type == Token::Type::STRING) {
+      auto it = targetProject.m_targets.find(peek().m_value);
+      if (it == targetProject.m_targets.end()) {
+        logError("Undeclared target \"" + peek().m_value + "\" referenced for dependency by \"" + targetName + "\" at " + peek().positionToString());
+        pos += 2;
+        break;
+      }
 
-    //while (!isAtEnd() && )
+      targetIterator->second.m_dependantTargets.insert(&it->second);
+
+      switch (peek(1).m_type) {
+        case Token::Type::CLOSEPAREN:
+          consumingDependencies = false;
+        case Token::Type::COMMA:
+          pos += 2;
+          break;
+        default:
+          logError("Expected ',' or ')', got \"" + peek(1).m_value + "\" at " + peek(1).positionToString());
+          pos++;
+          consumingDependencies = false;
+      }
+    }
 
   };
   auto parseKeywordLabel = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::IDENTIFIER
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       pos++;
       return;
     }
+
+    if (targetProject.m_labels.find(peek().m_value) != targetProject.m_labels.end()) {
+      logWarning("Label redefinition (defined by Label keyword) \"" + peek().m_value + "\" at " + peek().positionToString());
+    }
+    targetProject.m_labels.insert(peek().m_value);
+    pos++;
   };
   auto parseKeywordIfdef = [&]() {
     int tokenError = validateTokenTypes({
-      SMake::Token::Type::KEYWORD,
       SMake::Token::Type::IDENTIFIER,
       SMake::Token::Type::OPENBLOCK
     });
+
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       pos++;
       return;
     }
+    
+    if (targetProject.m_labels.find(peek().m_value) == targetProject.m_labels.end()) {
+      logDebug("Label \"" + peek().m_value + "\" undefined, block skipped at " + peek().positionToString());
+      advanceUntilAfterType(Token::Type::CLOSEBLOCK);
+      return;
+    }
+    pos += 2;
+    size_t index = 0;
+    while (index < tokens.size() && peek(index).m_type != Token::Type::CLOSEBLOCK) {index++;}
+    tokens.erase(tokens.begin() + pos); 
   };
   auto parseKeywordIfndef = [&]() {
     int tokenError = validateTokenTypes({
@@ -628,10 +665,20 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     SMake::Token::Type::OPENBLOCK
     });
     if (tokenError) {
-      logError("Invalid token type in use of keyword: \"" + peek().m_value + "\"\n  With token at " + peek(tokenError).positionToString());
+      logError("Invalid token type at " + peek(tokenError-1).positionToString());
       pos++;
       return;
     }
+
+    if (targetProject.m_labels.find(peek().m_value) != targetProject.m_labels.end()) {
+      logDebug("Label \"" + peek().m_value + "\" defined, block skipped at " + peek().positionToString());
+      advanceUntilAfterType(Token::Type::CLOSEBLOCK);
+      return;
+    }
+    pos += 2;
+    size_t index = 0;
+    while (index < tokens.size() && peek(index).m_type != Token::Type::CLOSEBLOCK) {index++;}
+    tokens.erase(tokens.begin() + pos); 
   };
 
   std::unordered_map<std::string, std::function<void()>> tokenParseHashMap = {
@@ -659,7 +706,6 @@ void SMake::parseTokensToProject(const std::vector<Token>& tokens, SMakeProject&
     const auto& token = advance();
     auto it = tokenParseHashMap.find(token.m_value);
     if (it == tokenParseHashMap.end()) {logError("Unknown keyword \"" + token.m_value + "\" at " + token.positionToString());continue;}
-    std::cout << "[SMAKE] tk value:" << token.m_value << std::endl;
     it->second();
   }
 
@@ -680,7 +726,7 @@ std::string SMake::SMakeProject::toString() const {
 
   str << "  Labels:\n";
   for (const auto& label : m_labels) {
-    str << label << '\n';
+    str << "    " << label << '\n';
   }
 
 
@@ -714,7 +760,7 @@ std::string SMake::Target::toString(size_t padding, size_t indnt) const {
   str << indent2 << "Dependant targets:\n";
   for (const auto& targetPtr : m_dependantTargets) {
     if (targetPtr != nullptr) {
-      str << indent3 << '"' << targetPtr->m_name << '"\n';
+      str << indent3 << '"' << targetPtr->m_name << "\"\n";
     }
   }
 

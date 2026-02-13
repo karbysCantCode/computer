@@ -4,6 +4,23 @@
 #include "smake.hpp"
 #include "spasm.hpp"
 
+#define DumpLogger(logger, AuthorName) \
+  if (readErrors) {                                         \
+    while (logger.Errors.isNotEmpty()) {                    \
+      std::cout << '[' << AuthorName << "][ERROR] " << logger.Errors.consumeMessage() << '\n';  \
+    }                                                       \
+  }                                                         \
+  if (readWarnings) {                                       \
+    while (logger.Warnings.isNotEmpty()) {                  \
+      std::cout << '[' << AuthorName << "][WARNING] " << logger.Warnings.consumeMessage() << '\n';\
+    }                                                       \
+  }                                                         \
+  if (readDebugs) {                                         \
+    while (logger.Debugs.isNotEmpty()) {                    \
+      std::cout << '[' << AuthorName << "][DEBUG] " << logger.Debugs.consumeMessage() << '\n';  \
+    }                                                       \
+  }
+
 // execute on MAC with: ./exeName Args
 
 // set cmake tools launch args in settings.json at: "cmake.debugConfig"
@@ -78,12 +95,12 @@ int main(int argc, char* argv[]) {
   if (smakeFlag) {  
     Debug::FullLogger logger;
     SMake::SMakeProject project;
-    const auto tokens = SMake::lex(smakePath, &logger);
-    for (const auto& token : tokens) {
-      std::cout << token.m_value << ":";
-    }
+    auto tokens = SMake::lex(smakePath, &logger);
+    DumpLogger(logger, "SMAKELEX");
+ 
     SMake::parseTokensToProject(tokens, project, smakePath, &logger);
-
+    DumpLogger(logger, "SMAKEPARSER");
+ 
     std::cout << project.toString() << std::endl;
 
     return errc;

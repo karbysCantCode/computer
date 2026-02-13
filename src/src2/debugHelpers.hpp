@@ -10,6 +10,7 @@ namespace Debug {
 
     inline bool isNotEmpty() const {return !m_messages.empty();}
     inline void logMessage(const std::string& message) {m_messages.push_back(message);}
+    inline std::string consumeMessage() {const auto msg = m_messages.back(); m_messages.pop_back(); return msg;}
   };
 
   struct FullLogger {

@@ -12,7 +12,7 @@ std::string FileHelper::openFileToString(const std::filesystem::path& path) {
 
   // Read the entire file content into a std::string using iterators
   std::string file_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  std::cout << "[File opened]" << file_contents << "[file open end]" << std::endl;
+  //std::cout << "[File opened]" << file_contents << "[file open end]" << std::endl;
   return file_contents;
 }
 std::string FileHelper::openFileToString(const std::filesystem::path& path, Debug::FullLogger* logger) {
@@ -24,7 +24,7 @@ std::string FileHelper::openFileToString(const std::filesystem::path& path, Debu
 
   // Read the entire file content into a std::string using iterators
   std::string file_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  std::cout << "[File opened]" << file_contents << "[file open end]" << std::endl;
+  //std::cout << "[File opened]" << file_contents << "[file open end]" << std::endl;
   return file_contents;
 }
 std::string FileHelper::openFileToString(const std::filesystem::path& path, Debug::MessageLogger* mlogger) {
@@ -37,7 +37,7 @@ std::string FileHelper::openFileToString(const std::filesystem::path& path, Debu
 
   // Read the entire file content into a std::string using iterators
   std::string file_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  std::cout << "[File opened]" << file_contents << "[file open end]" << std::endl;
+  //std::cout << "[File opened]" << file_contents << "[file open end]" << std::endl;
   return file_contents;
 }
 }
