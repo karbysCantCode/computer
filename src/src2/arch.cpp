@@ -6,47 +6,51 @@
 #include "lexHelper.hpp"
 #include "fileHelper.hpp"
 
-std::string Arch::Instruction::Instruction::toString(size_t padding) const {
+std::string Arch::Instruction::Instruction::toString(size_t padding, size_t ident) const {
   std::ostringstream str;
-  std::string indent(padding, ' ');
-  std::string indentArg(padding + 8, ' ');
-  str <<       indent << "Instruction name: " << this->m_name << '\n'
-            << indent << "    " << "Opcode: \"" << this->m_opcode << "\"" << '\n'
-            << indent << "    " << "Format alias: " << this->m_formatAlias << '\n'
-            << indent << "    " << "Arguments: " << '\n'; 
+  std::string indent(ident, ' ');
+  std::string indent2(padding + ident, ' ');
+  str <<       indent << "Instruction name: " << m_name << '\n'
+            << indent2 << "Opcode: \"" << m_opcode << "\"" << '\n'
+            << indent2 << "Format alias: " << m_formatAlias << '\n'
+            << indent2 << "Arguments: " << '\n'; 
 
-  for (const auto& arg : this->m_arguments) {
-    str << indentArg << "    " << arg.toString(padding + 8);
+  for (const auto& arg : m_arguments) {
+    str << arg.toString(padding, ident + padding*2);
   }
 
-  str << std::endl;
+  str << '\n';
   return str.str();
 }
 
-std::string Arch::Instruction::Argument::toString(size_t padding) const {
-  return "Argument Alias: " + m_alias + '\n' + std::string(padding, ' ') + "    Type: " + typeToString() + '\n' + std::string(padding, ' ') + "    Range: " + m_range.get()->toString() + '\n';
+std::string Arch::Instruction::Argument::toString(size_t padding, size_t ident) const {
+  return std::string(ident, ' ') + "Argument Alias: " + m_alias + '\n'
+   + std::string(padding + ident, ' ') + "Type: " + typeToString() + '\n'
+   + std::string(padding + ident, ' ') + "Range: " + m_range.get()->toString() + '\n';
 }
 
-std::string Arch::Format::toString(size_t padding) const {
+std::string Arch::Format::toString(size_t padding, size_t ident) const {
   std::ostringstream str;
-  std::string indent(padding, ' ');
- str << indent << "Format name: " << this->m_alias << "\n    Operand bit widths:\n        ";
+  std::string indent(ident, ' ');
+  std::string indent2(ident + padding, ' ');
+ str << indent << "Format name: " << this->m_alias << '\n'
+     << indent2 << "Operand bit widths: ";
   for (const auto& operandBits : this->m_operandBitwidth) {
-    str << indent << operandBits << ", ";
+    str << operandBits << ", ";
   }
   str << '\n';
   return str.str();
 }
 
-std::string Arch::DataType::toString(size_t padding) const {
+std::string Arch::DataType::toString(size_t padding, size_t ident) const {
   std::ostringstream str;
-  std::string indent(padding, ' ');
-  std::string indent4(padding + 4, ' ');
+  std::string indent(ident, ' ');
+  std::string indent2(padding + ident, ' ');
   str << indent << "Name: " << m_name << '\n';
   if (m_autoLength) {
-    str << indent4 << "Length: Auto Length";
+    str << indent2 << "Length: Auto Length";
   } else {
-    str << indent4 << "Length: " << m_length;
+    str << indent2 << "Length: " << m_length;
   }
   str << '\n';
   return str.str();
@@ -303,7 +307,44 @@ void Arch::assembleTokens(std::vector<Token>& tokens, Architecture& targetArch, 
       } else if (token.m_value == "reg") {
         consume();
         tokenisingError(Token::Type::IDENTIFIER,"Invalid register identifier at " + token.positionToString());
+        const auto& rangeToken = consume();
+        std::string lowerStr;
+        std::string lowerNumber;
+        std::string higherNumber;
+        std::string prefix;
+        std::string postfix;
+        size_t dashPos = 0;
+        bool isRange = false;
+        while (dashPos < rangeToken.m_value.length()) {
+          const char c = rangeToken.m_value[dashPos];
+          if (c == '-') {isRange = true;}
+          else if (!isdigit(c) && !isRange) {prefix.push_back(c);}
+          else if (!isdigit(c) && isRange) {postfix.push_back(c);}
+          else if (isdigit(c) && !isRange) {lowerNumber.push_back(c);}
+          else if (isdigit(c) && isRange) {higherNumber.push_back(c);}
+          lowerStr.push_back(c);
+          dashPos++;
+        }
         
+        tokenisingError(Token::Type::IDENTIFIER,"Invalid register identifier at " + peek().positionToString());
+        const auto& bitWidthToken = consume();
+
+        int bitWidth = -1;
+        safe_stoi(bitWidthToken.m_value, bitWidth);
+        
+        if (isRange) {
+          if (prefix != postfix) {logError("mismatched range prefix \"" + prefix + "\" and \"" + postfix + "\" @ " + rangeToken.positionToString()); return;}
+          
+          const int minReg = std::stoi(lowerNumber);
+          const int maxReg = std::stoi(higherNumber);
+          if (minReg > maxReg) {logError("invalid range of registers (err is: min > max) @ " + rangeToken.positionToString()); return;}
+          
+          for (int i = minReg; i <= maxReg; i++) {
+            targetArch.m_registers.emplace(prefix + std::to_string(i), Arch::RegisterIdentity(prefix + std::to_string(i), bitWidth)) ;
+          }
+        } else {
+          targetArch.m_registers.emplace(rangeToken.m_value, Arch::RegisterIdentity(rangeToken.m_value, bitWidth)) ;
+        }
       } else {
         std::cout << "ASSERTED_A" << std::endl;
         std::cout << token.m_value << std::endl;
@@ -338,4 +379,38 @@ void Arch::assembleTokens(std::vector<Token>& tokens, Architecture& targetArch, 
         targetArch.m_instructionSet.emplace(instruction.m_name, std::move(instruction));
     }
   }
+}
+
+std::string Arch::Architecture::toString() const {
+  std::ostringstream str;
+
+  //instruction set
+  for (const auto& it : m_instructionSet) {
+    str << it.second.toString(2,2);
+  }
+  //register
+  for (const auto& it : m_registers) {
+    str << it.second.toString(2,2);
+  }
+  //datatypes
+  for (const auto& it : m_dataTypes) {
+    str << it.second.toString(2,2);
+  }
+  //formats
+  for (const auto& it : m_formats) {
+    str << it.second.toString(2,2);
+  }
+
+  return str.str();
+}
+
+std::string Arch::RegisterIdentity::toString(size_t padding, size_t ident) const {
+  std::ostringstream str;
+  const std::string indent(ident + padding, ' ');
+  const std::string indent2(ident + 2 * padding, ' ');
+  str << indent << "Register Name \"" << m_name 
+  << "\" Bitwidth: " << m_bitWidth 
+  << ", Machine Operand Value: " << m_machineCodeOperandValue 
+  << '\n';
+  return str.str();
 }

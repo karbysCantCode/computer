@@ -96,7 +96,7 @@ namespace Instruction {
     std::shared_ptr<Range> m_range;
     std::string m_alias;
 
-    std::string toString(size_t padding = 0) const;
+    std::string toString(size_t padding = 0, size_t ident = 0) const;
     constexpr const char* typeToString() const {
       switch (this->m_type) {
           case Type::IMMEDIATE:    return "IMMEDIATE";
@@ -114,7 +114,7 @@ namespace Instruction {
     std::string m_formatAlias;
     int m_opcode = -1;
 
-    std::string toString(size_t padding = 0) const;
+    std::string toString(size_t padding = 0, size_t ident = 0) const;
   };
 }
 
@@ -122,6 +122,14 @@ struct RegisterIdentity {
   std::string m_name;
   size_t m_bitWidth = 0;
   size_t m_machineCodeOperandValue = 0;
+
+  RegisterIdentity() {}
+  RegisterIdentity(std::string name, size_t bitWidth, size_t machineCodeOperandValue = 0) :
+    m_name(name),
+    m_bitWidth(bitWidth),
+    m_machineCodeOperandValue(machineCodeOperandValue) {}
+
+  std::string toString(size_t padding = 0, size_t ident = 0) const;
 };
 
 struct DataType {
@@ -129,14 +137,14 @@ struct DataType {
   size_t m_length;
   bool m_autoLength;
 
-  std::string toString(size_t padding = 0) const;
+  std::string toString(size_t padding = 0, size_t ident = 0) const;
 };
 
 struct Format {
   std::string m_alias;
   std::vector<int> m_operandBitwidth;
 
-  std::string toString(size_t padding = 0) const;
+  std::string toString(size_t padding = 0, size_t ident = 0) const;
 };
 
 class Architecture {
@@ -154,6 +162,8 @@ class Architecture {
   bool isInstruction(const std::string& instructionName) {
     return m_instructionSet.find(instructionName) != m_instructionSet.end();
   }
+
+  std::string toString() const;
 };
 
 std::vector<Token> lex(std::filesystem::path& sourcePath, Debug::FullLogger* logger = nullptr);

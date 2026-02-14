@@ -230,7 +230,9 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
       searchDepth = 0;
     } else if (searchString.substr(6) == "cdepth" && searchString.length() > 6) {
       searchType = SearchType::CDEPTH;
-      searchDepth = std::stoi(std::string(6,searchString.size()));
+      assert(false);
+      //fix this line VVV
+      //searchDepth = std::stoi(std::string(6,searchString.size()));
     } else {
       logError("Unknown search type at " + peek(3).positionToString());
       return;

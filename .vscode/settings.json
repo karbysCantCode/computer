@@ -47,7 +47,7 @@
     "editor.tabSize": 2,
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "cmake.debugConfig": {
-    "args": ["--smake", "resources/test.smake", "-v", "-vv"]
+    "args": ["--smake", "resources/test.smake", "-v", "-vv", "--arch", "resources/archRev2.arch"]
     }
 
 }

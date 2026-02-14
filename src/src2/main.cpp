@@ -84,8 +84,8 @@ int main(int argc, char* argv[]) {
 
       i++;
       if (i < argc) {
-        archFlag = argv[i];
-        if (!std::filesystem::exists(archPath)) {std::cerr << "file \"" << smakePath.generic_string() << "\" does not exist. Aborted."; return -2;}
+        archPath = argv[i];
+        if (!std::filesystem::exists(archPath)) {std::cerr << "file \"" << archPath.generic_string() << "\" does not exist. Aborted."; return -2;}
       }
     } else if (arg =="-v") {
       readWarnings = true;
@@ -115,6 +115,9 @@ int main(int argc, char* argv[]) {
   auto archTokens = Arch::lex(archPath,&archLogger);
   Arch::assembleTokens(archTokens,targetArch,&archLogger);
   
+  DumpLogger(archLogger, "ARCH");
+
+  std::cout << targetArch.toString();
   
 
   if (smakeFlag) {  

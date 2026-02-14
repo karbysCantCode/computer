@@ -109,5 +109,5 @@ jalr two       REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp ; jump and link 
 
 
 ;state
-sset fullImmediate 0:1023 ;IMM | stateRegister  sets the bits in the immediate
-sclr fullImmediate 0:1023 ;~IMM & stateRegister clears the bits in the immediate
+sset fullImmediate IMM immediate 0:1023 ;IMM | stateRegister  sets the bits in the immediate
+sclr fullImmediate IMM immediate 0:1023 ;~IMM & stateRegister clears the bits in the immediate
