@@ -3,6 +3,9 @@
 
 #include "smake.hpp"
 #include "spasm.hpp"
+#include "arch.hpp"
+
+#define ARCH_CACHED_FILE_PATH "__CACHED_ARCH_COPY__.arch"
 
 #define DumpLogger(logger, AuthorName) \
   if (readErrors) {                                         \
@@ -30,6 +33,8 @@
   //  executes the smake file (mutually exclusive to --asm)
   //--asm spasmFilePath
   //  compiles the spasm file (mutually exclusive to --smake)
+  //--arch archFilePath
+  //  caches the arch file
   //-v
   //  dumps warnings
   //-vv
@@ -43,6 +48,7 @@
 int main(int argc, char* argv[]) {
   bool smakeFlag = false;
   bool asmFlag = false;
+  bool archFlag = false;
 
   bool readErrors = true;
   bool readWarnings = false;
@@ -50,6 +56,7 @@ int main(int argc, char* argv[]) {
 
   std::filesystem::path smakePath;
   std::filesystem::path asmPath;
+  std::filesystem::path archPath = ARCH_CACHED_FILE_PATH;
 
   for (int i = 1; i < argc; i++) {
 
@@ -72,6 +79,14 @@ int main(int argc, char* argv[]) {
         asmPath = argv[i];
         if (!std::filesystem::exists(asmPath)) {std::cerr << "file \"" << smakePath.generic_string() << "\" does not exist. Aborted."; return -2;}
       }
+    } else if (arg =="--arch") {
+      archFlag = true;
+
+      i++;
+      if (i < argc) {
+        archFlag = argv[i];
+        if (!std::filesystem::exists(archPath)) {std::cerr << "file \"" << smakePath.generic_string() << "\" does not exist. Aborted."; return -2;}
+      }
     } else if (arg =="-v") {
       readWarnings = true;
     } else if (arg =="-vv") {
@@ -92,6 +107,16 @@ int main(int argc, char* argv[]) {
   }
 
   int errc = 0;
+  if (archFlag) {
+    std::filesystem::copy(archPath, std::filesystem::path(ARCH_CACHED_FILE_PATH), std::filesystem::copy_options::overwrite_existing);
+  }
+  Debug::FullLogger archLogger;
+  Arch::Architecture targetArch;
+  auto archTokens = Arch::lex(archPath,&archLogger);
+  Arch::assembleTokens(archTokens,targetArch,&archLogger);
+  
+  
+
   if (smakeFlag) {  
     Debug::FullLogger logger;
     SMake::SMakeProject project;
