@@ -4,7 +4,7 @@
 
 #### A note about the lexer.
 
-  It delimits non-special characters (Ie: + - * / { } [ ] , . ) by whitespace. It doesn't tokenise newline characters.
+  It delimits non-special characters (Ie: + - * / { } [ ] , . ) by whitespace. ~~It doesn't tokenise newline characters.~~
 
   Non-special or number tokens are expected to start with a word character or underscore and will be parsed until whitespace or special character.
 
@@ -42,6 +42,32 @@
     
   #### A Note About Scopes
   variables theoretically have a local scope but um lowkey why arent you just managing it urself u lazy twat
+
+- ### Constants
+
+  The compiler allows binary, hex, or decimal constants (via 0b, 0x, or standard number). All of which can be specified as negative by a preceeding '-', the compiler will convert the number to its negative form.  
+  The compiler also allows for mathematical expressions for constants, as long as they are enclosed by square brackets like so.  
+  ```
+  ADI r0,r1,[8*2]
+  ```
+  Preprocessor definitions which are replaced by numbers can also be used.
+  ```
+  @define BYTES 2
+  ADI r0,r1,[8*BYTES]
+  ```  
+  Labels or declared data can also be used (will be interpreted as their memory address).
+  ```
+  WORD halfInt, 0
+  ...
+  halfIntMove:
+  ADI r0,r1,[halfInt - 2]
+  ...
+  SBI r0,r1,[halfIntMove + 2]
+  ```
+  *Do beware labels do need to be referred to at their global scope (ie even if you are in main.helper, you need to refer to main.helper.loop, not .loop or etc.)*  
+
+
+  Mathematical order of operations DOES apply.
 
 - ### Data Declaraction
 
@@ -84,7 +110,10 @@
 
   ARRAY  numbers, AUTO, 2, {52,385,209,295}
   ; Will be 8 bytes (4x2 byte elements)
-  ```
+  ```  
+
+  TEXT types with an initialising value or ARRAY types can be marked as using signed integers by adding a ", SIGNED" after the initial arguments. This will ensure that all numbers are in the range of the specified byte length's signed range and will throw errors if not.  
+  Using a '-' before numbers in a NON signed declaration will convert THAT number only to the byte length's signed form, but will NOT ensure that other numbers are in the signed range (non-signed declared TEXT or ARRAY will throw errors if numbers are NOT in the unsigned range of the byte length.)
 
 
 ## Macros

@@ -9,20 +9,21 @@
 .format special2        6 2  4 4
 
 ;normal regs
-.reg r0-r15  16   ; 16
-.reg sp      27   ;  1  (32 bits, but only the bottom 27 are read by any instruction) 
-.reg fp      27   ;  1  (32 bits, but only the bottom 27 are read by any instruction) 
-.reg ip      27   ;  1  (32 bits, but only the bottom 27 are read by any instruction) 
-.reg mem     11   ;  1  (16 bits, but only the bottom 11 are read by any instruction) 
-.reg w0-w3   32   ;  4
-.reg wl0-wl3 16   ;  4
-.reg wh0-wh3 16   ;  4
+.reg r0-r15  16 0  ; 16
+.reg sp      27 16  ;  1  (32 bits, but only the bottom 27 are read by any instruction) 
+.reg fp      27 17  ;  1  (32 bits, but only the bottom 27 are read by any instruction) 
+.reg ip      27 18  ;  1  (32 bits, but only the bottom 27 are read by any instruction) 
+.reg mem     11 19  ;  1  (16 bits, but only the bottom 11 are read by any instruction) 
+.reg w0-w3   32 20  ;  4
+.reg wl0-wl3 16 24  ;  4
+.reg wh0-wh3 16 28  ;  4
 
 ;control regs
-.reg ctx     8    ;  1
-.reg mmio    8    ;  1
-.reg priv    8    ;  1
-.reg state  10    ;  1
+.reg ctx     8 0   ;  1
+.reg mmio    8 1   ;  1
+.reg priv    8 2   ;  1
+.reg state  10 3   ;  1
+.reg flags   8 4   ;  1
 
 
 ;Arithmetic and logic
@@ -85,7 +86,7 @@
   ; 6 = 32 bit bus lower word
   ; 7 = 32 bit bus upper word
 
-  ctlmv  special IMM mode 0:3 REG rN r0-r7 REG ctx<mmio<<priv<<state rS ;if mode set, then it is storing (otherwise load) TO the control
+  ctlmv  special IMM mode 0:3 REG rN r0-r7 REG rS ctx<mmio<priv<state ;if mode set, then it is storing (otherwise load) TO the control
 
 ;control flow
 nop  fullImmediate 

@@ -112,13 +112,13 @@ int main(int argc, char* argv[]) {
   }
   Debug::FullLogger archLogger;
   Arch::Architecture targetArch;
-  auto archTokens = Arch::lex(archPath,&archLogger);
+  auto archTokens = Arch::Lexer::lex(archPath,&archLogger);
   Arch::assembleTokens(archTokens,targetArch,&archLogger);
   
-  DumpLogger(archLogger, "ARCH");
+  
 
   std::cout << targetArch.toString();
-  
+  DumpLogger(archLogger, "ARCH");
 
   if (smakeFlag) {  
     Debug::FullLogger logger;
