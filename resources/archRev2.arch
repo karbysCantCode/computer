@@ -1,12 +1,11 @@
 .bitwidth 16
 
-.format normal         6 4  3 3
-.format two            6 5  5     ;implies 32 unique registers
-.format immediate      6 4  6
-.format smallImmediate 6 3  3 4
+.format normal         6 4  3 3   ; first arg is dest
+.format two            6 5  5     ;implies 32 unique registers, first arg is dest
+.format immediate      6 4  6     ; first arg is dest
+.format smallImmediate 6 3  3 4   ; first arg is dest
 .format fullImmediate  6 10 
-.format special        6 1  4 
-.format special2        6 2  4 4
+.format special       6 4 4 2
 
 ;normal regs
 .reg r0-r15  16 0  ; 16
@@ -57,13 +56,15 @@
 
   clz   normal REG rd r0-r15 REG rA r0-r7       ; count leading zeros
 
+  ; #24 instr above
+
 ;memory
 
   ;mode 0: full 2bytes little endian
   ;mode 1: low  byte
   ;mode 2: high byte
-  lod  special2 REG rd r0-r15 REG ra r0-r15 IMM mode 0:2     ; rd = [mem << 16 | ra]
-  sto  special2 REG rs r0-r15 REG ra r0-r15 IMM mode 0:2     ; [mem << 16 ra] = rs
+  lod  special REG rd r0-r15 REG ra r0-r15 IMM mode 0:2     ; rd = [mem << 16 | ra]
+  sto  special REG rs r0-r15 REG ra r0-r15 IMM mode 0:2     ; [mem << 16 ra] = rs
 
   push two REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; [sp] = rs, sp -= 2
   pop  two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; sp += 2  , rs = [sp]
@@ -71,7 +72,7 @@
 
 ;moves
   cmov   normal
-  swap
+  swap   two    REG ra r0-r15 REG rb r0-r15 
   mov    two    REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ;rd = rs (truncates or discards MSB's for mismatched bitwidths)
 
   movi   two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp IMM mode 0:15 
@@ -90,10 +91,8 @@
 
 ;control flow
 nop  fullImmediate 
-halt fullImmediate
-sint fullImmediate NON
-cmp  ;
-tst  ;
+halt fullImmediate 
+sint fullImmediate 
 
 brc  two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch register
 brca immediate IMM condition 0:15 IMM offset 0:63 ; branch add

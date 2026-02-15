@@ -3,7 +3,9 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <set>
 #include <unordered_map>
+#include <map>
 #include <iostream>
 #include <cassert>
 #include <filesystem>
@@ -158,7 +160,7 @@ class Architecture {
   public:
   
 
-  std::unordered_map<std::string, Instruction::Instruction> m_instructionSet;
+  std::map<std::string, Instruction::Instruction> m_instructionSet;
   std::unordered_set<std::string> m_instructionNameSet;
   std::unordered_set<std::string> m_nameSet;
   std::unordered_map<std::string, RegisterIdentity> m_registers;

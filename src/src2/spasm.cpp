@@ -296,8 +296,9 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
     if (token.m_type == Lexer::Token::Type::NUMBER) {
       return std::make_unique<Program::Expressions::Operands::NumberLiteral>(resolveNumber(token));
     } else if (token.m_type == Lexer::Token::Type::IDENTIFIER) {
-      program.
-      return std::make_unique
+      //program.
+      //return std::make_unique
+      assert(false);
     } else if (token.m_type == Lexer::Token::Type::OPENPAREN) {
       
     }
@@ -403,7 +404,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
           Program::Expressions::Label* currentLabel = it->second;
           skip(2);
           bool walking = true;
-          while (walking and currentLabel != nullptr) {
+          while (walking && currentLabel != nullptr) {
             const auto it = currentLabel->m_children.find(peek().m_value);
             if (it != currentLabel->m_children.end()) {
               //keep walking

@@ -393,6 +393,7 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
       }
       instruction.m_formatAlias = formatToken.m_value;
       while (peek().m_type == Lexer::Token::Type::ARGUMENTTYPE) {
+        //if (peek().m_value == "NON") {consume(); break;}
         instruction.m_arguments.emplace_back(parseArgument());
       }
 

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <unordered_set>
 #include <memory>
+#include <variant>
 
 #include "debugHelpers.hpp"
 #include "arch.hpp"
@@ -180,7 +181,7 @@ namespace Spasm {
       std::vector<std::unique_ptr<Expressions::Statement>> m_statements;
       std::unordered_map<std::string, ProgramForm*> m_includedPrograms;
       std::unordered_map<std::string, Expressions::Label*> m_globalLabels;
-      std::unordered_map<std::string, > m_
+      //std::unordered_map<std::string, > m_
     };
     
     ProgramForm parseProgram(std::vector<Spasm::Lexer::Token>& tokens, Arch::Architecture& arch, Debug::FullLogger* logger = nullptr, std::filesystem::path path = "");
