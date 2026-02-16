@@ -86,6 +86,8 @@ namespace Spasm {
       inline void setType(const Type& newType) {m_type=newType;}
       inline void setNicheType(const NicheType& newType) {m_nicheType=newType;}
       bool isOneOf(const std::initializer_list<Type> list) const {return std::any_of(list.begin(), list.end(), [this](Type t){return this->m_type == t;});}
+      
+
     };
 
     std::vector<Token> lex(std::filesystem::path path, std::unordered_set<std::string>& keywords, Debug::FullLogger* logger = nullptr);
@@ -153,12 +155,21 @@ namespace Spasm {
         virtual ~Statement() = default;
       };
 
+      /*
+      unowned labels (implied existence to be determined at link time)
+      are owned by the programs unowned list
+      until they are defined or linked to a definition from another file
+      if they already exist (unowned) but are being defined, they are moved to 
+      the top (or bottom?) of the statement array.
+      
+      */
       struct Label : Statement {
         std::string m_name;
         Label* m_parent = nullptr;
         std::unordered_map<std::string, Label*> m_children;
+        bool m_declared = false;
 
-        Label(std::string name, Label* parent = nullptr) : m_name(name), m_parent(parent) {}
+        Label(std::string name, Label* parent = nullptr, bool declared = false) : m_name(name), m_parent(parent), m_declared(declared) {}
       };
 
       struct Declaration : Statement {
@@ -181,11 +192,11 @@ namespace Spasm {
       std::vector<std::unique_ptr<Expressions::Statement>> m_statements;
       std::unordered_map<std::string, ProgramForm*> m_includedPrograms;
       std::unordered_map<std::string, Expressions::Label*> m_globalLabels;
-      //std::unordered_map<std::string, > m_
+      std::unordered_map<std::string, std::unique_ptr<Expressions::Label>> m_unownedLabels;
     };
     
     ProgramForm parseProgram(std::vector<Spasm::Lexer::Token>& tokens, Arch::Architecture& arch, Debug::FullLogger* logger = nullptr, std::filesystem::path path = "");
 
 
-  }
+  };
 }

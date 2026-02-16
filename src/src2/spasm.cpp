@@ -271,75 +271,94 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
     return !(pos < tokens.size());
   };
   #define skipUntilTrue(condition) while(!(condition)) {skip();}
-  //peek() needs to be the top level identifier token
-  auto consumeTokensForLabel = [&](const std::initializer_list<Lexer::Token::Type>& list, bool delcNewIfNotExist = false, bool exclusiveList = false) -> Program::Expressions::Label* {
-    if (peek(1).m_type == Lexer::Token::Type::PERIOD) {
-      //get the global
-      const auto it = program.m_globalLabels.find(peek().m_value);
-      if (it != program.m_globalLabels.end()) {
-        //walk the path of .
-        Program::Expressions::Label* currentLabel = it->second;
-        skip(2);
-        bool walking = true;
-        while (walking && currentLabel != nullptr) {
-          const auto it = currentLabel->m_children.find(peek().m_value);
-          if (it != currentLabel->m_children.end()) {
-            //keep walking
-            currentLabel = it->second;
-          } else if (exclusiveList ^ peek(1).isOneOf(list)) {
-            //add label here.
-            walking = false;
-            if (delcNewIfNotExist) {
-              auto label = std::make_unique<Program::Expressions::Label>(peek().m_value,currentLabel);
-              auto labelPtr = label.get();
-              currentLabel->m_children.emplace(label->m_name, label.get());
-              program.m_statements.push_back(std::move(label));
-              skip(2);
-              return labelPtr;
-            } else {
-              skip(2);
-              return currentLabel;
-            }
-          } else {
-            logWarning("Weird position in label walker reached " + peek().positionToString());
-            skip(2);
-            return nullptr;
-            //dont really know what to do here
-          }
-          skip(2);
-        }
 
-      } else {
-        logError("Unknown label \"" + peek().m_value + "\" at " + peek().positionToString());
-        skipUntilTrue((exclusiveList ^ peek(1).isOneOf(list))
-                    || peek().m_type == Lexer::Token::Type::NEWLINE);
+
+  //peek() needs to be the top level identifier token
+  auto consumeTokensForLabel = [&](Lexer::Token::Type delimiter, bool delcNewIfNotExist = false, bool delimOnNonPeriod = false) -> Program::Expressions::Label* {
+    Program::Expressions::Label* topLabel = nullptr;
+    Program::Expressions::Label* currentLabel = nullptr;
+    
+    const auto it = program.m_globalLabels.find(peek().m_value);
+    if (it == program.m_globalLabels.end()) {
+      const auto next = peek(1);
+      if (next.m_type == Lexer::Token::Type::PERIOD) {
+        // create label and continue
+        // just as symbol thus NOT declared
+        // make uniqueptr and give to unowned labels
+        auto label = std::make_unique<Program::Expressions::Label>(peek().m_value, currentLabel);
+        auto labelptr = label.get();
+        program.m_unownedLabels.emplace(labelptr->m_name, std::move(label));
+        program.m_globalLabels.emplace(labelptr->m_name, labelptr);
+      } else if (!(delcNewIfNotExist && next.m_type == delimiter)) {
+        topLabel = it->second;
+        currentLabel = it->second;
       }
-    } else if (exclusiveList ^ peek(1).isOneOf(list)) {
-      const auto it = program.m_globalLabels.find(peek().m_value);
-      if (it != program.m_globalLabels.end()) {
-        skip(2);
-        return it->second;
-      } else {
-        if (delcNewIfNotExist) {
-          auto label = std::make_unique<Program::Expressions::Label>(peek().m_value);
-          auto labelptr = label.get();
-          program.m_globalLabels.emplace(label->m_name, label.get());
-          program.m_statements.push_back(std::move(label));
-          skip(2);
-          return labelptr;
+    }
+
+    while (notAtEnd()) {
+      if (peek(1).m_type == Lexer::Token::Type::PERIOD) {
+        skip(2); //continue walking
+        //walk
+        const auto& identifierToken = peek();
+        const auto& delimToken = peek(1);
+        if (identifierToken.m_type != Lexer::Token::Type::IDENTIFIER) {logError("Expected identifier, got \"" + identifierToken.m_value + "\" at " + identifierToken.positionToString()); return nullptr;}
+        const auto it = currentLabel->m_children.find(identifierToken.m_value);
+        if (it == currentLabel->m_children.end()) {
+          // not in children
+          if (delimToken.m_type == Lexer::Token::Type::PERIOD) {
+            // create label and continue
+            // just as symbol thus NOT declared
+            // make uniqueptr and give to unowned labels
+            auto label = std::make_unique<Program::Expressions::Label>(identifierToken.m_value, currentLabel);
+            auto labelptr = label.get();
+            program.m_unownedLabels.emplace(labelptr->m_name, std::move(label));
+            program.m_globalLabels.emplace(labelptr->m_name, labelptr);
+          } else if (delimToken.m_type == delimiter || delimOnNonPeriod) {
+            break; // move to creating a new
+          } else {
+            logError("god i dont even know what you did or if this branch should be an error, but heres an error anyway! at " + identifierToken.positionToString());
+            return nullptr;
+          }
         } else {
-          logError("Referenced label \"" + peek().m_value + "\" is not declared, " + peek().positionToString());
-          skip(2);
-          return nullptr;
+          // is in children!
+          currentLabel = it->second;
         }
+      } else if (peek(1).m_type == delimiter || delimOnNonPeriod) {
+        break;
+      } else {
+        logError("i think this is an error? yeah probably um wtf did u do bro. at " + peek().positionToString());
+        break;
+      }
+    }
+    if (peek(1).m_type == delimiter || delimOnNonPeriod) {
+      if (delcNewIfNotExist) {
+        // create a label here
+        auto label = std::make_unique<Program::Expressions::Label>(peek().m_value, currentLabel, true);
+        auto labelptr = label.get();
+        program.m_statements.push_back(std::move(label));
+        if (currentLabel == nullptr) {
+          program.m_globalLabels.emplace(labelptr->m_name, labelptr);
+        }
+        return labelptr;
+      } else {
+        // create an unowned label
+        auto label = std::make_unique<Program::Expressions::Label>(peek().m_value, currentLabel);
+        auto labelptr = label.get();
+        program.m_unownedLabels.emplace(labelptr->m_name, std::move(label));
+        if (currentLabel == nullptr) {
+          program.m_globalLabels.emplace(labelptr->m_name, labelptr);
+        }
+        return labelptr;
       }
     } else {
-      logError("Reached not delimiter on, supposedly, a global label reference at " + peek().positionToString());
-      skip(1);
+      //error
+      logError("Unknown label \"" + peek().m_value + "\" referenced illegally at " + peek().positionToString());
       return nullptr;
     }
-    return nullptr;
+
+    
   };
+
   auto resolveNumber = [&](const Lexer::Token& token) -> int {
     size_t base = 10;
     switch (token.m_nicheType) {
@@ -365,8 +384,10 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
     if (token.m_type == Lexer::Token::Type::NUMBER) {
       return std::make_unique<Program::Expressions::Operands::NumberLiteral>(resolveNumber(token));
     } else if (token.m_type == Lexer::Token::Type::IDENTIFIER) {
-      consumeTokensForLabel({Lexer::Token::Type::},false, true);
-      //if ()
+      auto labelptr = consumeTokensForLabel(Lexer::Token::Type::IDENTIFIER,false, true); //token type has NOTHING to do with delimiter since 3rd arg is true
+      if (labelptr == nullptr) {
+        static_assert(false); complete in future.
+      }
       //return std::make_unique<Program::Expressions::Operands::MemoryAddressIdentifier>()
       assert(false);
     } else if (token.m_type == Lexer::Token::Type::OPENPAREN) {
