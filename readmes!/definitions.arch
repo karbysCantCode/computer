@@ -13,3 +13,5 @@
 ; define registers by .reg [REGISTER NAME] [REGISTER BITWIDTH (POS INT)]
 ; alternatively: .reg [REGISTER PREFIX][LOWEST INDEX (POS INT)]-[REGISTER PREFIX][HIGHEST INDEX (POS INT)] [REGISTER BITWIDTH (POS INT)]
 ; beginning!
+
+; .ctr [control signal name] [bit index to set (ie 5 = 5th bit is set by this flag)]

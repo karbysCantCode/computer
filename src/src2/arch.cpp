@@ -135,7 +135,7 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
 
   #define tokenisingError(tokenType, ErrorMessage)          \
   if (!notAtEnd() || peek().m_type != tokenType)        \
-  {logError(ErrorMessage); continue;}
+  {logError(ErrorMessage); skip(); continue;}
 
   auto safe_stoi = [&](const std::string&s, int& out) -> bool {
     auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), out);
@@ -155,6 +155,11 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
     pos++; 
     return token;
   };
+
+  auto skip = [&]() -> void {
+    pos++;
+  };
+
   auto parseRange = [&](const std::string& str, size_t* pos) -> std::string {
     std::string range;
     while ((*pos) < str.length() && str[*pos] != '<') {
@@ -279,6 +284,7 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
 
   while (notAtEnd()) {
     const auto& token = peek();
+    std::cout << token.m_value << std::endl;
     if (token.m_type == Lexer::Token::Type::KEYWORD) {
 
       if (token.m_value == "format") {
@@ -363,6 +369,15 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
         } else {
           targetArch.m_registers.emplace(rangeToken.m_value, Arch::RegisterIdentity(rangeToken.m_value, bitWidth, operandValue)) ;
         }
+      } else if (token.m_value == "ctr") {
+        skip();
+        tokenisingError(Lexer::Token::Type::IDENTIFIER, "Expected identifier, got \"" + peek().m_value + "\" at " + peek().positionToString());
+        const auto& identifierToken = consume();
+        tokenisingError(Lexer::Token::Type::IDENTIFIER, "Expected identifier, got \"" + peek().m_value + "\" at " + peek().positionToString());
+        const auto& valueToken = consume();
+        int bitassert = 0;
+        safe_stoi(valueToken.m_value, bitassert);
+        targetArch.m_controlSignals.emplace(identifierToken.m_value, Arch::ControlSignal(identifierToken.m_value,(size_t)bitassert));
       } else {
         std::cout << "ASSERTED_A" << std::endl;
         std::cout << token.m_value << std::endl;
@@ -424,6 +439,10 @@ std::string Arch::Architecture::toString() const {
     str << it.second.toString(2,2);
   }
 
+  for (const auto& it : m_controlSignals) {
+    str << it.second.toString(2,2);
+  }
+
   return str.str();
 }
 
@@ -431,9 +450,15 @@ std::string Arch::RegisterIdentity::toString(size_t padding, size_t ident) const
   std::ostringstream str;
   const std::string indent(ident + padding, ' ');
   const std::string indent2(ident + 2 * padding, ' ');
-  str << indent << "Register Name \"" << m_name 
+  str << indent << "Register Name \"" << std::setw(5) << std::left << m_name 
   << "\" Bitwidth: " << m_bitWidth 
   << ", Machine Operand Value: " << m_machineCodeOperandValue 
   << '\n';
+  return str.str();
+}
+
+std::string Arch::ControlSignal::toString(size_t padding, size_t ident) const {
+  std::stringstream str;
+  str << "Control Signal [" << std::right << std::setw(3) << m_assertbit << "]: " << m_name << '\n';
   return str.str();
 }

@@ -115,7 +115,6 @@ int main(int argc, char* argv[]) {
   auto archTokens = Arch::Lexer::lex(archPath,&archLogger);
   Arch::assembleTokens(archTokens,targetArch,&archLogger);
   
-  
 
   std::cout << targetArch.toString();
   DumpLogger(archLogger, "ARCH");
@@ -123,14 +122,16 @@ int main(int argc, char* argv[]) {
   if (smakeFlag) {  
     Debug::FullLogger logger;
     SMake::SMakeProject project;
+
     auto tokens = SMake::lex(smakePath, &logger);
+
     DumpLogger(logger, "SMAKELEX");
- 
+    
+
     SMake::parseTokensToProject(tokens, project, smakePath, &logger);
     DumpLogger(logger, "SMAKEPARSER");
  
     std::cout << project.toString() << std::endl;
-
     return errc;
   }
 

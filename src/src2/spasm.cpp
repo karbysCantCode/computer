@@ -270,7 +270,76 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
   auto isAtEnd = [&]() -> bool {
     return !(pos < tokens.size());
   };
+  #define skipUntilTrue(condition) while(!(condition)) {skip();}
+  //peek() needs to be the top level identifier token
+  auto consumeTokensForLabel = [&](Lexer::Token::Type delimType, bool delcNewIfNotExist = false, bool exclusiveDelim = false) -> Program::Expressions::Label* {
+    if (peek(1).m_type == Lexer::Token::Type::PERIOD) {
+      //get the global
+      const auto it = program.m_globalLabels.find(peek().m_value);
+      if (it != program.m_globalLabels.end()) {
+        //walk the path of .
+        Program::Expressions::Label* currentLabel = it->second;
+        skip(2);
+        bool walking = true;
+        while (walking && currentLabel != nullptr) {
+          const auto it = currentLabel->m_children.find(peek().m_value);
+          if (it != currentLabel->m_children.end()) {
+            //keep walking
+            currentLabel = it->second;
+          } else if (exclusiveDelim ^ (peek(1).m_type == delimType)) {
+            //add label here.
+            walking = false;
+            if (delcNewIfNotExist) {
+              auto label = std::make_unique<Program::Expressions::Label>(peek().m_value,currentLabel);
+              auto labelPtr = label.get();
+              currentLabel->m_children.emplace(label->m_name, label.get());
+              program.m_statements.push_back(std::move(label));
+              skip(2);
+              return labelPtr;
+            } else {
+              skip(2);
+              return currentLabel;
+            }
+          } else {
+            logWarning("Weird position in label walker reached " + peek().positionToString());
+            skip(2);
+            return nullptr;
+            //dont really know what to do here
+          }
+          skip(2);
+        }
 
+      } else {
+        logError("Unknown label \"" + peek().m_value + "\" at " + peek().positionToString());
+        skipUntilTrue(peek().m_type == delimType 
+                    || peek().m_type == Lexer::Token::Type::NEWLINE);
+      }
+    } else if (peek(1).m_type == delimType) {
+      const auto it = program.m_globalLabels.find(peek().m_value);
+      if (it != program.m_globalLabels.end()) {
+        skip(2);
+        return it->second;
+      } else {
+        if (delcNewIfNotExist) {
+          auto label = std::make_unique<Program::Expressions::Label>(peek().m_value);
+          auto labelptr = label.get();
+          program.m_globalLabels.emplace(label->m_name, label.get());
+          program.m_statements.push_back(std::move(label));
+          skip(2);
+          return labelptr;
+        } else {
+          logError("Referenced label \"" + peek().m_value + "\" is not declared, " + peek().positionToString());
+          skip(2);
+          return nullptr;
+        }
+      }
+    } else {
+      logError("Reached not delimiter on, supposedly, a global label reference at " + peek().positionToString());
+      skip(1);
+      return nullptr;
+    }
+    return nullptr;
+  };
   auto resolveNumber = [&](const Lexer::Token& token) -> int {
     size_t base = 10;
     switch (token.m_nicheType) {
@@ -296,8 +365,9 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
     if (token.m_type == Lexer::Token::Type::NUMBER) {
       return std::make_unique<Program::Expressions::Operands::NumberLiteral>(resolveNumber(token));
     } else if (token.m_type == Lexer::Token::Type::IDENTIFIER) {
-      //program.
-      //return std::make_unique
+      consumeTokensForLabel({},false);
+      //if ()
+      //return std::make_unique<Program::Expressions::Operands::MemoryAddressIdentifier>()
       assert(false);
     } else if (token.m_type == Lexer::Token::Type::OPENPAREN) {
       
@@ -327,7 +397,6 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
   auto parseExpression = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
     parseOr();
   };
-  #define skipUntilTrue(condition) while(!(condition)) {skip();}
 
   while(notAtEnd()) {
     //check if is keyword
@@ -395,43 +464,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
             &&  (peek(1).m_type == Lexer::Token::Type::COLON 
               || peek(1).m_type == Lexer::Token::Type::PERIOD)) {
       //is label
-      
-      if (peek(1).m_type == Lexer::Token::Type::PERIOD) {
-        //get the global
-        const auto it = program.m_globalLabels.find(peek().m_value);
-        if (it != program.m_globalLabels.end()) {
-          //walk the path of .
-          Program::Expressions::Label* currentLabel = it->second;
-          skip(2);
-          bool walking = true;
-          while (walking && currentLabel != nullptr) {
-            const auto it = currentLabel->m_children.find(peek().m_value);
-            if (it != currentLabel->m_children.end()) {
-              //keep walking
-              currentLabel = it->second;
-            } else if (peek(1).m_type == Lexer::Token::Type::COLON) {
-              //add label here.
-              walking = false;
-              auto label = std::make_unique<Program::Expressions::Label>(peek().m_value,currentLabel);
-              currentLabel->m_children.emplace(label->m_name, label.get());
-              program.m_statements.push_back(std::move(label));
-            }
-          }
-
-        } else {
-          logError("Unknown label \"" + peek().m_value + "\" at " + peek().positionToString());
-          skipUntilTrue(peek().m_type == Lexer::Token::Type::COLON 
-                     || peek().m_type == Lexer::Token::Type::NEWLINE);
-        }
-      } else {
-        //global label
-        auto label = std::make_unique<Program::Expressions::Label>(peek().m_value);
-        program.m_globalLabels.emplace(label->m_name, label.get());
-        program.m_statements.push_back(std::move(label));
-        skip(2);
-      }
-
-
+      consumeTokensForLabel(Lexer::Token::Type::COLON,true);
     } else {
       logError("Expected keyword or label, got \"" + keyToken.m_value + "\" at " + keyToken.positionToString());
       skip();

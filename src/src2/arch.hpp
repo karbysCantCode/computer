@@ -141,6 +141,14 @@ namespace Instruction {
   };
 }
 
+struct ControlSignal {
+  std::string m_name;
+  size_t m_assertbit;
+
+  ControlSignal(const std::string& name, size_t assertbit) : m_name(name), m_assertbit(assertbit) {}
+
+  std::string toString(size_t padding = 0, size_t ident = 0) const;
+};
 struct DataType {
   std::string m_name;
   size_t m_length;
@@ -166,6 +174,7 @@ class Architecture {
   std::unordered_map<std::string, RegisterIdentity> m_registers;
   std::unordered_map<std::string, DataType> m_dataTypes;
   std::unordered_map<std::string, Format> m_formats;
+  std::map<std::string, ControlSignal> m_controlSignals;
 
   //instructions and datatypes
   std::unordered_set<std::string> m_keywordSet;

@@ -111,3 +111,35 @@ jalr two       REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp ; jump and link 
 ;state
 sset fullImmediate IMM immediate 0:1023 ;IMM | stateRegister  sets the bits in the immediate
 sclr fullImmediate IMM immediate 0:1023 ;~IMM & stateRegister clears the bits in the immediate
+
+
+
+
+
+; control signals
+.ctr 16reg_write                      00   ;
+.ctr 16reg_read_a                     01   ;
+.ctr 16reg_read_b                     02   ;
+.ctr alu_update_flags                 03   ;
+.ctr alu_result_to_bus                04   ;if not asserted, it is passthrough
+.ctr agu_result_to_bus                05   ;if not asserted, it is passthrough
+.ctr agu_flags_to_special_bus         06   ;
+.ctr memory_result_to_bus             07   ;  
+.ctr icache_inval_address             08   ;
+.ctr icache_inval_line                09   ;
+.ctr icache_inval_line_set_select     10   ;0 = A, 1 = B
+.ctr dcache_flush_address             10   ;
+.ctr dcache_flush_line                11   ;
+.ctr dcache_inval_address             12   ;
+.ctr dcache_inval_line                13   ;
+.ctr dcache_inval_line_set_select     14   ;0 = A, 1 = B
+.ctr data_translate                   15   ;
+.ctr data_passthrough                 16   ;
+.ctr data_two_byte                    17   ;
+.ctr data_write                       18   ;if not asserted, is data_read
+.ctr lower_flag_mask                  19   ;
+.ctr mmu_invalidate_page              20   ;
+.ctr mmu_invalidate_translation_page  21   ;
+.ctr mmu_invalidate_all               22   ;
+;.ctr                                  23   ;
+;.ctr                                  24   ;
