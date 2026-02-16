@@ -139,14 +139,26 @@ namespace Spasm {
         bool m_resolved = false;
         int m_value = 0;
         Type m_type;
-        std::unique_ptr<Operand> LHS;
-        std::unique_ptr<Operand> RHS;
-        ConstantExpression* parentExpression;
+        std::unique_ptr<Operand> m_LHS;
+        std::unique_ptr<Operand> m_RHS;
+        ConstantExpression* m_parentExpression;
+
+        ConstantExpression(Type type, std::unique_ptr<Operand> lhs, std::unique_ptr<Operand> rhs) : m_type(type),m_LHS(std::move(lhs)),m_RHS(std::move(rhs)) {}
+        // ConstantExpression(ConstantExpression& expr) :
+        //    m_resolved(expr.m_resolved), 
+        //    m_value(expr.m_value),
+        //    m_type(expr.m_type),
+        //    m_LHS(std::move(expr.m_LHS)),
+        //    m_RHS(std::move(expr.m_RHS)),
+        //    m_parentExpression(expr.m_parentExpression) {}
       };
 
       //ie a label or data declaration
       struct MemoryAddressIdentifier : Operand {
         std::variant<Label*, Declaration*> m_identifier;
+
+        MemoryAddressIdentifier(std::variant<Label*, Declaration*> identifier) : m_identifier(identifier) {}
+        MemoryAddressIdentifier() {}
       };
 
       }
@@ -192,6 +204,7 @@ namespace Spasm {
       std::vector<std::unique_ptr<Expressions::Statement>> m_statements;
       std::unordered_map<std::string, ProgramForm*> m_includedPrograms;
       std::unordered_map<std::string, Expressions::Label*> m_globalLabels;
+      std::unordered_map<std::string, Expressions::Declaration*> m_dataDeclarations;
       std::unordered_map<std::string, std::unique_ptr<Expressions::Label>> m_unownedLabels;
     };
     

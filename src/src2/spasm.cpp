@@ -3,6 +3,8 @@
 #include "fileHelper.hpp"
 #include "lexHelper.hpp"
 
+#include <functional>
+
 
 //tokens
 std::string Spasm::Lexer::Token::positionToString() const {
@@ -379,44 +381,197 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
     return std::stoi(token.m_value,nullptr,base);
   };
   //descent
+  using operandPointer = std::unique_ptr<Program::Expressions::Operands::Operand>;
+  std::function<operandPointer()> parseExpression;
+  std::function<operandPointer()> parseNot;
   auto parsePrimary = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
     const auto& token = peek();
     if (token.m_type == Lexer::Token::Type::NUMBER) {
+      skip();
       return std::make_unique<Program::Expressions::Operands::NumberLiteral>(resolveNumber(token));
     } else if (token.m_type == Lexer::Token::Type::IDENTIFIER) {
+      const auto& topToken = peek();
       auto labelptr = consumeTokensForLabel(Lexer::Token::Type::IDENTIFIER,false, true); //token type has NOTHING to do with delimiter since 3rd arg is true
       if (labelptr == nullptr) {
-        static_assert(false); complete in future.
+        logError("Unknown label referenced at " + topToken.positionToString());
+        return std::make_unique<Program::Expressions::Operands::NumberLiteral>(0);
       }
-      //return std::make_unique<Program::Expressions::Operands::MemoryAddressIdentifier>()
-      assert(false);
+      return std::make_unique<Program::Expressions::Operands::MemoryAddressIdentifier>(labelptr);
+
     } else if (token.m_type == Lexer::Token::Type::OPENPAREN) {
-      
+      skip();
+      auto expr = parseExpression();
+      if (peek().m_type != Lexer::Token::Type::CLOSEPAREN) {
+        logError("Expected ')' after expression at " + peek().positionToString());
+        return expr; // recover
+      }
+
+      skip(); // consume ')'
+
+      return expr;
+    } else {
+      logError("Unexpected type (expected number, identifier, or parentheses) at " + token.positionToString());
+      return std::make_unique<Program::Expressions::Operands::NumberLiteral>(0);
     }
   };
-  auto parseNot = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
-    auto lhs = parsePrimary();
+  parseNot = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
+    if (peek().m_type == Lexer::Token::Type::BITWISENOT) {
+      skip();
+      auto operand = parseNot();
+      return std::make_unique<Program::Expressions::Operands::ConstantExpression>(Program::Expressions::Operands::ConstantExpression::Type::NOT, std::move(operand), nullptr);
+    }
+
+    return parsePrimary();
+    
   };
   auto parseMultiplicative = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
     auto lhs = parseNot();
+    
+    while (peek().isOneOf({
+      Lexer::Token::Type::MULTIPLY,
+      Lexer::Token::Type::DIVIDE,
+      Lexer::Token::Type::MOD
+    })) {
+
+      Program::Expressions::Operands::ConstantExpression::Type op;
+      switch (peek().m_type)
+      {
+      case Lexer::Token::Type::MULTIPLY:
+        op = Program::Expressions::Operands::ConstantExpression::Type::MULTIPLY;
+      break;
+      case Lexer::Token::Type::DIVIDE:
+        op = Program::Expressions::Operands::ConstantExpression::Type::DIVIDE;
+      break;
+      case Lexer::Token::Type::MOD:
+        op = Program::Expressions::Operands::ConstantExpression::Type::MODULO;
+      break;
+      
+      default:
+        logError("Shouldn't be an error.");
+        assert(false);
+      break;
+      }
+      skip();
+
+      auto rhs = parseNot();
+
+      lhs = std::make_unique<
+          Program::Expressions::Operands::ConstantExpression
+      >(op, std::move(lhs), std::move(rhs));
+    }
+
+    return lhs;
+    
   };
   auto parseAdditive = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
     auto lhs = parseMultiplicative();
+
+    while (peek().isOneOf({
+      Lexer::Token::Type::ADD,
+      Lexer::Token::Type::SUBTRACT
+    })) {
+      Program::Expressions::Operands::ConstantExpression::Type op;
+      switch (peek().m_type) {
+        case Lexer::Token::Type::ADD:
+          op = Program::Expressions::Operands::ConstantExpression::Type::ADDITION;
+        break;
+        case Lexer::Token::Type::SUBTRACT:
+          op = Program::Expressions::Operands::ConstantExpression::Type::SUBTRACTION;
+        break;
+        
+        default:
+          logError("Shouldn't be an error.");
+          assert(false);
+        break;
+      }
+      skip();
+      auto rhs = parseMultiplicative();
+
+      lhs = std::make_unique<
+          Program::Expressions::Operands::ConstantExpression
+      >(op, std::move(lhs), std::move(rhs));
+    }
+
+    return lhs;
   };
   auto parseShift = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
     auto lhs = parseAdditive();
+
+    while (peek().isOneOf({
+      Lexer::Token::Type::LEFTSHIFT,
+      Lexer::Token::Type::RIGHTSHIFT
+    })) {
+      Program::Expressions::Operands::ConstantExpression::Type op;
+      switch (peek().m_type) {
+        case Lexer::Token::Type::LEFTSHIFT:
+          op = Program::Expressions::Operands::ConstantExpression::Type::LEFTSHIFT;
+        break;
+        case Lexer::Token::Type::RIGHTSHIFT:
+          op = Program::Expressions::Operands::ConstantExpression::Type::RIGHTSHIFT;
+        break;
+        
+        default:
+          logError("Shouldn't be an error.");
+          assert(false);
+        break;
+      }
+      skip();
+      auto rhs = parseAdditive();
+
+      lhs = std::make_unique<
+          Program::Expressions::Operands::ConstantExpression
+      >(op, std::move(lhs), std::move(rhs));
+    }
+
+    return lhs;
   };
   auto parseAnd = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
     auto lhs = parseShift();
+
+    while (peek().m_type == Lexer::Token::Type::BITWISEAND) {
+      Program::Expressions::Operands::ConstantExpression::Type op = Program::Expressions::Operands::ConstantExpression::Type::AND;
+      skip();
+      auto rhs = parseShift();
+
+      lhs = std::make_unique<
+          Program::Expressions::Operands::ConstantExpression
+      >(op, std::move(lhs), std::move(rhs));
+    }
+
+    return lhs;
   };
   auto parseXor = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
     auto lhs = parseAnd();
+
+    while (peek().m_type == Lexer::Token::Type::BITWISEXOR) {
+      Program::Expressions::Operands::ConstantExpression::Type op = Program::Expressions::Operands::ConstantExpression::Type::XOR;
+      skip();
+      auto rhs = parseAnd();
+
+      lhs = std::make_unique<
+          Program::Expressions::Operands::ConstantExpression
+      >(op, std::move(lhs), std::move(rhs));
+    }
+
+    return lhs;
   };
   auto parseOr = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
     auto lhs = parseXor();
+
+    while (peek().m_type == Lexer::Token::Type::BITWISEOR) {
+      Program::Expressions::Operands::ConstantExpression::Type op = Program::Expressions::Operands::ConstantExpression::Type::OR;
+      skip();
+      auto rhs = parseXor();
+
+      lhs = std::make_unique<
+          Program::Expressions::Operands::ConstantExpression
+      >(op, std::move(lhs), std::move(rhs));
+    }
+
+    return lhs;
   };
-  auto parseExpression = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
-    parseOr();
+  parseExpression = [&]() -> std::unique_ptr<Program::Expressions::Operands::Operand> {
+    return parseOr();
   };
 
   while(notAtEnd()) {
@@ -439,11 +594,40 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
             switch (firstToken.m_type) {
               case Lexer::Token::Type::OPENSQUARE:
               {
-                
+                instruction->m_operands.push_back(std::move(parseExpression()));
+                if (peek().m_type == Lexer::Token::Type::CLOSESQUARE) {
+                  skip();
+                } else {
+                  //error?
+                  logWarning("expected '[' at " + peek().positionToString());
+                  skip();
+                }
               }
               break;
-              case Lexer::Token::Type::IDENTIFIER:
+              case Lexer::Token::Type::IDENTIFIER: {
                 //label or data decl
+                auto identifier = std::make_unique<Program::Expressions::Operands::MemoryAddressIdentifier>();
+                auto dataIt = program.m_dataDeclarations.find(peek().m_value);
+                if (peek(1).m_type == Lexer::Token::Type::PERIOD || dataIt == program.m_dataDeclarations.end()) {
+                  //label
+                  const auto& topToken = peek();
+                  identifier->m_identifier = consumeTokensForLabel(Lexer::Token::Type::UNASSIGNED, false, true);
+                  if (auto ptr = std::get_if<Program::Expressions::Label*>(&identifier->m_identifier)) {
+                      if (*ptr == nullptr) {
+                          // stored Label* is null
+                          logError("Unknown label referenced at " + topToken.positionToString());
+                          instruction->m_operands.push_back(std::make_unique<Program::Expressions::Operands::MemoryAddressIdentifier>((Program::Expressions::Label*)nullptr));
+                          break;
+                        }
+                  }
+                } else {
+                  //data decl
+                  identifier->m_identifier = dataIt->second;
+                }
+
+                instruction->m_operands.push_back(std::move(identifier));
+              }
+                
               break;
               case Lexer::Token::Type::NUMBER: {
                 auto arg = std::make_unique<Program::Expressions::Operands::NumberLiteral>(resolveNumber(firstToken));
@@ -473,7 +657,8 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
           break;
         
         default:
-
+          logError("Unhandled argument type (from arch)" + arg.toString());
+          skipUntilTrue(peek().m_type == Lexer::Token::Type::NEWLINE);
           break;
         }
       }

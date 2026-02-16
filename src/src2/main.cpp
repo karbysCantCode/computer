@@ -132,6 +132,19 @@ int main(int argc, char* argv[]) {
     DumpLogger(logger, "SMAKEPARSER");
  
     std::cout << project.toString() << std::endl;
+
+    for (const auto& target : project.m_targets) {
+      for (const auto& path : target.second.m_sourceFilepaths) {
+        Debug::FullLogger logger;
+        auto tokens = Spasm::Lexer::lex(path, targetArch.m_keywordSet, &logger);
+        Spasm::Program::ProgramForm program = Spasm::Program::parseProgram(tokens, targetArch, &logger, path);
+        for (const auto& statement : program.m_statements) {
+          std::cout << statement->toString();
+        }
+        DumpLogger(logger, "SPASM");
+      }
+    }
+
     return errc;
   }
 
