@@ -272,7 +272,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
   };
   #define skipUntilTrue(condition) while(!(condition)) {skip();}
   //peek() needs to be the top level identifier token
-  auto consumeTokensForLabel = [&](Lexer::Token::Type delimType, bool delcNewIfNotExist = false, bool exclusiveDelim = false) -> Program::Expressions::Label* {
+  auto consumeTokensForLabel = [&](const std::initializer_list<Lexer::Token::Type>& list, bool delcNewIfNotExist = false, bool exclusiveList = false) -> Program::Expressions::Label* {
     if (peek(1).m_type == Lexer::Token::Type::PERIOD) {
       //get the global
       const auto it = program.m_globalLabels.find(peek().m_value);
@@ -286,7 +286,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
           if (it != currentLabel->m_children.end()) {
             //keep walking
             currentLabel = it->second;
-          } else if (exclusiveDelim ^ (peek(1).m_type == delimType)) {
+          } else if (exclusiveList ^ peek(1).isOneOf(list)) {
             //add label here.
             walking = false;
             if (delcNewIfNotExist) {
@@ -311,10 +311,10 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
 
       } else {
         logError("Unknown label \"" + peek().m_value + "\" at " + peek().positionToString());
-        skipUntilTrue(peek().m_type == delimType 
+        skipUntilTrue((exclusiveList ^ peek(1).isOneOf(list))
                     || peek().m_type == Lexer::Token::Type::NEWLINE);
       }
-    } else if (peek(1).m_type == delimType) {
+    } else if (exclusiveList ^ peek(1).isOneOf(list)) {
       const auto it = program.m_globalLabels.find(peek().m_value);
       if (it != program.m_globalLabels.end()) {
         skip(2);
@@ -365,7 +365,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
     if (token.m_type == Lexer::Token::Type::NUMBER) {
       return std::make_unique<Program::Expressions::Operands::NumberLiteral>(resolveNumber(token));
     } else if (token.m_type == Lexer::Token::Type::IDENTIFIER) {
-      consumeTokensForLabel({},false);
+      consumeTokensForLabel({Lexer::Token::Type::},false, true);
       //if ()
       //return std::make_unique<Program::Expressions::Operands::MemoryAddressIdentifier>()
       assert(false);
