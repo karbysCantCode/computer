@@ -140,10 +140,12 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
 
   auto searchHandler = [&](auto const& self, FList& targetList, std::unordered_set<std::string>& fileExtentions , std::filesystem::path pathToSearch, SearchType type, int searchDepth) -> bool {
     if (searchDepth < 0) {return true;}
+    
     bool success = true;
     std::error_code ec;
     for (std::filesystem::directory_iterator it(pathToSearch, ec); it != std::filesystem::directory_iterator(); it.increment(ec)) {
       if (ec) {success = false; continue;} 
+      std::cout  << "[PATH]" << it->path().generic_string() << '\n';
       if (std::filesystem::is_directory(it->path())) {
         if ((type == SearchType::CDEPTH && searchDepth < 1) || type == SearchType::SHALLOW) {continue;}
         if (!self(self, targetList,fileExtentions, it->path(), type, searchDepth - 1)) {logError("Error while searching path \"" + it->path().u8string() + "\" from string at " + peek().positionToString()); success = false;}
@@ -257,6 +259,7 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
       searchHandler(searchHandler, flistIterator->second, fileTypes, std::filesystem::path(peek(1).m_value), searchType, searchDepth);
       pos += 2;
     }
+    advance();
 
     std::cout << "pre directory parse" << std::endl;
 
@@ -658,7 +661,7 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
     pos += 2;
     size_t index = 0;
     while (index < tokens.size() && peek(index).m_type != Token::Type::CLOSEBLOCK) {index++;}
-    tokens.erase(tokens.begin() + pos); 
+    tokens.erase(tokens.begin() + pos + index); 
   };
   auto parseKeywordIfndef = [&]() {
     int tokenError = validateTokenTypes({

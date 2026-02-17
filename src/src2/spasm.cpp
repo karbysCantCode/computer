@@ -4,6 +4,7 @@
 #include "lexHelper.hpp"
 
 #include <functional>
+#include <sstream>
 
 
 //tokens
@@ -677,4 +678,149 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
     }
   }
   return program;
+}
+
+namespace Spasm::Program::Expressions {
+ std::string Label::toString(size_t padding, size_t indent, size_t minArgWidth, bool basicData) const {
+  std::stringstream str;
+  str << std::string(indent, ' ') << std::left << std::setw(minArgWidth) << "[Label]" << std::left << std::setw(minArgWidth) << m_name << ", Declared = " << m_declared << '\n';
+  if (basicData) return str.str();
+
+  //full data 
+  if (m_parent != nullptr) {
+    str << std::string(padding + indent, ' ') << "Parent label: " << m_parent->m_name << '\n';
+  }
+  for (const auto& child : m_children) {
+    if (child.second != nullptr) {
+      str << std::string(padding + indent, ' ') << "Child: " << child.second->m_name << '\n';
+    }
+  }
+  return str.str();
+ }
+
+ std::string Instruction::toString(size_t padding, size_t indent, size_t minArgWidth, bool basicData) const {
+  std::stringstream str;
+  str << "[Instr]" << std::left << std::setw(minArgWidth);
+  if (m_instruction != nullptr) {
+    str << m_instruction->m_name;
+  } else {
+    str << "Unnamed";
+  }
+
+  for (const auto& op : m_operands) {
+    str << op->toString() << ' ';
+  }
+
+  str << std::endl;
+  
+  if (basicData) return str.str();
+
+  //full data 
+
+  return str.str();
+ }
+
+ std::string Declaration::toString(size_t padding, size_t indent, size_t minArgWidth, bool basicData) const {
+  std::stringstream str;
+
+  str << std::string(indent, ' ') << std::left << std::setw(minArgWidth) << m_declaredName;
+  if (m_dataType != nullptr) {
+    str << ' ' << std::left << std::setw(minArgWidth) << m_dataType->m_name;
+  }
+  str << ' ' << m_declaration->toString();
+  str << std::endl;
+  
+  if (basicData) return str.str();
+
+  //full data 
+
+  return str.str();
+ }
+
+ namespace Operands {
+  std::string NumberLiteral::toString() const {
+    return std::to_string(m_value);
+  }
+
+  std::string StringLiteral::toString() const {
+    return m_value;
+  }
+
+  std::string RegisterLiteral::toString() const {
+    if (m_register != nullptr) {
+      return m_register->m_name;
+    } else {
+      return "NULLPTR";
+    }
+    
+  }
+
+  std::string ConstantExpression::toString() const {
+    std::stringstream str;
+    
+    str << '(' << m_LHS->toString() << ' ';
+    switch (m_type)
+    {
+    case Type::MULTIPLY:
+      str << '*';
+      break;
+    case Type::DIVIDE:
+      str << '/';
+      break;
+    case Type::MODULO:
+      str << '%';
+      break;
+    case Type::ADDITION:
+      str << '+';
+      break;
+    case Type::SUBTRACTION:
+      str << '-';
+      break;
+    case Type::AND:
+      str << '&';
+      break;
+    case Type::OR:
+      str << '|';
+      break;
+    case Type::XOR:
+      str << '^';
+      break;
+    case Type::NOT:
+      str << '!';
+      break;
+    case Type::LEFTSHIFT:
+      str << "<<";
+      break;
+    case Type::RIGHTSHIFT:
+      str << ">>";
+      break;
+    
+    default:
+      break;
+    }
+    str << ' ' << m_RHS->toString() << ')';
+    return str.str();
+  }
+
+  std::string MemoryAddressIdentifier::toString() const {
+    std::stringstream str;
+
+    std::visit([&str](auto&& arg){
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T,Label*>) {
+            if (arg != nullptr) {
+              str << arg->m_name;
+            }
+        } else if constexpr (std::is_same_v<T,Declaration*>) {
+            if (arg != nullptr) {
+              str << arg->m_declaredName;
+            }
+        } else {
+            str << "NONETYPE";
+        }
+    }, m_identifier);
+    
+    return str.str();
+  }
+ }
 }

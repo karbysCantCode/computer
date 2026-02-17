@@ -1,8 +1,8 @@
 .label re
 .target test
 .flist main_files
-.ifdef DEBUG {
-    .search_add(main_files, shallow, ".spasm","")
+.ifdef re {
+    .search_add(main_files, all, ".spasm","/resources")
 }
 .add_target(test, main_files, "software/hidy.spasm")
 .entry(test, "main")

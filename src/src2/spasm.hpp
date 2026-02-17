@@ -102,6 +102,8 @@ namespace Spasm {
       namespace Operands {
       struct Operand {
         virtual ~Operand() = default;
+
+        virtual std::string toString() const {assert(false);}
       };
 
       struct NumberLiteral : Operand {
@@ -109,15 +111,19 @@ namespace Spasm {
 
         NumberLiteral(int value) : m_value(value) {}
         NumberLiteral() {}
+
+        std::string toString() const override;
       };
 
       struct StringLiteral : Operand {
         std::string m_value;
+
+        std::string toString() const override;
       };
 
       struct RegisterLiteral : Operand {
         Arch::RegisterIdentity* m_register;
-
+        std::string toString() const override;
         RegisterLiteral(Arch::RegisterIdentity* reg) : m_register(reg) {}
       };
 
@@ -143,6 +149,8 @@ namespace Spasm {
         std::unique_ptr<Operand> m_RHS;
         ConstantExpression* m_parentExpression;
 
+        std::string toString() const override;
+
         ConstantExpression(Type type, std::unique_ptr<Operand> lhs, std::unique_ptr<Operand> rhs) : m_type(type),m_LHS(std::move(lhs)),m_RHS(std::move(rhs)) {}
         // ConstantExpression(ConstantExpression& expr) :
         //    m_resolved(expr.m_resolved), 
@@ -157,6 +165,8 @@ namespace Spasm {
       struct MemoryAddressIdentifier : Operand {
         std::variant<Label*, Declaration*> m_identifier;
 
+        std::string toString() const override;
+
         MemoryAddressIdentifier(std::variant<Label*, Declaration*> identifier) : m_identifier(identifier) {}
         MemoryAddressIdentifier() {}
       };
@@ -165,6 +175,8 @@ namespace Spasm {
 
       struct Statement {
         virtual ~Statement() = default;
+
+        virtual std::string toString(size_t padding = 0, size_t indent = 0, size_t minArgWidth = 5, bool basicData = true) const {assert(false);};
       };
 
       /*
@@ -182,17 +194,23 @@ namespace Spasm {
         bool m_declared = false;
 
         Label(std::string name, Label* parent = nullptr, bool declared = false) : m_name(name), m_parent(parent), m_declared(declared) {}
+      
+        std::string toString(size_t padding = 0, size_t indent = 0, size_t minArgWidth = 5, bool basicData = true) const override;
       };
 
       struct Declaration : Statement {
         std::string m_declaredName;
         Arch::DataType* m_dataType;
         std::unique_ptr<Operands::Operand> m_declaration;
+
+        std::string toString(size_t padding = 0, size_t indent = 0, size_t minArgWidth = 5, bool basicData = true) const override;
       };
 
       struct Instruction : Statement {
         Arch::Instruction::Instruction* m_instruction;
         std::vector<std::unique_ptr<Operands::Operand>> m_operands;
+
+        std::string toString(size_t padding = 0, size_t indent = 0, size_t minArgWidth = 5, bool basicData = true) const override;
 
         Instruction(Arch::Instruction::Instruction* instruction) : m_instruction(instruction) {}
       };
