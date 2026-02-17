@@ -33,7 +33,7 @@ std::vector<Spasm::Lexer::Token> Spasm::Lexer::lex(std::filesystem::path path, s
   #define peek(arg) lexHelper.peek(arg)
   #define line lexHelper.m_line
   #define column lexHelper.m_column
-  #define isWordBoundary(arg) lexHelper.isWordBoundary(arg)
+  #define isWordBoundary(arg) lexHelper.spasmIsWordBoundary(arg)
   #define consume() lexHelper.consume()
   #define isKeyword(arg) lexHelper.isKeyword(arg)
   #define skipComment(arg) lexHelper.skipComment(arg)
@@ -287,6 +287,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
     auto it = program.m_globalLabels.find(globalToken.m_value);
     if (it == program.m_globalLabels.end()) {
       //make new label
+      std::cout << "mknew" << peek().m_value << " " << peek(1).m_value << std::endl;
       auto label = std::make_unique<Program::Expressions::Label>(peek().m_value, currentLabel);
       auto labelptr = label.get();
       program.m_globalLabels.emplace(labelptr->m_name, labelptr);
@@ -294,14 +295,24 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
       currentLabel = labelptr;
 
       if (peek(1).m_type == delimiter && delcNewIfNotExist) {
+        std::cout << "decled" << std::endl;
         program.m_statements.push_back(std::move(label));
       } else {
         program.m_unownedLabels.emplace(labelptr->m_name, std::move(label));
       }
     } else {
       //already exists, update
+      const bool nextIsEnd = (delimOnNonPeriod && peek(1).m_type != Lexer::Token::Type::PERIOD) || peek(1).m_type == delimiter;
       topLabel = it->second;
       currentLabel = it->second;
+      if (nextIsEnd && delcNewIfNotExist) {
+        auto& it = program.m_unownedLabels.find(globalToken.m_value);
+        if (it != program.m_unownedLabels.end()) {
+          it->second->m_declared = true;
+          program.m_statements.push_back(std::move(it->second));
+        }
+        
+      } 
     }
 
     skip();
@@ -330,6 +341,13 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
         }
       } else {
         currentLabel = it->second;
+        if (nextIsEnd && delcNewIfNotExist) {
+          auto& it = program.m_unownedLabels.find(identifierToken.m_value);
+          if (it != program.m_unownedLabels.end()) {
+            it->second->m_declared = true;
+            program.m_statements.push_back(std::move(it->second));
+          }
+        }
       }
 
       skip(); // consume label identifier ()
@@ -761,7 +779,8 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
             &&  (peek(1).m_type == Lexer::Token::Type::COLON 
               || peek(1).m_type == Lexer::Token::Type::PERIOD)) {
       //is label
-      consumeTokensForLabel(Lexer::Token::Type::COLON,true);
+      std::cout << "islabel:" << peek().m_value << '\n';
+      consumeTokensForLabel(Lexer::Token::Type::COLON,true, false);
     } else if (peek().m_type == Lexer::Token::Type::DIRECTIVE) {
       std::cout << consume().m_value << std::endl;
     } else if (peek().m_type != Lexer::Token::Type::NEWLINE) {

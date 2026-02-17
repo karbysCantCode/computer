@@ -57,6 +57,23 @@ class LexHelper {
       case ']':
       case '{':
       case '}':
+        return true;
+      default:
+        return std::isspace(c);
+    }
+  };
+
+  inline bool spasmIsWordBoundary(char c) {
+    switch (c) {
+      case '(':
+      case ')':
+      case ',':
+      case '\'':
+      case '"':
+      case '[':
+      case ']':
+      case '{':
+      case '}':
       case ':':
       case '.':
       case '+':
@@ -73,6 +90,7 @@ class LexHelper {
         return std::isspace(c);
     }
   };
+
   inline void skipComment(bool isMultiline) {
     if (isMultiline) {
       consume();
@@ -111,6 +129,14 @@ class LexHelper {
   inline std::string getUntilWordBoundary() {
     std::string str;
     while (notAtEnd() && !isWordBoundary(peek())) {
+      str.push_back(consume());
+    }
+    return str;
+  }
+
+  inline std::string spasmGetUntilWordBoundary() {
+    std::string str;
+    while (notAtEnd() && !spasmIsWordBoundary(peek())) {
       str.push_back(consume());
     }
     return str;
