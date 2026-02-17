@@ -139,22 +139,62 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
   };
 
   auto searchHandler = [&](auto const& self, FList& targetList, std::unordered_set<std::string>& fileExtentions , std::filesystem::path pathToSearch, SearchType type, int searchDepth) -> bool {
-    if (searchDepth < 0) {return true;}
-    
+    if (searchDepth < 0 && type != SearchType::ALL)
+        return true;
+
     bool success = true;
     std::error_code ec;
-    for (std::filesystem::directory_iterator it(pathToSearch, ec); it != std::filesystem::directory_iterator(); it.increment(ec)) {
-      if (ec) {success = false; continue;} 
-      std::cout  << "[PATH]" << it->path().generic_string() << '\n';
-      if (std::filesystem::is_directory(it->path())) {
-        if ((type == SearchType::CDEPTH && searchDepth < 1) || type == SearchType::SHALLOW) {continue;}
-        if (!self(self, targetList,fileExtentions, it->path(), type, searchDepth - 1)) {logError("Error while searching path \"" + it->path().u8string() + "\" from string at " + peek().positionToString()); success = false;}
-      } else {
-        targetList.m_filepaths.insert(it->path());
-      }
+
+    if (std::filesystem::is_regular_file(pathToSearch, ec)) {
+        std::string ext = pathToSearch.extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+        if (fileExtentions.find(ext) != fileExtentions.end()) {
+            targetList.m_filepaths.insert(pathToSearch);
+        }
+        return true;
     }
+
+    if (!std::filesystem::is_directory(pathToSearch, ec))
+        return false;
+
+    for (std::filesystem::directory_iterator it(pathToSearch, ec);
+         it != std::filesystem::directory_iterator();
+         it.increment(ec))
+    {
+        if (ec) {
+            success = false;
+            continue;
+        }
+
+        if (std::filesystem::is_directory(it->path())) {
+
+            if ((type == SearchType::CDEPTH && searchDepth < 1)
+                || type == SearchType::SHALLOW)
+                continue;
+
+            if (!self(self, targetList, fileExtentions,
+                      it->path(), type, searchDepth - 1))
+            {
+                logError("Error while searching path \"" +
+                         it->path().u8string() +
+                         "\" from string at " +
+                         peek().positionToString());
+                success = false;
+            }
+        }
+        else {
+            std::string ext = it->path().extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+
+            if (fileExtentions.find(ext) != fileExtentions.end()) {
+                targetList.m_filepaths.insert(it->path());
+            }
+        }
+    }
+
     return success;
-  };
+};
 
   auto validateTokenTypes = [&](std::initializer_list<Token::Type> allowed) -> int {
     int i = 0;
@@ -202,7 +242,6 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
       advanceUntilAfterType(SMake::Token::Type::CLOSEPAREN);
       return;
     } 
-    std::cout << "pre filetpye parse" << std::endl;
     std::unordered_set<std::string> fileTypes;
     std::string currentRun;
     size_t index = 0;
@@ -210,14 +249,16 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
     while (index < fileTypeString.length()) {
       const char c = fileTypeString[index];
       if (c == ',') {
-        fileTypes.insert(currentRun);
+        fileTypes.emplace(currentRun);
         currentRun.clear();
       } else if (!(c == ' ' || c == '\n' || c == '\t')) {
         currentRun.push_back(c);
       }
       index++;
     }
-    std::cout << "post filetpye parse" << std::endl;
+    if (currentRun.length() > 0) {
+      fileTypes.emplace(currentRun);
+    }
     if (clear) {
       flistIterator->second.m_filepaths.clear();
     }
@@ -241,8 +282,6 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
     }
     pos += 6;
 
-    std::cout << "pre directory parse" << std::endl;
-
     while (peek().m_type != SMake::Token::Type::CLOSEPAREN && !isAtEnd()) {
       if (peek().m_type != SMake::Token::Type::COMMA) {
         logError("Expected comma, got \"" + std::string(peek().typeToString()) + "\" at " + peek().positionToString());
@@ -251,17 +290,14 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
       }
       if (peek(1).m_type != SMake::Token::Type::STRING) {
         logError("Expected string, got \"" + std::string(peek(1).typeToString()) + "\" at " + peek(1).positionToString());
-        if (peek(1).m_type == SMake::Token::Type::CLOSEPAREN) {break;}
+        if (peek(1).m_type == SMake::Token::Type::CLOSEPAREN) {pos += 2; break;}
         pos += 2;
         continue;
       }
-
       searchHandler(searchHandler, flistIterator->second, fileTypes, std::filesystem::path(peek(1).m_value), searchType, searchDepth);
       pos += 2;
     }
     advance();
-
-    std::cout << "pre directory parse" << std::endl;
 
   };
 

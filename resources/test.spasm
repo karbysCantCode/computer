@@ -1,42 +1,13 @@
 @include "include.spasm" 
-;* hehehe *;
-@define Micheal 10
-@define PUSHALL(rd) {push rd push R2 push R4 HALT} 
-@entry .main
-;* hehe
-   123
-*;
-; test ;* te" heello"st test *;
-; test2 test2
-;*
 
-therhge
+; syntax test file
 
-ryrgrg
-*;HELLO
-;";;tee"
-;";the"
-Micheal
-Micheal
-Micheal
-Micheal
-Micheal
-Micheal
-Micheal
-Micheal
-Micheal!
-!Micheal
-@include "include2"
-.global:
-IADD R1 R2 R3
-ISUB R2 R1 R4
-CHAR numberOfBoxes 0
-CHAR byte 255
-WORD byte2 0xffff
-DWORD byte4 0b10101010_10101010_10101010_10101010
-QWORD byte8 "ABEDECSDegeg"
-DWORD byte 29
-  DWORD PUSHALL 92
-  PUSHALL r15
+add r1, r2, r3
+sub r1, r2, r3
+adi r2, [20389 * 2 + 65 - 25 - 2 * 252 + main]
 
-.main
+main:
+movi r2, 0
+nop
+nop
+nop

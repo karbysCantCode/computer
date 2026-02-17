@@ -26,13 +26,13 @@
 
 
 ;Arithmetic and logic
-  add normal REG rd r0-r15 ;add REG ra r0-r7 REG rb r0-r7 
-  adc normal REG rd r0-r15 ;add with carry REG ra r0-r7 REG rb r0-r7  
+  add normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7 ;add  
+  adc normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;add with carry 
   adi immediate REG rd r0-r15 IMM immediate 0:63 ;add immediate
   adli two   REG rd r0-r15<wl0-wl3<wh0-wh3  IMM immediate 0:65535  ;add 16 bit immediate
 
-  sub normal REG rd r0-r15                       ;sub REG ra r0-r7 REG rb r0-r7 
-  sbc normal REG rd r0-r15                       ;sub with carry REG ra r0-r7 REG rb r0-r7  
+  sub normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                       ;sub 
+  sbc normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                        ;sub with carry 
   sbi immediate REG rd r0-r15 IMM immediate 0:63 ;sub immediate
   sbli two   REG rd r0-r15<wl0-wl3<wh0-wh3 IMM immediate 0:65535  ;sub 16 bit immediate
 

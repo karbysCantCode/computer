@@ -103,7 +103,7 @@ namespace Spasm {
       struct Operand {
         virtual ~Operand() = default;
 
-        virtual std::string toString() const {assert(false);}
+        virtual std::string toString() const {assert(false); return "";}
       };
 
       struct NumberLiteral : Operand {
@@ -176,7 +176,7 @@ namespace Spasm {
       struct Statement {
         virtual ~Statement() = default;
 
-        virtual std::string toString(size_t padding = 0, size_t indent = 0, size_t minArgWidth = 5, bool basicData = true) const {assert(false);};
+        virtual std::string toString(size_t padding = 0, size_t indent = 0, size_t minArgWidth = 5, bool basicData = true) const {assert(false); return "";};
       };
 
       /*

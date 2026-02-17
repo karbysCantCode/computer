@@ -2,9 +2,9 @@
 .target test
 .flist main_files
 .ifdef re {
-    .search_add(main_files, all, ".spasm","/resources")
+    .search_add(main_files, all, ".spasm","resources/test.spasm")
 }
-.add_target(test, main_files, "software/hidy.spasm")
+.add_target(test, main_files, "resources/test.spasm")
 .entry(test, "main")
 .output(test, "/build", "testexe.bin")
 .format(test, "bin")

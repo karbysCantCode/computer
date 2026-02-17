@@ -57,6 +57,17 @@ class LexHelper {
       case ']':
       case '{':
       case '}':
+      case ':':
+      case '.':
+      case '+':
+      case '-':
+      case '=':
+      case '!':
+      case '^':
+      case '&':
+      case '|':
+      case '*':
+      case '/':
         return true;
       default:
         return std::isspace(c);
