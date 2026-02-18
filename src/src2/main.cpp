@@ -4,6 +4,7 @@
 #include "smake.hpp"
 #include "spasm.hpp"
 #include "arch.hpp"
+#include "spasmPreprocessor.hpp"
 
 #define ARCH_CACHED_FILE_PATH "__CACHED_ARCH_COPY__.arch"
 
@@ -137,6 +138,7 @@ int main(int argc, char* argv[]) {
       for (const auto& path : target.second.m_sourceFilepaths) {
         Debug::FullLogger logger;
         auto tokens = Spasm::Lexer::lex(path, targetArch.m_keywordSet, &logger);
+        preprocessSpasm(tokens, &logger);
         Spasm::Program::ProgramForm program;
         Spasm::Program::parseProgram(tokens, targetArch, program, &logger, path);
         for (const auto& statement : program.m_statements) {

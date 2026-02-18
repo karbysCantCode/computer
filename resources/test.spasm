@@ -1,4 +1,13 @@
 @include "include.spasm" 
+@define mul32(rA,rB,rC,rD,rdA,rdB) {
+  push r15
+  mull rdA, rC, rA
+  mulh rdB, rC, rA
+
+  mull r15, rB, rd
+  add  rdB, r15, rdB
+  pop r15
+}
 
 ; syntax test file
 
@@ -8,6 +17,7 @@ adi r2, [20389 * 2 + 65 - 25 - 2 * 252 + main]
 
 main:
 movi r2, 0
+mul32 r1, r2, r3, r4, r5, r6
 nop
 nop
 nop

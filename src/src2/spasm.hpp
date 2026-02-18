@@ -81,6 +81,42 @@ namespace Spasm {
         m_column(col),
         m_fileName(fileName) {}
 
+      constexpr const char* typeToString() const {
+        switch (m_type) {
+          case Type::IDENTIFIER:   return "IDENTIFIER";
+          case Type::KEYWORD:      return "KEYWORD";
+          case Type::OPENPAREN:    return "OPENPAREN";
+          case Type::CLOSEPAREN:   return "CLOSEPAREN";
+          case Type::STRING:       return "STRING";
+          case Type::NUMBER:       return "NUMBER";
+          case Type::COMMA:        return "COMMA";
+          case Type::COLON:        return "COLON";
+          case Type::PERIOD:       return "PERIOD";
+          case Type::OPENBLOCK:    return "OPENBLOCK";
+          case Type::CLOSEBLOCK:   return "CLOSEBLOCK";
+          case Type::OPENSQUARE:   return "OPENSQUARE";
+          case Type::CLOSESQUARE:  return "CLOSESQUARE";
+          case Type::UNASSIGNED:   return "UNASSIGNED";
+          case Type::DIRECTIVE:    return "DIRECTIVE";
+
+          case Type::BITWISEOR:    return "BITWISEOR";
+          case Type::BITWISEXOR:   return "BITWISEXOR";
+          case Type::BITWISEAND:   return "BITWISEAND";
+          case Type::LEFTSHIFT:    return "LEFTSHIFT";
+          case Type::RIGHTSHIFT:   return "RIGHTSHIFT";
+          case Type::ADD:          return "ADD";
+          case Type::SUBTRACT:     return "SUBTRACT";
+          case Type::MULTIPLY:     return "MULTIPLY";
+          case Type::DIVIDE:       return "DIVIDE";
+          case Type::MOD:          return "MOD";
+          case Type::BITWISENOT:   return "BITWISENOT";
+
+          case Type::NEWLINE:      return "NEWLINE";
+          case Type::MACRONEWLINE: return "MACRONEWLINE";
+        }
+
+        return "UNKNOWN"; // fallback safety
+      }
       std::string positionToString() const;
       inline void setString(const std::string& newString) {m_value=newString;}
       inline void setType(const Type& newType) {m_type=newType;}
