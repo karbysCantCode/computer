@@ -145,6 +145,8 @@ int main(int argc, char* argv[]) {
       }
     }
 
+    //implement byte length calculation for instructions
+
     return errc;
   }
 

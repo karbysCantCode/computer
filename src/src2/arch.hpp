@@ -106,20 +106,34 @@ namespace Instruction {
     bool isInRange(std::string& reg) const override {return m_registers.find(reg) != m_registers.end();};
   };
 
+
+
   struct Argument {
     enum class Type {
       REGISTER,
       IMMEDIATE,
       NONE,
+      CONSTANT,
       INVALID,
       UNKNOWN
     };
       
     Type m_type = Type::UNKNOWN;
-    std::shared_ptr<Range> m_range;
     std::string m_alias;
 
-    std::string toString(size_t padding = 0, size_t ident = 0) const;
+    Argument() {}
+    Argument(Type type) : m_type(type) {}
+
+    virtual ~Argument() = default;
+
+    virtual bool hasConstant() const {return false;}
+    virtual int* getConstant()  {return nullptr;}
+
+    virtual bool hasRange() const {return false;}
+    virtual Range* getRange() {return nullptr;}
+    virtual void setRange(std::unique_ptr<Arch::Instruction::Range> ptr) {assert(false);}
+
+    virtual std::string toString(size_t padding = 0, size_t ident = 0) const {assert(false);};
     constexpr const char* typeToString() const {
       switch (this->m_type) {
           case Type::IMMEDIATE:    return "IMMEDIATE";
@@ -130,12 +144,42 @@ namespace Instruction {
         }
       }
   };
+
+  struct RangeArgument : Argument {
+    std::unique_ptr<Range> m_range;
+
+    std::string toString(size_t padding = 0, size_t ident = 0) const override;
+  
+    bool hasRange() const override {return true;}
+    Range* getRange() override {return m_range.get();}
+    void setRange(std::unique_ptr<Arch::Instruction::Range> ptr) override {m_range = std::move(ptr);}
+    
+    RangeArgument() {}
+    RangeArgument(Type type) {
+      m_type = type;
+    }
+  };
+
+  struct ConstantArgument : Argument {
+    int m_constant = -1;
+
+    std::string toString(size_t padding = 0, size_t ident = 0) const override;
+  
+    bool hasConstant() const override {return true;}
+    int* getConstant() override {return &m_constant;}
+
+    ConstantArgument() {}
+    ConstantArgument(Type type) {
+      m_type = type;
+    }
+  };
   
   struct Instruction {
     std::string m_name = "UNNAMED";
-    std::vector<Argument> m_arguments;
+    std::vector<std::unique_ptr<Argument>> m_arguments;
     std::string m_formatAlias;
     int m_opcode = -1;
+    int m_byteLength = -1;
 
     std::string toString(size_t padding = 0, size_t ident = 0) const;
   };

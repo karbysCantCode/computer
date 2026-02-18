@@ -279,6 +279,9 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
 
   //peek() needs to be the top level identifier token
   auto consumeTokensForLabel = [&](Lexer::Token::Type delimiter, bool delcNewIfNotExist = false, bool delimOnNonPeriod = false) -> Program::Expressions::Label* {
+    //delcnewifnotexist and delimonnonperiod are mutually exlcusive
+    if (delcNewIfNotExist && delimOnNonPeriod) {assert(false);}
+    
     Program::Expressions::Label* topLabel = nullptr;
     Program::Expressions::Label* currentLabel = nullptr;
 
@@ -297,6 +300,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
       if (peek(1).m_type == delimiter && delcNewIfNotExist) {
         std::cout << "decled" << std::endl;
         program.m_statements.push_back(std::move(label));
+        skip();
       } else {
         program.m_unownedLabels.emplace(labelptr->m_name, std::move(label));
       }
@@ -306,12 +310,12 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
       topLabel = it->second;
       currentLabel = it->second;
       if (nextIsEnd && delcNewIfNotExist) {
-        auto& it = program.m_unownedLabels.find(globalToken.m_value);
+        auto it = program.m_unownedLabels.find(globalToken.m_value);
         if (it != program.m_unownedLabels.end()) {
           it->second->m_declared = true;
           program.m_statements.push_back(std::move(it->second));
         }
-        
+        skip();
       } 
     }
 
@@ -342,11 +346,13 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
       } else {
         currentLabel = it->second;
         if (nextIsEnd && delcNewIfNotExist) {
-          auto& it = program.m_unownedLabels.find(identifierToken.m_value);
+          auto it = program.m_unownedLabels.find(identifierToken.m_value);
           if (it != program.m_unownedLabels.end()) {
             it->second->m_declared = true;
             program.m_statements.push_back(std::move(it->second));
           }
+
+          skip();
         }
       }
 
@@ -687,7 +693,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
       for (const auto& arg : instruction->m_instruction->m_arguments) {
         skip(); //to skip preceeding comma or the instr token!
 
-        switch (arg.m_type)
+        switch (arg->m_type)
         {
         case Arch::Instruction::Argument::Type::IMMEDIATE:
           { 
@@ -760,7 +766,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
           break;
         
         default:
-          logError("Unhandled argument type (from arch)" + arg.toString());
+          logError("Unhandled argument type (from arch)" + arg->toString());
           skipUntilTrue(peek().m_type == Lexer::Token::Type::NEWLINE);
           break;
         }

@@ -26,35 +26,35 @@
 
 
 ;Arithmetic and logic
-  add normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7 ;add  
-  adc normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;add with carry 
-  adi immediate REG rd r0-r15 IMM immediate 0:63 ;add immediate
-  adli two   REG rd r0-r15<wl0-wl3<wh0-wh3  IMM immediate 0:65535  ;add 16 bit immediate
+  add  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7 ;add  
+  adc  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;add with carry 
+  adi  2 X immediate REG rd r0-r15 IMM immediate 0:63 ;add immediate
+  adli 4 X two   REG rd r0-r15<wl0-wl3<wh0-wh3  IMM immediate 0:65535  ;add 16 bit immediate
 
-  sub normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                       ;sub 
-  sbc normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                        ;sub with carry 
-  sbi immediate REG rd r0-r15 IMM immediate 0:63 ;sub immediate
-  sbli two   REG rd r0-r15<wl0-wl3<wh0-wh3 IMM immediate 0:65535  ;sub 16 bit immediate
+  sub  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                       ;sub 
+  sbc  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                        ;sub with carry 
+  sbi  2 X immediate REG rd r0-r15 IMM immediate 0:63 ;sub immediate
+  sbli 4 X two   REG rd r0-r15<wl0-wl3<wh0-wh3 IMM immediate 0:65535  ;sub 16 bit immediate
 
-  mull normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
-  mulh normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
+  mull 2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
+  mulh 2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
 
-  and  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;and
-  andi normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;and immediate (stored in next 2 bytes)
-  or   normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;or
-  ori  normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;or immediate (stored in next 2 bytes)
-  not  normal REG rd r0-r15 REG ra r0-r7  ;not
-  xor  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;xor
-  xori normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;xor immediate (stored in next 2 bytes)
+  and  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;and
+  andi 4 X normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;and immediate (stored in next 2 bytes)
+  or   2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;or
+  ori  4 X normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;or immediate (stored in next 2 bytes)
+  not  2 X normal REG rd r0-r15 REG ra r0-r7  ;not
+  xor  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;xor
+  xori 4 X normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;xor immediate (stored in next 2 bytes)
 
-  shl   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA << rB
-  shli  smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA << immediate
-  shr   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA >> rB
-  shri  smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA >> immediate
-  ror   normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rotate right
-  rori  smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rotate right immediate
+  shl  2 X normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA << rB
+  shli 2 X smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA << immediate
+  shr  2 X normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA >> rB
+  shri 2 X smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA >> immediate
+  ror  2 X normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rotate right
+  rori 2 X smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rotate right immediate
 
-  clz   normal REG rd r0-r15 REG rA r0-r7       ; count leading zeros
+  clz  2 X normal REG rd r0-r15 REG rA r0-r7       ; count leading zeros
 
   ; #24 instr above
 
@@ -63,19 +63,23 @@
   ;mode 0: full 2bytes little endian
   ;mode 1: low  byte
   ;mode 2: high byte
-  lod  special REG rd r0-r15 REG ra r0-r15 IMM mode 0:2     ; rd = [mem << 16 | ra]
-  sto  special REG rs r0-r15 REG ra r0-r15 IMM mode 0:2     ; [mem << 16 ra] = rs
+  lod   4 X special REG rd r0-r15 REG ra r0-r15 CONST 0     ; rd = [mem << 16 | ra]
+  lodl  4 X special REG rd r0-r15 REG ra r0-r15 CONST 1     ; rd = [mem << 16 | ra]
+  lodh  4 X special REG rd r0-r15 REG ra r0-r15 CONST 2     ; rd = [mem << 16 | ra]
+  sto   4 X special REG rs r0-r15 REG ra r0-r15 CONST 0     ; [mem << 16 ra] = rs
+  stol  4 X special REG rs r0-r15 REG ra r0-r15 CONST 1     ; [mem << 16 ra] = rs
+  stoh  4 X special REG rs r0-r15 REG ra r0-r15 CONST 2     ; [mem << 16 ra] = rs
 
-  push two REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; [sp] = rs, sp -= 2
-  pop  two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; sp += 2  , rs = [sp]
+  push 2 X two REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; [sp] = rs, sp -= 2
+  pop  2 X two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; sp += 2  , rs = [sp]
 
 
 ;moves
-  cmov   normal
-  swap   two    REG ra r0-r15 REG rb r0-r15 
-  mov    two    REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ;rd = rs (truncates or discards MSB's for mismatched bitwidths)
+  cmov   2 X normal
+  swap   2 X two    REG ra r0-r15 REG rb r0-r15 
+  mov    2 X two    REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ;rd = rs (truncates or discards MSB's for mismatched bitwidths)
 
-  movi   two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp IMM mode 0:15 
+  movi   2 X two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp IMM mode 0:15 
   ; first arg rd, and the 2nd arg describes how the bytes are loaded
   ; modes:
   ; 0 = two bytes (little endian)

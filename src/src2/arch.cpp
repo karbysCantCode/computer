@@ -16,17 +16,23 @@ std::string Arch::Instruction::Instruction::toString(size_t padding, size_t iden
             << indent2 << "Arguments: " << '\n'; 
 
   for (const auto& arg : m_arguments) {
-    str << arg.toString(padding, ident + padding*2);
+    str << arg->toString(padding, ident + padding*2);
   }
 
   str << '\n';
   return str.str();
 }
 
-std::string Arch::Instruction::Argument::toString(size_t padding, size_t ident) const {
+std::string Arch::Instruction::RangeArgument::toString(size_t padding, size_t ident) const {
   return std::string(ident, ' ') + "Argument Alias: " + m_alias + '\n'
    + std::string(padding + ident, ' ') + "Type: " + typeToString() + '\n'
    + std::string(padding + ident, ' ') + "Range: " + m_range.get()->toString() + '\n';
+}
+
+std::string Arch::Instruction::ConstantArgument::toString(size_t padding, size_t ident) const {
+  return std::string(ident, ' ') + "Argument Alias: " + m_alias + '\n'
+   + std::string(padding + ident, ' ') + "Type: " + typeToString() + '\n'
+   + std::string(padding + ident, ' ') + "Value: " + std::to_string(m_constant) + '\n';
 }
 
 std::string Arch::Format::toString(size_t padding, size_t ident) const {
@@ -137,10 +143,12 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
   if (!notAtEnd() || peek().m_type != tokenType)        \
   {logError(ErrorMessage); skip(); continue;}
 
-  auto safe_stoi = [&](const std::string&s, int& out) -> bool {
-    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), out);
+  auto safe_stoi = [&](const std::string&s, int* out) -> bool {
+    if (out == nullptr) {return 0;}
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), *out);
     return ec == std::errc() && ptr == s.data() + s.size();
   };
+
   auto notAtEnd = [&]() -> bool {
     return pos < tokens.size();
   };
@@ -169,117 +177,127 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
     if (*pos < str.length() && str[*pos] == '<') {(*pos)++;}
     return range;
   };
-  auto parseArgument = [&]() -> Arch::Instruction::Argument {
-  Arch::Instruction::Argument argument;
-  const Lexer::Token& typeToken = consume();
-  if (typeToken.m_value == "REG") {
-    argument.m_type = Arch::Instruction::Argument::Type::REGISTER;
-  } else if (typeToken.m_value == "IMM") {
-    argument.m_type = Arch::Instruction::Argument::Type::IMMEDIATE;
-  } else if (typeToken.m_value == "NON") {
-    argument.m_type = Arch::Instruction::Argument::Type::NONE;
-    return argument;
-  } else {
-    argument.m_type = Arch::Instruction::Argument::Type::INVALID;
-  }
+  auto parseArgument = [&]() -> std::unique_ptr<Arch::Instruction::Argument> {
+    std::unique_ptr<Arch::Instruction::Argument> argument;
+    const Lexer::Token& typeToken = consume();
+    if (typeToken.m_value == "REG") {
+      argument = std::make_unique<Arch::Instruction::RangeArgument>(Arch::Instruction::Argument::Type::REGISTER);
+    } else if (typeToken.m_value == "IMM") {
+      argument = std::make_unique<Arch::Instruction::RangeArgument>(Arch::Instruction::Argument::Type::IMMEDIATE);
+    } else if (typeToken.m_value == "NON") {
+      argument = std::make_unique<Arch::Instruction::RangeArgument>(Arch::Instruction::Argument::Type::NONE);
+      return argument;
+    } else if (typeToken.m_value == "CONST") {
+      argument = std::make_unique<Arch::Instruction::ConstantArgument>();
+      argument->m_type = Arch::Instruction::Argument::Type::CONSTANT;
+      if (!notAtEnd() || peek().m_type != Lexer::Token::Type::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
+      const auto& valueToken = consume();
+      if (!safe_stoi(valueToken.m_value, argument.get()->getConstant())) {
 
-  if (!notAtEnd() || peek().m_type != Lexer::Token::Type::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
-  
-  argument.m_alias = consume().m_value;
-
-  if (!notAtEnd() || peek().m_type != Lexer::Token::Type::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
-
-  //parse the range :(
-  const Lexer::Token& rangeToken = consume();
-  switch (argument.m_type) {
-    //register range
-    case Arch::Instruction::Argument::Type::REGISTER: {
-      size_t tokenPos = 0;
-      argument.m_range = std::make_shared<Arch::Instruction::RegisterRange>();
-      while (tokenPos < rangeToken.m_value.length()) {
-        const std::string currentRange = parseRange(rangeToken.m_value,&tokenPos);
-        std::string lowerStr;
-        std::string lowerNumber;
-        std::string higherNumber;
-        std::string prefix;
-        std::string postfix;
-        size_t dashPos = 0;
-        bool isRange = false;
-        while (dashPos < currentRange.length()) {
-          const char c = currentRange[dashPos];
-          if (c == '-') {isRange = true;}
-          else if (!isdigit(c) && !isRange) {prefix.push_back(c);}
-          else if (!isdigit(c) && isRange) {postfix.push_back(c);}
-          else if (isdigit(c) && !isRange) {lowerNumber.push_back(c);}
-          else if (isdigit(c) && isRange) {higherNumber.push_back(c);}
-          lowerStr.push_back(c);
-          dashPos++;
-        }
-        
-        if (isRange) {
-          if (prefix != postfix) {logError("mismatched range prefix \"" + prefix + "\" and \"" + postfix + "\" @ " + rangeToken.positionToString()); return argument;}
-          
-          const int minReg = std::stoi(lowerNumber);
-          const int maxReg = std::stoi(higherNumber);
-          if (minReg > maxReg) {logError("invalid range of registers (err is: min > max) @ " + rangeToken.positionToString()); return argument;}
-          
-          for (int i = minReg; i <= maxReg; i++) {
-            const std::string regName = prefix + std::to_string(i);
-            const auto it = targetArch.m_registers.find(regName);
-            if (it == targetArch.m_registers.end()) {
-              logError("Register \"" + regName + "\" is not declared, but is referenced at " + rangeToken.positionToString());
-              continue;
-            }
-            argument.m_range.get()->addToRegisterRange(&it->second);
-          }
-        } else {
-          const auto it = targetArch.m_registers.find(currentRange);
-            if (it == targetArch.m_registers.end()) {
-              logError("Register \"" + currentRange + "\" is not declared, but is referenced at " + rangeToken.positionToString());
-              continue;
-            }
-            argument.m_range.get()->addToRegisterRange(&it->second);
-        }
       }
-      break;
+      return argument;
+    } else {
+      argument->m_type = Arch::Instruction::Argument::Type::INVALID;
     }
-    // immediate range
-    case Arch::Instruction::Argument::Type::IMMEDIATE: {
-      size_t tokenPos = 0;
-      int leftValue = 0;
-      int rightValue = 0;
-      bool secondHalf = false;
-      std::string left;
-      std::string current;
-      while (tokenPos < rangeToken.m_value.length()) {
-        const char c = rangeToken.m_value[tokenPos];
-        tokenPos++;
-        if (c == ':') {
-          left = current;
-          secondHalf = true;
-          continue;
-        }
-        current.push_back(c);
-      }
 
-      if (!(safe_stoi(left,leftValue) && safe_stoi(current,rightValue))) {
-        logError("Could not parse string to integers at " + rangeToken.positionToString());
+    if (!notAtEnd() || peek().m_type != Lexer::Token::Type::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
+    
+    argument->m_alias = consume().m_value;
+
+    if (!notAtEnd() || peek().m_type != Lexer::Token::Type::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
+
+    //parse the range :(
+    const Lexer::Token& rangeToken = consume();
+    switch (argument->m_type) {
+      //register range
+      case Arch::Instruction::Argument::Type::REGISTER: {
+        size_t tokenPos = 0;
+        auto range = std::make_unique<Arch::Instruction::RegisterRange>();
+        argument->setRange(std::move(range));
+        while (tokenPos < rangeToken.m_value.length()) {
+          const std::string currentRange = parseRange(rangeToken.m_value,&tokenPos);
+          std::string lowerStr;
+          std::string lowerNumber;
+          std::string higherNumber;
+          std::string prefix;
+          std::string postfix;
+          size_t dashPos = 0;
+          bool isRange = false;
+          while (dashPos < currentRange.length()) {
+            const char c = currentRange[dashPos];
+            if (c == '-') {isRange = true;}
+            else if (!isdigit(c) && !isRange) {prefix.push_back(c);}
+            else if (!isdigit(c) && isRange) {postfix.push_back(c);}
+            else if (isdigit(c) && !isRange) {lowerNumber.push_back(c);}
+            else if (isdigit(c) && isRange) {higherNumber.push_back(c);}
+            lowerStr.push_back(c);
+            dashPos++;
+          }
+          
+          if (isRange) {
+            if (prefix != postfix) {logError("mismatched range prefix \"" + prefix + "\" and \"" + postfix + "\" @ " + rangeToken.positionToString()); return argument;}
+            
+            const int minReg = std::stoi(lowerNumber);
+            const int maxReg = std::stoi(higherNumber);
+            if (minReg > maxReg) {logError("invalid range of registers (err is: min > max) @ " + rangeToken.positionToString()); return argument;}
+            
+            for (int i = minReg; i <= maxReg; i++) {
+              const std::string regName = prefix + std::to_string(i);
+              const auto it = targetArch.m_registers.find(regName);
+              if (it == targetArch.m_registers.end()) {
+                logError("Register \"" + regName + "\" is not declared, but is referenced at " + rangeToken.positionToString());
+                continue;
+              }
+              argument->getRange()->addToRegisterRange(&it->second);
+            }
+          } else {
+            const auto it = targetArch.m_registers.find(currentRange);
+              if (it == targetArch.m_registers.end()) {
+                logError("Register \"" + currentRange + "\" is not declared, but is referenced at " + rangeToken.positionToString());
+                continue;
+              }
+              argument->getRange()->addToRegisterRange(&it->second);
+          }
+        }
         break;
       }
+      // immediate range
+      case Arch::Instruction::Argument::Type::IMMEDIATE: {
+        size_t tokenPos = 0;
+        int leftValue = 0;
+        int rightValue = 0;
+        bool secondHalf = false;
+        std::string left;
+        std::string current;
+        while (tokenPos < rangeToken.m_value.length()) {
+          const char c = rangeToken.m_value[tokenPos];
+          tokenPos++;
+          if (c == ':') {
+            left = current;
+            secondHalf = true;
+            continue;
+          }
+          current.push_back(c);
+        }
 
-      if (leftValue > rightValue) {
-        argument.m_range = std::make_shared<Arch::Instruction::ImmediateRange>(rightValue,leftValue);
-      } else {
-        argument.m_range = std::make_shared<Arch::Instruction::ImmediateRange>(leftValue,rightValue);
+        if (!(safe_stoi(left,&leftValue) && safe_stoi(current,&rightValue))) {
+          logError("Could not parse string to integers at " + rangeToken.positionToString());
+          break;
+        }
+
+        if (leftValue > rightValue) {
+          argument->setRange(std::make_unique<Arch::Instruction::ImmediateRange>(rightValue,leftValue));
+        } else {
+          argument->setRange(std::make_unique<Arch::Instruction::ImmediateRange>(leftValue,rightValue));
+        }
+        break;
       }
+      default: 
+      logError("Expected range type, got " + std::string(argument->typeToString()) + " at " + rangeToken.positionToString());
       break;
     }
-    default: 
-    logError("Expected range type, got " + std::string(argument.typeToString()) + " at " + rangeToken.positionToString());
-    break;
-  }
 
-  return argument;
+    return argument;
   };
 
   while (notAtEnd()) {
@@ -351,9 +369,9 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
         const auto& operandToken = consume();
         
         int bitWidth = -1;
-        safe_stoi(bitWidthToken.m_value, bitWidth);
+        safe_stoi(bitWidthToken.m_value, &bitWidth);
         int operandValue = -1;
-        safe_stoi(operandToken.m_value, operandValue);
+        safe_stoi(operandToken.m_value, &operandValue);
         
         if (isRange) {
           if (prefix != postfix) {logError("mismatched range prefix \"" + prefix + "\" and \"" + postfix + "\" @ " + rangeToken.positionToString()); return;}
@@ -376,7 +394,7 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
         tokenisingError(Lexer::Token::Type::IDENTIFIER, "Expected identifier, got \"" + peek().m_value + "\" at " + peek().positionToString());
         const auto& valueToken = consume();
         int bitassert = 0;
-        safe_stoi(valueToken.m_value, bitassert);
+        safe_stoi(valueToken.m_value, &bitassert);
         targetArch.m_controlSignals.emplace(identifierToken.m_value, Arch::ControlSignal(identifierToken.m_value,(size_t)bitassert));
       } else {
         std::cout << "ASSERTED_A" << std::endl;
@@ -407,9 +425,28 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
         continue;
       }
       instruction.m_formatAlias = formatToken.m_value;
+      //implement bytelegtnh and opcode setting for instr objects
+      const auto& byteLengthToken = consume();
+      if (byteLengthToken.m_type == Lexer::Token::Type::NEWLINE) {
+        targetArch.m_nameSet.emplace(instruction.m_name);
+        targetArch.m_instructionSet.emplace(instruction.m_name, std::move(instruction));
+        targetArch.m_keywordSet.emplace(instruction.m_name);
+        continue;
+      }
+      safe_stoi(byteLengthToken.m_value, &instruction.m_byteLength);
+
+      const auto& opcodeToken = consume();
+      if (opcodeToken.m_type == Lexer::Token::Type::NEWLINE) {
+        targetArch.m_nameSet.emplace(instruction.m_name);
+        targetArch.m_instructionSet.emplace(instruction.m_name, std::move(instruction));
+        targetArch.m_keywordSet.emplace(instruction.m_name);
+        continue;
+      }
+      safe_stoi(opcodeToken.m_value, &instruction.m_opcode);
+      
       while (peek().m_type == Lexer::Token::Type::ARGUMENTTYPE) {
         //if (peek().m_value == "NON") {consume(); break;}
-        instruction.m_arguments.emplace_back(parseArgument());
+        instruction.m_arguments.push_back(std::move(parseArgument()));
       }
 
       targetArch.m_nameSet.emplace(instruction.m_name);
