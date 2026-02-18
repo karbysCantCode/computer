@@ -133,7 +133,7 @@ namespace Instruction {
     virtual Range* getRange() {return nullptr;}
     virtual void setRange(std::unique_ptr<Arch::Instruction::Range> ptr) {assert(false);}
 
-    virtual std::string toString(size_t padding = 0, size_t ident = 0) const {assert(false);};
+    virtual std::string toString(size_t padding = 0, size_t ident = 0) const {assert(false); return "";}
     constexpr const char* typeToString() const {
       switch (this->m_type) {
           case Type::IMMEDIATE:    return "IMMEDIATE";

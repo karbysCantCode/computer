@@ -5,7 +5,7 @@
 .format immediate      6 4  6     ; first arg is dest
 .format smallImmediate 6 3  3 4   ; first arg is dest
 .format fullImmediate  6 10 
-.format special       6 4 4 2
+.format special        6 4 4 2
 
 ;normal regs
 .reg r0-r15  16 0  ; 16
@@ -26,35 +26,35 @@
 
 
 ;Arithmetic and logic
-  add  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7 ;add  
-  adc  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;add with carry 
-  adi  2 X immediate REG rd r0-r15 IMM immediate 0:63 ;add immediate
-  adli 4 X two   REG rd r0-r15<wl0-wl3<wh0-wh3  IMM immediate 0:65535  ;add 16 bit immediate
+  add  2 0 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7 ;add  
+  adc  2 1 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;add with carry 
+  adi  2 2 immediate REG rd r0-r15 IMM immediate 0:63 ;add immediate
+  adli 4 3 two   REG rd r0-r15<wl0-wl3<wh0-wh3  IMM immediate 0:65535  ;add 16 bit immediate
 
-  sub  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                       ;sub 
-  sbc  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                        ;sub with carry 
-  sbi  2 X immediate REG rd r0-r15 IMM immediate 0:63 ;sub immediate
-  sbli 4 X two   REG rd r0-r15<wl0-wl3<wh0-wh3 IMM immediate 0:65535  ;sub 16 bit immediate
+  sub  2 4 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                       ;sub 
+  sbc  2 5 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7                        ;sub with carry 
+  sbi  2 6 immediate REG rd r0-r15 IMM immediate 0:63 ;sub immediate
+  sbli 4 7 two   REG rd r0-r15<wl0-wl3<wh0-wh3 IMM immediate 0:65535  ;sub 16 bit immediate
 
-  mull 2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
-  mulh 2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
+  mull 2 8 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
+  mulh 2 9 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  
 
-  and  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;and
-  andi 4 X normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;and immediate (stored in next 2 bytes)
-  or   2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;or
-  ori  4 X normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;or immediate (stored in next 2 bytes)
-  not  2 X normal REG rd r0-r15 REG ra r0-r7  ;not
-  xor  2 X normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;xor
-  xori 4 X normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;xor immediate (stored in next 2 bytes)
+  and  2 10 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;and
+  andi 4 11 normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;and immediate (stored in next 2 bytes)
+  or   2 12 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;or
+  ori  4 13 normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;or immediate (stored in next 2 bytes)
+  not  2 14 normal REG rd r0-r15 REG ra r0-r7  ;not
+  xor  2 15 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7  ;xor
+  xori 4 16 normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:65535   ;xor immediate (stored in next 2 bytes)
 
-  shl  2 X normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA << rB
-  shli 2 X smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA << immediate
-  shr  2 X normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA >> rB
-  shri 2 X smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA >> immediate
-  ror  2 X normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rotate right
-  rori 2 X smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rotate right immediate
+  shl  2 17 normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA << rB
+  shli 2 18 smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA << immediate
+  shr  2 19 normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rd = rA >> rB
+  shri 2 20 smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rd = rA >> immediate
+  ror  2 21 normal REG rd r0-r15 REG rA r0-r7 REG rB r0-r7                    ; rotate right
+  rori 2 22 smallImmediate REG rd r0-r7 REG rA r0-r7 IMM immediate 0:15       ; rotate right immediate
 
-  clz  2 X normal REG rd r0-r15 REG rA r0-r7       ; count leading zeros
+  clz  2 23 normal REG rd r0-r15 REG rA r0-r7       ; count leading zeros
 
   ; #24 instr above
 
@@ -63,23 +63,30 @@
   ;mode 0: full 2bytes little endian
   ;mode 1: low  byte
   ;mode 2: high byte
-  lod   4 X special REG rd r0-r15 REG ra r0-r15 CONST 0     ; rd = [mem << 16 | ra]
-  lodl  4 X special REG rd r0-r15 REG ra r0-r15 CONST 1     ; rd = [mem << 16 | ra]
-  lodh  4 X special REG rd r0-r15 REG ra r0-r15 CONST 2     ; rd = [mem << 16 | ra]
-  sto   4 X special REG rs r0-r15 REG ra r0-r15 CONST 0     ; [mem << 16 ra] = rs
-  stol  4 X special REG rs r0-r15 REG ra r0-r15 CONST 1     ; [mem << 16 ra] = rs
-  stoh  4 X special REG rs r0-r15 REG ra r0-r15 CONST 2     ; [mem << 16 ra] = rs
+  lod   4 24 special REG rd r0-r15 REG ra r0-r15 CONST 0     ; rd = [mem << 16 | ra]
+  lodl  4 24 special REG rd r0-r15 REG ra r0-r15 CONST 1     ; rd = [mem << 16 | ra]
+  lodh  4 24 special REG rd r0-r15 REG ra r0-r15 CONST 2     ; rd = [mem << 16 | ra]
+  sto   4 25 special REG rs r0-r15 REG ra r0-r15 CONST 0     ; [mem << 16 ra] = rs
+  stol  4 25 special REG rs r0-r15 REG ra r0-r15 CONST 1     ; [mem << 16 ra] = rs
+  stoh  4 25 special REG rs r0-r15 REG ra r0-r15 CONST 2     ; [mem << 16 ra] = rs
 
-  push 2 X two REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; [sp] = rs, sp -= 2
-  pop  2 X two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; sp += 2  , rs = [sp]
+  push 2 26 two REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; [sp] = rs, sp -= 2
+  pop  2 27 two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ; sp += 2  , rs = [sp]
 
 
 ;moves
-  cmov   2 X normal
-  swap   2 X two    REG ra r0-r15 REG rb r0-r15 
-  mov    2 X two    REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ;rd = rs (truncates or discards MSB's for mismatched bitwidths)
+  cmov   2 28 normal  IMM condition 0:15 REG rd r0-r7 REG rs r0-r7 
+  swap   2 29 two     REG ra r0-r15 REG rb r0-r15 
+  mov    2 30 two     REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp  ;rd = rs (truncates or discards MSB's for mismatched bitwidths)
 
-  movi   2 X two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp IMM mode 0:15 
+  movi   4 31 two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp CONST 0
+  movil  4 31 two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp CONST 1
+  movih  4 31 two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp CONST 2
+  movs   4 31 two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp CONST 3
+  movw   6 31 two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp CONST 4
+  movwlb 4 31 two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp CONST 5
+  movwl  4 31 two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp CONST 6
+  movwh  4 31 two REG rd r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp CONST 7
   ; first arg rd, and the 2nd arg describes how the bytes are loaded
   ; modes:
   ; 0 = two bytes (little endian)
@@ -91,25 +98,25 @@
   ; 6 = 32 bit bus lower word
   ; 7 = 32 bit bus upper word
 
-  ctlmv  special IMM mode 0:3 REG rN r0-r7 REG rS ctx<mmio<priv<state ;if mode set, then it is storing (otherwise load) TO the control
+  ctlmv  2 X special IMM mode 0:3 REG rN r0-r7 REG rS ctx<mmio<priv<state ;if mode set, then it is storing (otherwise load) TO the control
 
 ;control flow
-nop  fullImmediate 
-halt fullImmediate 
-sint fullImmediate 
+nop  2 63 fullImmediate NON
+halt 2 62 fullImmediate NON
+;sint fullImmediate 
 
-brc  two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch register
-brca immediate IMM condition 0:15 IMM offset 0:63 ; branch add
-brcs immediate IMM condition 0:15 IMM offset 0:63 ; branch sub
-bala immediate IMM condition 0:15 IMM offset 0:63 ; branch and link add
-bals immediate IMM condition 0:15 IMM offset 0:63 ; branch and link sub
-balr two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch and link register
+brc  2 32 two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch register
+brca 2 33 immediate IMM condition 0:15 IMM offset 0:63 ; branch add
+brcs 2 34 immediate IMM condition 0:15 IMM offset 0:63 ; branch sub
+bala 2 35 immediate IMM condition 0:15 IMM offset 0:63 ; branch and link add
+bals 2 36 immediate IMM condition 0:15 IMM offset 0:63 ; branch and link sub
+balr 2 37 two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch and link register
 
-jmpa fullImmediate IMM offset 0:1023 ; jump add
-jmps fullImmediate IMM offset 0:1023 ; jump sub
-jala fullImmediate IMM offset 0:1023 ; jump and link add
-jals fullImmediate IMM offset 0:1023 ; jump and link sub
-jalr two       REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp ; jump and link register
+jmpa 2 38 fullImmediate IMM offset 0:1023 ; jump add
+jmps 2 39 fullImmediate IMM offset 0:1023 ; jump sub
+jala 2 40 fullImmediate IMM offset 0:1023 ; jump and link add
+jals 2 41 fullImmediate IMM offset 0:1023 ; jump and link sub
+jalr 2 42 two       REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp ; jump and link register
 
 
 ;state

@@ -24,6 +24,16 @@ std::string Arch::Instruction::Instruction::toString(size_t padding, size_t iden
 }
 
 std::string Arch::Instruction::RangeArgument::toString(size_t padding, size_t ident) const {
+  switch (m_type) {
+    case Type::NONE:
+    return "NONETYPE";
+    case Type::UNKNOWN:
+    return "UNKNOWNTYPE";
+    case Type::INVALID:
+    return "INVALIDTYPE";
+    default:
+    break;
+  }
   return std::string(ident, ' ') + "Argument Alias: " + m_alias + '\n'
    + std::string(padding + ident, ' ') + "Type: " + typeToString() + '\n'
    + std::string(padding + ident, ' ') + "Range: " + m_range.get()->toString() + '\n';
@@ -113,7 +123,7 @@ std::vector<Arch::Lexer::Token> Arch::Lexer::lex(std::filesystem::path& sourcePa
       tokens.emplace_back(std::string{'\n'}, Lexer::Token::Type::NEWLINE, line, column);
     } else {
       const std::string value = getUntilWordBoundary();
-      if (value == "REG" || value == "IMM") {
+      if (value == "REG" || value == "IMM" || value == "CONST" || value == "NON") {
         tokens.emplace_back(value ,Lexer::Token::Type::ARGUMENTTYPE, line, column);
       } else {
         tokens.emplace_back(value ,Lexer::Token::Type::IDENTIFIER, line, column);
@@ -138,6 +148,8 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
 
   #define logError(ErrorMessage) \
   if (logger != nullptr) (logger->Errors.logMessage(ErrorMessage))
+  #define logWarning(ErrorMessage) \
+  if (logger != nullptr) (logger->Warnings.logMessage(ErrorMessage))
 
   #define tokenisingError(tokenType, ErrorMessage)          \
   if (!notAtEnd() || peek().m_type != tokenType)        \
@@ -192,8 +204,18 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
       argument->m_type = Arch::Instruction::Argument::Type::CONSTANT;
       if (!notAtEnd() || peek().m_type != Lexer::Token::Type::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
       const auto& valueToken = consume();
-      if (!safe_stoi(valueToken.m_value, argument.get()->getConstant())) {
 
+      if (!safe_stoi(valueToken.m_value, argument.get()->getConstant())) {
+        auto it = targetArch.m_registers.find(valueToken.m_value);
+        if (it == targetArch.m_registers.end()) {
+          logError("Invalid constant argument type \"" + valueToken.m_value + "\" at " + valueToken.positionToString());
+          return argument;
+        } else {
+          if (it->second.m_machineCodeOperandValue < 0) {
+            logWarning("Register with no value (less than 0) \"" + it->second.m_name + "\" used at " + valueToken.positionToString());
+          }
+          *argument->getConstant() = it->second.m_machineCodeOperandValue;
+        }
       }
       return argument;
     } else {
