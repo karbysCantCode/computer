@@ -98,30 +98,30 @@
   ; 6 = 32 bit bus lower word
   ; 7 = 32 bit bus upper word
 
-  ctlmv  2 X special IMM mode 0:3 REG rN r0-r7 REG rS ctx<mmio<priv<state ;if mode set, then it is storing (otherwise load) TO the control
+  ctlmv  2 32 special IMM mode 0:3 REG rN r0-r7 REG rS ctx<mmio<priv<state ;if mode set, then it is storing (otherwise load) TO the control
 
 ;control flow
 nop  2 63 fullImmediate NON
 halt 2 62 fullImmediate NON
 ;sint fullImmediate 
 
-brc  2 32 two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch register
-brca 2 33 immediate IMM condition 0:15 IMM offset 0:63 ; branch add
-brcs 2 34 immediate IMM condition 0:15 IMM offset 0:63 ; branch sub
-bala 2 35 immediate IMM condition 0:15 IMM offset 0:63 ; branch and link add
-bals 2 36 immediate IMM condition 0:15 IMM offset 0:63 ; branch and link sub
-balr 2 37 two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch and link register
+brc  2 33 two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch register
+brca 2 34 immediate IMM condition 0:15 IMM offset 0:63 ; branch add
+brcs 2 35 immediate IMM condition 0:15 IMM offset 0:63 ; branch sub
+bala 2 36 immediate IMM condition 0:15 IMM offset 0:63 ; branch and link add
+bals 2 37 immediate IMM condition 0:15 IMM offset 0:63 ; branch and link sub
+balr 2 38 two       IMM condition 0:15 REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp      ; branch and link register
 
-jmpa 2 38 fullImmediate IMM offset 0:1023 ; jump add
-jmps 2 39 fullImmediate IMM offset 0:1023 ; jump sub
-jala 2 40 fullImmediate IMM offset 0:1023 ; jump and link add
-jals 2 41 fullImmediate IMM offset 0:1023 ; jump and link sub
-jalr 2 42 two       REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp ; jump and link register
+jmpa 2 39 fullImmediate IMM offset 0:1023 ; jump add
+jmps 2 40 fullImmediate IMM offset 0:1023 ; jump sub
+jala 2 41 fullImmediate IMM offset 0:1023 ; jump and link add
+jals 2 42 fullImmediate IMM offset 0:1023 ; jump and link sub
+jalr 2 43 two       REG rs r0-r15<wl0-wl3<wh0-wh3<w0-w3<mem<sp<ip<fp ; jump and link register
 
 
 ;state
-sset fullImmediate IMM immediate 0:1023 ;IMM | stateRegister  sets the bits in the immediate
-sclr fullImmediate IMM immediate 0:1023 ;~IMM & stateRegister clears the bits in the immediate
+;sset fullImmediate IMM immediate 0:1023 ;IMM | stateRegister  sets the bits in the immediate
+;sclr fullImmediate IMM immediate 0:1023 ;~IMM & stateRegister clears the bits in the immediate
 
 
 

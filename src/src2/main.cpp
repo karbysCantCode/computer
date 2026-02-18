@@ -137,7 +137,8 @@ int main(int argc, char* argv[]) {
       for (const auto& path : target.second.m_sourceFilepaths) {
         Debug::FullLogger logger;
         auto tokens = Spasm::Lexer::lex(path, targetArch.m_keywordSet, &logger);
-        Spasm::Program::ProgramForm program = Spasm::Program::parseProgram(tokens, targetArch, &logger, path);
+        Spasm::Program::ProgramForm program;
+        Spasm::Program::parseProgram(tokens, targetArch, program, &logger, path);
         for (const auto& statement : program.m_statements) {
           std::cout << "[state]" << statement->toString();
         }

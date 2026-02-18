@@ -138,9 +138,11 @@ namespace Instruction {
       switch (this->m_type) {
           case Type::IMMEDIATE:    return "IMMEDIATE";
           case Type::REGISTER:   return "REGISTER";
+          case Type::NONE:     return "NONE";
+          case Type::CONSTANT:     return "CONSTANT";
           case Type::INVALID:     return "INVALID";
           case Type::UNKNOWN:     return "UNKNOWN";
-          default:                    return "UNKNOWN";
+          default:                    return "UNKNOWNDEFAULT";
         }
       }
   };

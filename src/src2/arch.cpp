@@ -12,6 +12,7 @@ std::string Arch::Instruction::Instruction::toString(size_t padding, size_t iden
   std::string indent2(padding + ident, ' ');
   str <<       indent << "Instruction name: " << m_name << '\n'
             << indent2 << "Opcode: \"" << m_opcode << "\"" << '\n'
+            << indent2 << "Byte length: " << m_byteLength << '\n'
             << indent2 << "Format alias: " << m_formatAlias << '\n'
             << indent2 << "Arguments: " << '\n'; 
 
@@ -26,11 +27,11 @@ std::string Arch::Instruction::Instruction::toString(size_t padding, size_t iden
 std::string Arch::Instruction::RangeArgument::toString(size_t padding, size_t ident) const {
   switch (m_type) {
     case Type::NONE:
-    return "NONETYPE";
+    return std::string(ident, ' ') + "NONETYPE";
     case Type::UNKNOWN:
-    return "UNKNOWNTYPE";
+    return std::string(ident, ' ') + "UNKNOWNTYPE";
     case Type::INVALID:
-    return "INVALIDTYPE";
+    return std::string(ident, ' ') + "INVALIDTYPE";
     default:
     break;
   }
@@ -200,8 +201,8 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
       argument = std::make_unique<Arch::Instruction::RangeArgument>(Arch::Instruction::Argument::Type::NONE);
       return argument;
     } else if (typeToken.m_value == "CONST") {
-      argument = std::make_unique<Arch::Instruction::ConstantArgument>();
-      argument->m_type = Arch::Instruction::Argument::Type::CONSTANT;
+      argument = std::make_unique<Arch::Instruction::ConstantArgument>(Arch::Instruction::Argument::Type::CONSTANT);
+      //argument->m_type = Arch::Instruction::Argument::Type::CONSTANT;
       if (!notAtEnd() || peek().m_type != Lexer::Token::Type::IDENTIFIER) {logError("incomplete argument @ " + typeToken.positionToString()); return argument;}
       const auto& valueToken = consume();
 
@@ -439,14 +440,6 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
       instruction.m_name = nameToken.m_value;
       if (!notAtEnd()) {logError("incomplete instruction @ " + token.positionToString()); continue;}
 
-      const auto& formatToken = consume();
-      if (formatToken.m_type == Lexer::Token::Type::NEWLINE) {
-        targetArch.m_nameSet.emplace(instruction.m_name);
-        targetArch.m_instructionSet.emplace(instruction.m_name, std::move(instruction));
-        targetArch.m_keywordSet.emplace(instruction.m_name);
-        continue;
-      }
-      instruction.m_formatAlias = formatToken.m_value;
       //implement bytelegtnh and opcode setting for instr objects
       const auto& byteLengthToken = consume();
       if (byteLengthToken.m_type == Lexer::Token::Type::NEWLINE) {
@@ -465,6 +458,15 @@ void Arch::assembleTokens(std::vector<Lexer::Token>& tokens, Architecture& targe
         continue;
       }
       safe_stoi(opcodeToken.m_value, &instruction.m_opcode);
+
+      const auto& formatToken = consume();
+      if (formatToken.m_type == Lexer::Token::Type::NEWLINE) {
+        targetArch.m_nameSet.emplace(instruction.m_name);
+        targetArch.m_instructionSet.emplace(instruction.m_name, std::move(instruction));
+        targetArch.m_keywordSet.emplace(instruction.m_name);
+        continue;
+      }
+      instruction.m_formatAlias = formatToken.m_value;
       
       while (peek().m_type == Lexer::Token::Type::ARGUMENTTYPE) {
         //if (peek().m_value == "NON") {consume(); break;}

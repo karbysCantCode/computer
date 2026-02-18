@@ -224,10 +224,10 @@ namespace Spasm {
       std::unordered_map<std::string, Expressions::Label*> m_globalLabels;
       std::unordered_map<std::string, Expressions::Declaration*> m_dataDeclarations;
       std::unordered_map<std::string, std::unique_ptr<Expressions::Label>> m_unownedLabels;
+
     };
     
-    ProgramForm parseProgram(std::vector<Spasm::Lexer::Token>& tokens, Arch::Architecture& arch, Debug::FullLogger* logger = nullptr, std::filesystem::path path = "");
-
+    bool parseProgram(std::vector<Spasm::Lexer::Token>& tokens, Arch::Architecture& arch, Spasm::Program::ProgramForm& program, Debug::FullLogger* logger = nullptr, std::filesystem::path path = "");
 
   };
 }

@@ -247,9 +247,8 @@ std::vector<Spasm::Lexer::Token> Spasm::Lexer::lex(std::filesystem::path path, s
   #undef logDebug
 }
 
-Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexer::Token>& tokens, Arch::Architecture& arch, Debug::FullLogger* logger, std::filesystem::path path) {
+bool Spasm::Program::parseProgram(std::vector<Spasm::Lexer::Token>& tokens, Arch::Architecture& arch, Spasm::Program::ProgramForm& program, Debug::FullLogger* logger, std::filesystem::path path) {
   using namespace Spasm;
-  Program::ProgramForm program;
 
   size_t pos = 0;
 
@@ -274,7 +273,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
   auto isAtEnd = [&]() -> bool {
     return !(pos < tokens.size());
   };
-  #define skipUntilTrue(condition) while(!(condition)) {skip();}
+  #define skipUntilTrue(condition) while(!(condition) && notAtEnd()) {skip();}
 
 
   //peek() needs to be the top level identifier token
@@ -290,7 +289,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
     auto it = program.m_globalLabels.find(globalToken.m_value);
     if (it == program.m_globalLabels.end()) {
       //make new label
-      std::cout << "mknew" << peek().m_value << " " << peek(1).m_value << std::endl;
+      //std::cout << "mknew" << peek().m_value << " " << peek(1).m_value << std::endl;
       auto label = std::make_unique<Program::Expressions::Label>(peek().m_value, currentLabel);
       auto labelptr = label.get();
       program.m_globalLabels.emplace(labelptr->m_name, labelptr);
@@ -298,7 +297,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
       currentLabel = labelptr;
 
       if (peek(1).m_type == delimiter && delcNewIfNotExist) {
-        std::cout << "decled" << std::endl;
+        
         program.m_statements.push_back(std::move(label));
         skip();
       } else {
@@ -683,7 +682,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
   while(notAtEnd()) {
     //check if is keyword
     auto keyToken = peek();
-    std::cout << keyToken.m_value << std::endl;
+    //std::cout << keyToken.m_value << std::endl;
     auto instrIt = arch.m_instructionSet.find(keyToken.m_value);
     auto dataIt = arch.m_dataTypes.find(keyToken.m_value);
 
@@ -691,11 +690,11 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
       //is instruction
       auto instruction = std::make_unique<Program::Expressions::Instruction>(&instrIt->second);
       for (const auto& arg : instruction->m_instruction->m_arguments) {
-        skip(); //to skip preceeding comma or the instr token!
 
         switch (arg->m_type)
         {
         case Arch::Instruction::Argument::Type::IMMEDIATE:
+          skip();//to skip preceeding comma or the instr token!
           { 
             const auto& firstToken = peek();
             switch (firstToken.m_type) {
@@ -749,7 +748,9 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
             }
           }
           break;
-        case Arch::Instruction::Argument::Type::REGISTER:{
+        case Arch::Instruction::Argument::Type::REGISTER:
+          skip();//to skip preceeding comma or the instr token!
+        {
           auto it = arch.m_registers.find(peek().m_value);
           if (it != arch.m_registers.end()) {
             auto reg = std::make_unique<Program::Expressions::Operands::RegisterLiteral>(&it->second);
@@ -762,19 +763,23 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
         }
           break;
         case Arch::Instruction::Argument::Type::NONE:
+          skip();//to skip preceeding comma or the instr token!  
           skipUntilTrue(peek().m_type == Lexer::Token::Type::NEWLINE);
           break;
-        
+        case Arch::Instruction::Argument::Type::CONSTANT:
+          continue;
+          break;
         default:
-          logError("Unhandled argument type (from arch)" + arg->toString());
+          logError("Unhandled argument type (from arch) in instruction \"" + instruction->m_instruction->m_name + '"' + std::string(1,'\n') + arg->toString(2,2));
           skipUntilTrue(peek().m_type == Lexer::Token::Type::NEWLINE);
           break;
         }
       }
 
-      if (instruction->m_instruction->m_arguments.size() < 1) {
-        skip();
-      }
+      // if (instruction->m_instruction->m_arguments.size() < 1) {
+      //   skip();
+      // }
+      skipUntilTrue(peek().m_type == Lexer::Token::Type::NEWLINE);
 
       program.m_statements.push_back(std::move(instruction));
 
@@ -796,7 +801,7 @@ Spasm::Program::ProgramForm Spasm::Program::parseProgram(std::vector<Spasm::Lexe
       skip();
     }
   }
-  return program;
+  return true;
 }
 
 namespace Spasm::Program::Expressions {
