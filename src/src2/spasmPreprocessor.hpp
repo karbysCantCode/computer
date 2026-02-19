@@ -6,6 +6,7 @@
 //#include "arch.hpp"
 #include "spasm.hpp"
 #include "debugHelpers.hpp"
+#include "smake.hpp"
 
 struct LineColPair {
   int line = -1;
@@ -13,6 +14,26 @@ struct LineColPair {
 
   LineColPair(int ln, int cl) : line(ln), col(cl) {}
 };
+
+std::filesystem::path searchForPathInIncluded(const std::string& sPath, 
+                                              const SMake::Target& target) {
+  namespace fs = std::filesystem; 
+  fs::path path{sPath};
+
+  if (fs::is_regular_file(path)) {
+    return fs::canonical(path);
+  }
+  
+  for (const auto& directory : target.m_includeDirectories) {
+    fs::path candidate = directory / path;
+
+    if (fs::is_regular_file(candidate)) {
+      return fs::canonical(candidate);
+    }
+  }
+
+  return std::filesystem::path();
+}
 
 struct Macro {
   std::string target;
@@ -91,7 +112,7 @@ struct ReplacementMacro : Macro {
 };  
 
 // 
-bool preprocessSpasm(std::vector<Spasm::Lexer::Token>& spasmTokens, Debug::FullLogger* logger = nullptr) {
+bool preprocessSpasm(std::vector<Spasm::Lexer::Token>& spasmTokens, Spasm::Program::ProgramForm& program, SMake::Target& target, Debug::FullLogger* logger = nullptr) {
   size_t index = 0;
   auto isAtEnd = [&]() {
     return !(index<spasmTokens.size());
@@ -192,8 +213,14 @@ bool preprocessSpasm(std::vector<Spasm::Lexer::Token>& spasmTokens, Debug::FullL
         break;
 
         case Spasm::Lexer::Token::NicheType::DIRECTIVE_INCLUDE: {
-          logError("INCLUDE DIRECTIVE NOT IMPLEMENTED FOR PREPROCESSOR");
           advance();
+          if (peek().m_type != Spasm::Lexer::Token::Type::STRING) {logError(std::string("Expected string for include, got ") + peek().typeToString() + " at " + peek().positionToString()); continue;}
+          const auto& fileToken = advance();
+          auto path = searchForPathInIncluded(fileToken.m_value, target);
+          
+
+          // logError("INCLUDE DIRECTIVE NOT IMPLEMENTED FOR PREPROCESSOR");
+          // advance();
         }
         break;
         case Spasm::Lexer::Token::NicheType::DIRECTIVE_ENTRY: {

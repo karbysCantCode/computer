@@ -134,14 +134,18 @@ int main(int argc, char* argv[]) {
  
     std::cout << project.toString() << std::endl;
 
-    for (const auto& target : project.m_targets) {
+    for (auto& target : project.m_targets) {
+      std::unordered_map<std::filesystem::path, std::unique_ptr<Spasm::Program::ProgramForm>> filePathProgramMap;
       for (const auto& path : target.second.m_sourceFilepaths) {
         Debug::FullLogger logger;
         auto tokens = Spasm::Lexer::lex(path, targetArch.m_keywordSet, &logger);
-        preprocessSpasm(tokens, &logger);
-        Spasm::Program::ProgramForm program;
-        Spasm::Program::parseProgram(tokens, targetArch, program, &logger, path);
-        for (const auto& statement : program.m_statements) {
+        
+        auto program = std::make_unique<Spasm::Program::ProgramForm>();
+        auto programPtr = program.get();
+        filePathProgramMap.emplace(path, std::move(program));
+        preprocessSpasm(tokens, *program, target.second, &logger);
+        Spasm::Program::parseProgram(tokens, targetArch, *program, &logger, path);
+        for (const auto& statement : (*program).m_statements) {
           std::cout << "[state]" << statement->toString();
         }
         DumpLogger(logger, "SPASM");
