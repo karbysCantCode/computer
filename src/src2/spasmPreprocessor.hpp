@@ -39,7 +39,16 @@ struct FunctionMacro : Macro {
     while (localArgs.size() < args.size() && currentIndex < replacementStream.size()) {
       const Spasm::Lexer::Token& token = replacementStream[currentIndex];
       currentIndex++;
-      if (token.m_type == Spasm::Lexer::Token::Type::COMMA) {argCount++; isBlame = true; localArgs.push_back(currentArg); currentArg.clear(); continue;}
+      
+      if (token.isOneOf({Spasm::Lexer::Token::Type::COMMA,Spasm::Lexer::Token::Type::NEWLINE})) {
+        argCount++; 
+        isBlame = true; 
+        localArgs.push_back(currentArg); 
+        currentArg.clear(); 
+        continue;
+      }
+      
+
       if (isBlame) {isBlame = false; localArgBlame.emplace_back(token.m_line, token.m_column);}
       currentArg.push_back(token);
     }
@@ -52,7 +61,7 @@ struct FunctionMacro : Macro {
       auto it = args.find(token.m_value);
       if (it != args.end()) {
         replacementStream.insert(replacementStream.begin() + currentIndex, localArgs[it->second].begin(), localArgs[it->second].end());
-        currentIndex += localArgs[it->second].size();
+        currentIndex += 1;//localArgs[it->second].size();
       } else {
         replacementStream.insert(replacementStream.begin() + currentIndex, token);
         currentIndex++;
@@ -105,7 +114,12 @@ bool preprocessSpasm(std::vector<Spasm::Lexer::Token>& spasmTokens, Debug::FullL
 
     auto macroIt = macroMap.find(token.m_value);
     if (macroIt != macroMap.end()) 
-      {index = macroIt->second->replace(index, spasmTokens); continue;}
+      {
+        const size_t startIndex = index;
+        index = macroIt->second->replace(index, spasmTokens); 
+        index = startIndex;
+        continue;
+      }
 
     if (token.m_type == Spasm::Lexer::Token::Type::DIRECTIVE && !isAtEnd()) {
       switch (token.m_nicheType) {
@@ -145,6 +159,11 @@ bool preprocessSpasm(std::vector<Spasm::Lexer::Token>& spasmTokens, Debug::FullL
             if (peek().m_type == Spasm::Lexer::Token::Type::OPENBLOCK) {
               advance();
               while (peek().m_type != Spasm::Lexer::Token::Type::CLOSEBLOCK && !isAtEnd()) {
+                if (peek().m_value == macroName) {
+                  logError("Macroname not allowed inside macro definition. at " + peek().positionToString());
+                   while (peek().m_type != Spasm::Lexer::Token::Type::CLOSEBLOCK && !isAtEnd()) {index++;}
+                  break;
+                }
                 macro->replacement.push_back(advance());
               }
               advance();
@@ -183,12 +202,12 @@ bool preprocessSpasm(std::vector<Spasm::Lexer::Token>& spasmTokens, Debug::FullL
       advance();
     }
   }
-  std::cout << "Start" << std::endl;
-  for (const auto& entry : macroMap) {
-    std::cout << entry.first << std::endl;
-  }
+  // std::cout << "Start" << std::endl;
+  // for (const auto& entry : macroMap) {
+  //   std::cout << entry.first << std::endl;
+  // }
 
-  std::cout << "S3" << std::endl;
+  // std::cout << "S3" << std::endl;
 
 
   return true;

@@ -1,12 +1,14 @@
 @include "include.spasm" 
+@define rF r15
 @define mul32(rA,rB,rC,rD,rdA,rdB) {
-  push r15
+  push rF
   mull rdA, rC, rA
   mulh rdB, rC, rA
 
-  mull r15, rB, rd
-  add  rdB, r15, rdB
-  pop r15
+  mull rF, rB, rD
+  add  rdB, rF, rdB
+  pop rF
+  mul32
 }
 
 ; syntax test file
