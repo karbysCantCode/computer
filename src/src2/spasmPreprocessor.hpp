@@ -59,11 +59,18 @@ struct FunctionMacro : Macro {
     currentIndex = fillIndex;
     for (const auto& token : replacement) {
       auto it = args.find(token.m_value);
+      auto insertPos = replacementStream.begin() + currentIndex;
+
       if (it != args.end()) {
-        replacementStream.insert(replacementStream.begin() + currentIndex, localArgs[it->second].begin(), localArgs[it->second].end());
-        currentIndex += 1;//localArgs[it->second].size();
+         const auto& expansion = localArgs[it->second];
+
+        replacementStream.insert(insertPos,
+                                 expansion.begin(), 
+                                 expansion.end());
+        currentIndex += expansion.size();
+        
       } else {
-        replacementStream.insert(replacementStream.begin() + currentIndex, token);
+        replacementStream.insert(insertPos, token);
         currentIndex++;
       }
     }

@@ -1,3 +1,31 @@
+;CPU build limits
+; normal
+;   field 1
+;     R16 Write select  (0-15)
+;     Condition
+;   field 2
+;     R16 Write select  (0-7)
+;     R16 Read A select (0-7)
+;     R16 Read B select (0-7)
+;   field 3
+;     R16 Read A select (0-7)
+;     R16 Read B select (0-7)
+
+; two
+;   field 1
+;     R16 Write select  (0-15)
+;     R16 Read A select (0-15)
+;     Condition
+;   field 2
+;     R16 Read B select (0-15)
+
+; immediate
+;   field 1
+;     R16 Write select (0-15)
+;     Condition
+;   field 2
+
+
 .bitwidth 16
 
 .format normal         6 4  3 3   ; first arg is dest
