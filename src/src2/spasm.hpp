@@ -256,7 +256,7 @@ namespace Spasm {
       public:
       std::filesystem::path m_sourceFilePath;
       std::vector<std::unique_ptr<Expressions::Statement>> m_statements;
-      std::unordered_map<std::filesystem::path, ProgramForm*> m_includedPrograms;
+      std::unordered_map<std::filesystem::path, std::unique_ptr<Spasm::Program::ProgramForm>*> m_includedPrograms;
       std::unordered_map<std::string, Expressions::Label*> m_globalLabels;
       std::unordered_map<std::string, Expressions::Declaration*> m_dataDeclarations;
       std::unordered_map<std::string, std::unique_ptr<Expressions::Label>> m_unownedLabels;

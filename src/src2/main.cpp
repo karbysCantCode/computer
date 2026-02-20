@@ -140,12 +140,27 @@ int main(int argc, char* argv[]) {
         Debug::FullLogger logger;
         auto tokens = Spasm::Lexer::lex(path, targetArch.m_keywordSet, &logger);
         
-        auto program = std::make_unique<Spasm::Program::ProgramForm>();
-        auto programPtr = program.get();
-        filePathProgramMap.emplace(path, std::move(program));
-        preprocessSpasm(tokens, *program, target.second, &logger);
-        Spasm::Program::parseProgram(tokens, targetArch, *program, &logger, path);
-        for (const auto& statement : (*program).m_statements) {
+        Spasm::Program::ProgramForm* programPtr = nullptr;
+        auto it = filePathProgramMap.find(path);
+        if (it == filePathProgramMap.end()) {
+          auto program = std::make_unique<Spasm::Program::ProgramForm>();
+          programPtr = program.get();
+          filePathProgramMap.emplace(path, std::move(program));
+        } else {
+          programPtr = it->second.get();
+          if (programPtr == nullptr) {
+            it->second = std::make_unique<Spasm::Program::ProgramForm>();
+            programPtr = it->second.get();
+          }
+        }
+        
+        std::vector<Spasm::Lexer::Token> preprocessedTokens = preprocessSpasm(tokens, *programPtr, target.second, filePathProgramMap, &logger);
+        std::cout << "tokenLength:" << preprocessedTokens.size() << '\n';
+        for (const auto& token : preprocessedTokens) {
+          std::cout << token.m_value << '\n';
+        }
+        Spasm::Program::parseProgram(preprocessedTokens, targetArch, *programPtr, &logger, path);
+        for (const auto& statement : (*programPtr).m_statements) {
           std::cout << "[state]" << statement->toString();
         }
         DumpLogger(logger, "SPASM");
