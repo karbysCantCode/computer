@@ -1,5 +1,6 @@
 @include "include.spasm" 
 @define rF r15
+@define rF r13
 @define mul32(rA,rB,rC,rD,rdA,rdB) {
   push rF
   mull rdA, rC, rA

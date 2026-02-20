@@ -48,6 +48,9 @@
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "cmake.debugConfig": {
     "args": ["--smake", "resources/test.smake", "-v", "-vv", "--arch", "resources/archRev2.arch"]
-    }
+    },
+    "workbench.colorTheme": "Monokai",
+    "workbench.iconTheme": "vs-seti",
+    "workbench.preferredDarkColorTheme": "Default Dark Modern"
 
 }

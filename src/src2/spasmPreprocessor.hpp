@@ -8,6 +8,70 @@
 #include "spasm.hpp"
 #include "debugHelpers.hpp"
 #include "smake.hpp"
+#include "spasmMacro.hpp"
+
+class Preprocessor {
+  public:
+  Preprocessor(Debug::FullLogger* logger = nullptr) 
+    : m_logger(logger) {};
+
+  std::vector<Spasm::Lexer::Token> run(
+    std::vector<Spasm::Lexer::Token>& inputTokens,
+    Spasm::Program::ProgramForm& program, 
+    SMake::Target& target, 
+    std::unordered_map<
+      std::filesystem::path, 
+      std::unique_ptr<Spasm::Program::ProgramForm>
+    >& filePathProgramMap
+  );
+
+
+  Debug::FullLogger* m_logger = nullptr;
+  private:
+  struct TokenStream {
+    std::vector<Spasm::Lexer::Token> m_tokens;
+    size_t m_index = 0;
+
+    TokenStream(const std::vector<Spasm::Lexer::Token>& tokens) 
+      : m_tokens(tokens) {};
+
+    inline bool isAtEnd() const {return !(m_index < m_tokens.size());}
+    inline Spasm::Lexer::Token peek(size_t peekDistance = 0) {
+      return m_index+peekDistance < m_tokens.size() ? 
+        m_tokens[m_index+peekDistance] : 
+        Spasm::Lexer::Token("EOF", Spasm::Lexer::Token::Type::UNASSIGNED, -1,-1);
+    };
+    inline Spasm::Lexer::Token advance() {
+      auto retVal = isAtEnd() ? Spasm::Lexer::Token("EOF", Spasm::Lexer::Token::Type::UNASSIGNED, -1,-1) : m_tokens[m_index];
+      m_index++;
+      return retVal;
+    };
+    inline void skip(size_t distance = 1) {
+      m_index += distance;
+    };
+  };
+  std::stack<TokenStream> p_stack;
+  std::unordered_map<std::string, std::unique_ptr<Macro::Macro>> p_macroMap;
+
+
+  void handleTokenStream(TokenStream&, std::vector<Spasm::Lexer::Token>&);
+  void handleDefine(TokenStream&);
+  void handleInclude(TokenStream&);
+  bool expandMacroIfExists(TokenStream&, std::unique_ptr<Macro::Macro>&);
+
+
+  void logError(const std::string& message) const;
+  void logWarning(const std::string& message) const;
+  void logDebug(const std::string& message) const;
+
+
+  
+};
+
+
+
+namespace {
+
 
 struct TokenStream {
   std::vector<Spasm::Lexer::Token> tokens;
@@ -41,76 +105,7 @@ std::filesystem::path searchForPathInIncluded(const std::string& sPath,
   return std::filesystem::path();
 }
 
-struct Macro {
-  std::string target;
 
-  virtual ~Macro() = default;
-
-  //returns the index after the replacement
-  virtual std::vector<Spasm::Lexer::Token> getReplacment(size_t fillIndex, std::vector<Spasm::Lexer::Token>& parsingStream) {return {};}
-};
-
-struct FunctionMacro : Macro {
-  std::unordered_map<std::string, size_t> args;
-  std::vector<Spasm::Lexer::Token> replacement;
-
-  std::vector<Spasm::Lexer::Token> getReplacment(size_t fillIndex, std::vector<Spasm::Lexer::Token>& parsingStream) override {
-    std::vector<std::vector<Spasm::Lexer::Token>> localArgs;
-    std::vector<LineColPair> localArgBlame;
-
-    size_t argCount = 0;
-    bool isBlame = true;
-    size_t currentIndex = fillIndex + 1;
-
-    std::vector<Spasm::Lexer::Token> currentArg;
-    while (localArgs.size() < args.size() && currentIndex < parsingStream.size()) {
-      const Spasm::Lexer::Token& token = parsingStream[currentIndex];
-      currentIndex++;
-      
-      if (token.isOneOf({Spasm::Lexer::Token::Type::COMMA,Spasm::Lexer::Token::Type::NEWLINE})) {
-        argCount++; 
-        isBlame = true; 
-        localArgs.push_back(currentArg); 
-        currentArg.clear(); 
-        continue;
-      }
-      
-
-      if (isBlame) {isBlame = false; localArgBlame.emplace_back(token.m_line, token.m_column);}
-      currentArg.push_back(token);
-    }
-    localArgs.push_back(currentArg);
-
-    //replacementStream.erase(replacementStream.begin() + fillIndex, replacementStream.begin() + currentIndex);
-    std::vector<Spasm::Lexer::Token> output;
-    for (const auto& token : replacement) {
-      auto it = args.find(token.m_value);
-      //auto insertPos = replacementStream.begin() + currentIndex;
-
-
-      if (it != args.end()) {
-        const auto& expansion = localArgs[it->second];
-
-        output.insert(output.end(), expansion.begin(), expansion.end());
-        
-      } else {
-        output.push_back(token);
-      }
-    }
-
-    return output;
-  }
-};
-
-struct ReplacementMacro : Macro {
-  std::vector<Spasm::Lexer::Token> replacementBody;
-
-  std::vector<Spasm::Lexer::Token> getReplacment(size_t fillIndex, std::vector<Spasm::Lexer::Token>& parsingStream) override {
-    return replacementBody;
-  }
-
-  ReplacementMacro() {}
-};  
 
 // 
 std::vector<Spasm::Lexer::Token> preprocessSpasm(std::vector<Spasm::Lexer::Token>& spasmTokens, Spasm::Program::ProgramForm& program, SMake::Target& target, std::unordered_map<std::filesystem::path, std::unique_ptr<Spasm::Program::ProgramForm>>& filePathProgramMap, Debug::FullLogger* logger = nullptr) {
@@ -165,6 +160,9 @@ std::vector<Spasm::Lexer::Token> preprocessSpasm(std::vector<Spasm::Lexer::Token
       return retVal;
     };
 
+    #define skip(arg) \
+      index += arg
+
     bool isProcessingTop = true;
     while (!isAtEnd() && isProcessingTop) {
       #define pushStackAndRestart(arg)    \
@@ -188,65 +186,7 @@ std::vector<Spasm::Lexer::Token> preprocessSpasm(std::vector<Spasm::Lexer::Token
         switch (token.m_nicheType) {
 
           case Spasm::Lexer::Token::NicheType::DIRECTIVE_DEFINE: {
-            size_t defineStartIndex = index;
-            advance();
-            std::string macroName = advance().m_value;
-            ContinueAndLogIfAtEnd(EOF_BEFORE_COMPLETE_ERR);
-            if (peek().m_type == Spasm::Lexer::Token::Type::OPENPAREN) {
-              advance();
-              // is a function macro
-              auto macro = std::make_unique<FunctionMacro>();
-              bool isEnd = false;
-              size_t argCount = 0;
-              while (!isAtEnd() && !isEnd) {
-                //get args
-                if (peek().m_type == Spasm::Lexer::Token::Type::CLOSEPAREN) {advance(); break;}
-                macro->args[advance().m_value] = argCount;
-                argCount++;
-                switch (peek().m_type) {
-                  case Spasm::Lexer::Token::Type::COMMA:
-                  advance();
-                  continue;
-                  break;
-                  case Spasm::Lexer::Token::Type::CLOSEPAREN:
-                  advance();
-                  isEnd = true;
-                  break;
-                  default:
-                  isEnd = true;
-                  logError("Unexpected token type (comma or close paren expected), got " + std::string(peek().typeToString()) + " at " + peek().positionToString());
-                  break;
-                } 
-              }
-              //
-              if (peek().m_type == Spasm::Lexer::Token::Type::OPENBLOCK) {
-                advance();
-                while (peek().m_type != Spasm::Lexer::Token::Type::CLOSEBLOCK && !isAtEnd()) {
-                  if (peek().m_value == macroName) {
-                    logError("Macroname not allowed inside macro definition. at " + peek().positionToString());
-                    while (peek().m_type != Spasm::Lexer::Token::Type::CLOSEBLOCK && !isAtEnd()) {index++;}
-                    break;
-                  } else {
-                    macro->replacement.push_back(advance());
-                  }
-                }
-                advance();
-              } else {
-                logError("Function block missing, expected curly brace, got " + std::string(peek().typeToString()) + " at " + peek().positionToString() + " value: \"" + peek().m_value + "\"");
-              }
-              macroMap[macroName] = std::move(macro);
-            } else {
-              // is a replacement macro
-              ContinueAndLogIfAtEnd(EOF_BEFORE_COMPLETE_ERR);
-              auto macro = std::make_unique<ReplacementMacro>();
-              while (!isAtEnd() && peek().m_type != Spasm::Lexer::Token::Type::NEWLINE) {
-                macro->replacementBody.push_back(advance());
-              }
-              macroMap[macroName] = std::move(macro);
-            }
-
-            //spasmTokens.erase(spasmTokens.begin() + defineStartIndex, spasmTokens.begin() + index);
-            //index = defineStartIndex;
+            
           }
           break;
 
@@ -298,6 +238,7 @@ std::vector<Spasm::Lexer::Token> preprocessSpasm(std::vector<Spasm::Lexer::Token
   #undef ContinueAndLogIfAtEnd
   #undef EOF_BEFORE_COMPLETE_ERR
   #undef index
+  #undef skip
   
   // std::cout << "Start" << std::endl;
   // for (const auto& entry : macroMap) {
@@ -311,3 +252,5 @@ std::vector<Spasm::Lexer::Token> preprocessSpasm(std::vector<Spasm::Lexer::Token
 }
 
 //not consuming first arg? or not replacing?
+};
+

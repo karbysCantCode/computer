@@ -122,7 +122,14 @@ namespace Spasm {
       inline void setType(const Type& newType) {m_type=newType;}
       inline void setNicheType(const NicheType& newType) {m_nicheType=newType;}
       bool isOneOf(const std::initializer_list<Type> list) const {return std::any_of(list.begin(), list.end(), [this](Type t){return this->m_type == t;});}
-      
+      inline bool isDirective()  const {return m_type == Type::DIRECTIVE; }
+      inline bool isIdentifier() const {return m_type == Type::IDENTIFIER;}
+      inline bool isCloseBlock() const {return m_type == Type::CLOSEBLOCK;}
+      inline bool isCloseParen() const {return m_type == Type::CLOSEPAREN;}
+      inline bool isComma()      const {return m_type == Type::COMMA; }
+      inline bool isOpenParen()  const {return m_type == Type::OPENPAREN;}
+      inline bool isOpenBlock()  const {return m_type == Type::OPENBLOCK;}
+      inline bool isKeyword()    const {return m_type == Type::KEYWORD;}
 
     };
 
