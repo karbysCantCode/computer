@@ -18,10 +18,12 @@ class Preprocessor {
   Preprocessor(Debug::FullLogger* logger = nullptr) 
     : m_logger(logger) {};
 
-  std::vector<Spasm::Lexer::Token> run(
+  Spasm::Lexer::TokenHolder run(
     std::vector<Spasm::Lexer::Token>& inputTokens,
     Spasm::Program::ProgramForm& program, 
-    SMake::Target& target
+    SMake::Target& target, 
+    std::stack<parseInfo>& parseStack, 
+    std::unordered_set<std::filesystem::path>& parsedSet
   );
 
 
@@ -55,7 +57,7 @@ class Preprocessor {
 
   void handleTokenStream(TokenStream&, std::vector<Spasm::Lexer::Token>&, SMake::Target&, Spasm::Program::ProgramForm&);
   void handleDefine(TokenStream&);
-  void handleInclude(TokenStream&, SMake::Target&, Spasm::Program::ProgramForm&);
+  void handleInclude(TokenStream&, SMake::Target&, Spasm::Program::ProgramForm&, std::stack<parseInfo>&, std::unordered_set<std::filesystem::path>&);
   bool expandMacroIfExists(TokenStream&, std::unique_ptr<Macro::Macro>&);
 
 

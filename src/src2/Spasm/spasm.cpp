@@ -963,10 +963,12 @@ namespace Spasm::Program::Expressions {
 bool Spasm::Program::ProgramParser::run(Spasm::Lexer::TokenHolder& tokenHolder, Arch::Architecture& arch, Spasm::Program::ProgramForm& program, std::filesystem::path path) {
   using namespace Spasm;
 
+  tokenHolder.reset(); //ensure holder is at start.
+
   while(tokenHolder.notAtEnd()) {
     //check if is keyword
     auto keyToken = tokenHolder.peek();
-    //std::cout << keyToken.m_value << std::endl;
+    std::cout << keyToken.m_value << std::endl;
     auto instrIt = arch.m_instructionSet.find(keyToken.m_value);
     auto dataIt = arch.m_dataTypes.find(keyToken.m_value);
 
@@ -1000,7 +1002,7 @@ bool Spasm::Program::ProgramParser::run(Spasm::Lexer::TokenHolder& tokenHolder, 
 }
 
 void Spasm::Program::ProgramParser::handleInstruction(Spasm::Lexer::TokenHolder& tokenHolder, Spasm::Program::ProgramForm& program, Arch::Architecture& arch, Arch::Instruction::Instruction& archInstruction) {
-  auto instruction = std::make_unique<Program::Expressions::Instruction>(archInstruction);
+  auto instruction = std::make_unique<Program::Expressions::Instruction>(&archInstruction);
   for (const auto& arg : instruction->m_instruction->m_arguments) {
 
     switch (arg->m_type)
@@ -1103,17 +1105,17 @@ void Spasm::Program::ProgramParser::handlenDatatype(Spasm::Lexer::TokenHolder&) 
 
 // }
 
-const Spasm::Lexer::Token& Spasm::Lexer::TokenHolder::peek(size_t distance) const {
+const Spasm::Lexer::Token Spasm::Lexer::TokenHolder::peek(size_t distance) const {
   const auto absDist = p_index + distance;
   return absDist < m_tokens.size() ? m_tokens[absDist] : Token(Token::Type::UNASSIGNED, &p_filepath);
 }
 
-inline const Spasm::Lexer::Token& Spasm::Lexer::TokenHolder::consume() {
+inline const Spasm::Lexer::Token Spasm::Lexer::TokenHolder::consume() {
   const auto& rettoken = notAtEnd() ? m_tokens[p_index] : Token(Token::Type::UNASSIGNED, &p_filepath);
   p_index++;
   return rettoken;
 }
-inline void Spasm::Lexer::TokenHolder::skip(size_t distance = 1) {
+inline void Spasm::Lexer::TokenHolder::skip(size_t distance) {
     p_index += distance;
   }
 
@@ -1409,3 +1411,22 @@ operandUniquePtr Spasm::Program::ProgramParser::parseExpression(Spasm::Lexer::To
    return parseOr(tokenHolder,program);
 }
 
+int Spasm::Program::ProgramParser::resolveNumber(const Spasm::Lexer::Token& token) {
+    size_t base = 10;
+    switch (token.m_nicheType) {
+      case Lexer::Token::NicheType::NUMBER_BIN:
+        base = 2;
+      break;
+      case Lexer::Token::NicheType::NUMBER_HEX:
+        base = 16;
+      break;
+      case Lexer::Token::NicheType::NUMBER_DEC:
+        base = 10;
+      break;
+      default:
+      logError(token, "Non number niche type (lexer should specify).");
+      return 0;
+      break;
+    }
+    return std::stoi(token.m_value,nullptr,base);
+}

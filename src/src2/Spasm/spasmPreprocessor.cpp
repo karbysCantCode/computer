@@ -7,13 +7,13 @@ enum class DEFINEDIRECTIVETYPE {
 
 using pp = Preprocessor;
 
-std::vector<Spasm::Lexer::Token> pp::run(
+Spasm::Lexer::TokenHolder pp::run(
   std::vector<Spasm::Lexer::Token>& inputTokens,
   Spasm::Program::ProgramForm& program, 
   SMake::Target& target
 ) {
-  std::vector<Spasm::Lexer::Token> output;
-  output.reserve(inputTokens.size());
+  Spasm::Lexer::TokenHolder output;
+  output.m_tokens.reserve(inputTokens.size());
   p_stack.emplace(TokenStream(inputTokens));
 
 
@@ -25,7 +25,7 @@ std::vector<Spasm::Lexer::Token> pp::run(
       continue;
     }
 
-    handleTokenStream(currentStream, output, target, program);
+    handleTokenStream(currentStream, output.m_tokens, target, program);
   }
 
   //cleanup
@@ -160,7 +160,7 @@ void pp::handleDefine(TokenStream& stream) {
     break;
   }
 }
-void pp::handleInclude(TokenStream& stream, SMake::Target& target, Spasm::Program::ProgramForm& program) {
+void pp::handleInclude(TokenStream& stream, SMake::Target& target, Spasm::Program::ProgramForm& program, std::stack<parseInfo>& parseStack, std::unordered_set<std::filesystem::path>& parsedSet) {
   stream.skip();
 
   const auto& fileToken = stream.advance();
@@ -181,6 +181,9 @@ void pp::handleInclude(TokenStream& stream, SMake::Target& target, Spasm::Progra
     includedProgramUniquePtrPtr = &progMapIt->second;
   }
 
+  if (parsedSet.find(filePath) == parsedSet.end()) {
+    parseStack.emplace(target, filePath);
+  }
   program.m_includedPrograms.emplace(filePath, includedProgramUniquePtrPtr);
 }
 bool pp::expandMacroIfExists(TokenStream& stream, std::unique_ptr<Macro::Macro>& macro) {

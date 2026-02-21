@@ -1,12 +1,9 @@
 #include <iostream>
 #include <filesystem>
 
-#include "smake.hpp"
-#include "spasm.hpp"
-#include "arch.hpp"
-#include "spasmPreprocessor.hpp"
-
-#define ARCH_CACHED_FILE_PATH "__CACHED_ARCH_COPY__.arch"
+#include "Arch/arch.hpp"
+#include "CLIHelper.hpp"
+#include "corePipelines.hpp"
 
 #define DumpLogger(logger, AuthorName) \
   if (readErrors) {                                         \
@@ -76,66 +73,29 @@ struct parseInfo {
 //-1 == conflicting flags
 //-2 == file not found
 //-3 == no args
+//-4 == arch unparsed
 int main(int argc, char* argv[]) {
-  bool smakeFlag = false;
-  bool asmFlag = false;
-  bool archFlag = false;
+  auto options = parseArguments(argc,argv);
 
-  bool readErrors = true;
-  bool readWarnings = false;
-  bool readDebugs = false;
+  if (options.errc != 0) {return options.errc;}
 
-  std::filesystem::path smakePath;
-  std::filesystem::path asmPath;
-  std::filesystem::path archPath = ARCH_CACHED_FILE_PATH;
-
-  for (int i = 1; i < argc; i++) {
-
-    const std::string arg = argv[i];
-    if (arg == "--smake") {
-      if (asmFlag) {std::cerr << "--smake mutually exclusive to --asm, aborted."; return -1;}
-      smakeFlag = true;
-
-      i++;
-      if (i < argc) {
-        smakePath = argv[i];
-        if (!std::filesystem::exists(smakePath)) {std::cerr << "file \"" << smakePath.generic_string() << "\" does not exist. Aborted."; return -2;}
-        smakePath = std::filesystem::canonical(smakePath);
-      }
-    } else if (arg =="--asm") {
-      if (smakeFlag) {std::cerr << "--asm mutually exclusive to --smake, aborted."; return -1;}
-      asmFlag = true;
-
-      i++;
-      if (i < argc) {
-        asmPath = argv[i];
-        if (!std::filesystem::exists(asmPath)) {std::cerr << "file \"" << smakePath.generic_string() << "\" does not exist. Aborted."; return -2;}
-      }
-    } else if (arg =="--arch") {
-      archFlag = true;
-
-      i++;
-      if (i < argc) {
-        archPath = argv[i];
-        if (!std::filesystem::exists(archPath)) {std::cerr << "file \"" << archPath.generic_string() << "\" does not exist. Aborted."; return -2;}
-      }
-    } else if (arg =="-v") {
-      readWarnings = true;
-    } else if (arg =="-vv") {
-      readDebugs = true;
-    } else if (arg =="-s") {
-      readErrors = false;
-    } else {
-      if (!readWarnings) {continue;}
-      std::cout << "Unknown arg \"" << arg << "\"" << std::endl;
-    }
+  Arch::Architecture* arch = nullptr;
+  
+  if (options.arch) {
+    //arch pipeline
+    runArchPipeline(options, &arch);
   }
 
-  if (!smakeFlag && !asmFlag) {
-    asmFlag = true;
-    if (argc < 2) {std::cerr << "No arguments passed, aborted."; return -3;}
-    if (!(std::filesystem::exists(argv[1]))) {std::cerr << "file \"" << argv[1] << "\" does not exist. Aborted."; return -2;}
-    asmPath = argv[2];
+  if (options.smake) {
+    //smake pipeline
+    if (arch == nullptr) {std::cerr << "Fatal. Arch unparsed."; return -1;}
+
+    runSMakePipeline(options, *arch);
+  }
+
+  if (options.spasm) {
+    //single asm pipeline
+    if (arch == nullptr) {std::cerr << "Fatal. Arch unparsed."; return -1;}
   }
 
   int errc = 0;
@@ -166,6 +126,7 @@ int main(int argc, char* argv[]) {
     std::cout << project.toString() << std::endl;
 
     std::stack<parseInfo> sourceToParseStack;
+    std::unordered_set<std::filesystem::path> parsedSet;
 
     for (auto& target : project.m_targets) {
       for (const auto& path : target.second.m_sourceFilepaths) {
@@ -181,10 +142,14 @@ int main(int argc, char* argv[]) {
     while (!sourceToParseStack.empty()) {
       const auto& sourceInfo = sourceToParseStack.top();
       sourceToParseStack.pop();
+      parsedSet.insert(sourceInfo.m_path);
 
-      //parse
+      std::cout << "SPASMPARSING" << sourceInfo.m_path.string() << '\n';
+
+      //lex
       auto tokens = Spasm::Lexer::lex(sourceInfo.m_path, targetArch.m_keywordSet, &lexLogger);
       
+      //resolve the program object.
       Spasm::Program::ProgramForm* programPtr = nullptr;
       auto it = sourceInfo.m_target.m_filePathProgramMap.find(sourceInfo.m_path);
       if (it == sourceInfo.m_target.m_filePathProgramMap.end()) {
@@ -199,12 +164,15 @@ int main(int argc, char* argv[]) {
         }
       }
 
+      //process tokens
+
       Preprocessor pp(&ppLogger);
-      std::vector<Spasm::Lexer::Token> preprocessedTokens = pp.run(tokens, *programPtr, sourceInfo.m_target);
-      std::cout << "tokenLength:" << preprocessedTokens.size() << '\n';
+      auto preprocessedTokens = pp.run(tokens, *programPtr, sourceInfo.m_target);
+      std::cout << "tokenLength:" << preprocessedTokens.m_tokens.size() << '\n';
+      preprocessedTokens.reset();
       Spasm::Program::ProgramParser programParser(&parseLogger);
-      programParser.run()
-      Spasm::Program::parseProgram(preprocessedTokens, targetArch, *programPtr, &logger, sourceInfo.m_path);
+      programParser.run(preprocessedTokens, targetArch, *programPtr, sourceInfo.m_path);
+      std::cout << "instrlength " << (*programPtr).m_statements.size() << '\n';
       for (const auto& statement : (*programPtr).m_statements) {
         std::cout << "[state]" << statement->toString();
       }
@@ -212,6 +180,8 @@ int main(int argc, char* argv[]) {
     DumpLoggerRaw(lexLogger);
     DumpLoggerRaw(ppLogger);
     DumpLoggerRaw(parseLogger);
+
+
     // DumpLogger(lexLogger, "LEXER");
     // DumpLogger(ppLogger, "PREPROC");
     // DumpLogger(parseLogger, "PARSER");

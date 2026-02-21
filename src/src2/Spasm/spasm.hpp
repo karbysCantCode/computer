@@ -140,10 +140,11 @@ namespace Spasm {
 
       inline bool isAtEnd() const {return !(p_index < m_tokens.size());}
       inline bool notAtEnd() const {return (p_index < m_tokens.size());}
-      inline const Token& peek(size_t distance = 0) const;
-      inline const Token& consume();
+      inline const Token peek(size_t distance = 0) const;
+      inline const Token consume();
       inline void skip(size_t distance = 1);
       inline void skipUntilType(Token::Type);
+      inline void reset() {p_index = 0;}
       private:
       size_t p_index;
       std::filesystem::path p_filepath;
@@ -300,7 +301,7 @@ namespace Spasm {
         if (p_logger != nullptr) p_logger->Debugs.logMessage(errToken.positionToString() + ": debug: " + message);
       };
 
-      int resolveNumber(const Spasm::Lexer::Token& token) const;
+      int resolveNumber(const Spasm::Lexer::Token& token);
       using operandUniquePtr = std::unique_ptr<Program::Expressions::Operands::Operand>;
       operandUniquePtr parsePrimary(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
       operandUniquePtr parseNot(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);

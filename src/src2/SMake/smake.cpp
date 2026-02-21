@@ -446,14 +446,14 @@ void SMake::parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targe
         auto flistIterator = targetProject.m_flists.find(peek().m_value);
         if (flistIterator!= targetProject.m_flists.end()) {
           for (const auto& path : flistIterator->second.m_filepaths) {
-            targetIterator->second.m_sourceFilepaths.insert(path);
+            targetIterator->second.m_sourceFilepaths.insert(path.lexically_normal());
           }
         } else {
           logError(peek(), "Undeclared flist \"" + peek().m_value + '"');
         }
         
       } else if (peek().m_type == SMake::Token::Type::STRING) { 
-        auto path = parsePath(peek().m_value);
+        auto path = parsePath(peek().m_value).lexically_normal();
         if (!path.empty()) {
           targetIterator->second.m_sourceFilepaths.insert(path);
         }
