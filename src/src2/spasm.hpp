@@ -67,15 +67,15 @@ namespace Spasm {
       std::string m_value;
       int m_line = -1;
       int m_column = -1;
-      std::string* m_fileName;
+      const std::filesystem::path* m_fileName;
 
-      Token(const std::string& val, Type type, int line = -1, int col = -1, std::string* fileName = nullptr) :
+      Token(const std::string& val, Type type, const std::filesystem::path* fileName, int line = -1, int col = -1) :
         m_value(val),
         m_type(type),
         m_line(line),
         m_column(col),
         m_fileName(fileName) {}
-      Token(Type type, int line = -1, int col = -1, std::string* fileName = nullptr) :
+      Token(Type type, const std::filesystem::path* fileName, int line = -1, int col = -1) :
         m_type(type),
         m_line(line),
         m_column(col),
@@ -133,8 +133,21 @@ namespace Spasm {
 
     };
 
-    std::vector<Token> lex(std::filesystem::path path, std::unordered_set<std::string>& keywords, Debug::FullLogger* logger = nullptr);
-  
+    std::vector<Token> lex(const std::filesystem::path& path, std::unordered_set<std::string>& keywords, Debug::FullLogger* logger = nullptr);
+    struct TokenHolder {
+      public:
+      std::vector<Token> m_tokens;
+
+      inline bool isAtEnd() const {return !(p_index < m_tokens.size());}
+      inline bool notAtEnd() const {return (p_index < m_tokens.size());}
+      inline const Token& peek(size_t distance = 0) const;
+      inline const Token& consume();
+      inline void skip(size_t distance = 1);
+      inline void skipUntilType(Token::Type);
+      private:
+      size_t p_index;
+      std::filesystem::path p_filepath;
+    };
   }
 
   namespace Program {
@@ -270,6 +283,41 @@ namespace Spasm {
 
     };
     
+    class ProgramParser {
+      public:
+      ProgramParser(Debug::FullLogger* logger) : p_logger(logger) {}
+      bool run(Spasm::Lexer::TokenHolder& tokenHolder, Arch::Architecture& arch, Spasm::Program::ProgramForm& program, std::filesystem::path path = "");
+    
+      private:
+      Debug::FullLogger* p_logger;
+      inline void logError(const Spasm::Lexer::Token& errToken, const std::string& message) {
+        if (p_logger != nullptr) p_logger->Errors.logMessage(errToken.positionToString() + ": error: " + message);
+      };
+      inline void logWarning(const Spasm::Lexer::Token& errToken, const std::string& message) {
+        if (p_logger != nullptr) p_logger->Warnings.logMessage(errToken.positionToString() + ": warning: " + message);
+      };
+      inline void logDebug(const Spasm::Lexer::Token& errToken, const std::string& message) {
+        if (p_logger != nullptr) p_logger->Debugs.logMessage(errToken.positionToString() + ": debug: " + message);
+      };
+
+      int resolveNumber(const Spasm::Lexer::Token& token) const;
+      using operandUniquePtr = std::unique_ptr<Program::Expressions::Operands::Operand>;
+      operandUniquePtr parsePrimary(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+      operandUniquePtr parseNot(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+      operandUniquePtr parseMultiplicative(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+      operandUniquePtr parseAdditive(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+      operandUniquePtr parseShift(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+      operandUniquePtr parseAnd(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+      operandUniquePtr parseXor(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+      operandUniquePtr parseOr(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+      operandUniquePtr parseExpression(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+
+      void handleInstruction(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&, Arch::Architecture&, Arch::Instruction::Instruction&);
+      void handlenDatatype(Spasm::Lexer::TokenHolder&);
+      //void handleLabel(Spasm::Lexer::TokenHolder&);
+
+      Program::Expressions::Label* consumeTokensForLabel(Lexer::Token::Type delimiter, Spasm::Lexer::TokenHolder& tokenHolder, Spasm::Program::ProgramForm& currentProgram, bool delcNewIfNotExist = false, bool delimOnNonPeriod = false);
+    };
     bool parseProgram(std::vector<Spasm::Lexer::Token>& tokens, Arch::Architecture& arch, Spasm::Program::ProgramForm& program, Debug::FullLogger* logger = nullptr, std::filesystem::path path = "");
 
   };

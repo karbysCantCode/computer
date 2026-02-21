@@ -1,8 +1,11 @@
+#pragma once
+
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <variant>
 #include <stack>
+#include <filesystem>
 
 //#include "arch.hpp"
 #include "spasm.hpp"
@@ -18,11 +21,7 @@ class Preprocessor {
   std::vector<Spasm::Lexer::Token> run(
     std::vector<Spasm::Lexer::Token>& inputTokens,
     Spasm::Program::ProgramForm& program, 
-    SMake::Target& target, 
-    std::unordered_map<
-      std::filesystem::path, 
-      std::unique_ptr<Spasm::Program::ProgramForm>
-    >& filePathProgramMap
+    SMake::Target& target
   );
 
 
@@ -39,10 +38,10 @@ class Preprocessor {
     inline Spasm::Lexer::Token peek(size_t peekDistance = 0) {
       return m_index+peekDistance < m_tokens.size() ? 
         m_tokens[m_index+peekDistance] : 
-        Spasm::Lexer::Token("EOF", Spasm::Lexer::Token::Type::UNASSIGNED, -1,-1);
+        Spasm::Lexer::Token("EOF", Spasm::Lexer::Token::Type::UNASSIGNED,nullptr, -1,-1);
     };
     inline Spasm::Lexer::Token advance() {
-      auto retVal = isAtEnd() ? Spasm::Lexer::Token("EOF", Spasm::Lexer::Token::Type::UNASSIGNED, -1,-1) : m_tokens[m_index];
+      auto retVal = isAtEnd() ? Spasm::Lexer::Token("EOF", Spasm::Lexer::Token::Type::UNASSIGNED,nullptr, -1,-1) : m_tokens[m_index];
       m_index++;
       return retVal;
     };
@@ -54,22 +53,22 @@ class Preprocessor {
   std::unordered_map<std::string, std::unique_ptr<Macro::Macro>> p_macroMap;
 
 
-  void handleTokenStream(TokenStream&, std::vector<Spasm::Lexer::Token>&);
+  void handleTokenStream(TokenStream&, std::vector<Spasm::Lexer::Token>&, SMake::Target&, Spasm::Program::ProgramForm&);
   void handleDefine(TokenStream&);
-  void handleInclude(TokenStream&);
+  void handleInclude(TokenStream&, SMake::Target&, Spasm::Program::ProgramForm&);
   bool expandMacroIfExists(TokenStream&, std::unique_ptr<Macro::Macro>&);
 
 
-  void logError(const std::string& message) const;
-  void logWarning(const std::string& message) const;
-  void logDebug(const std::string& message) const;
+  void logError(const Spasm::Lexer::Token& errToken, const std::string& message) const;
+  void logWarning(const Spasm::Lexer::Token& errToken, const std::string& message) const;
+  void logDebug(const Spasm::Lexer::Token& errToken, const std::string& message) const;
 
 
   
 };
 
 
-
+/*
 namespace {
 
 
@@ -254,3 +253,4 @@ std::vector<Spasm::Lexer::Token> preprocessSpasm(std::vector<Spasm::Lexer::Token
 //not consuming first arg? or not replacing?
 };
 
+*/

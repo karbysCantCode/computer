@@ -7,6 +7,7 @@
 #include <sstream>
 
 #include "debugHelpers.hpp"
+#include "spasm.hpp"
 
 
 
@@ -29,6 +30,7 @@ struct Token {
   Type m_type = Type::UNASSIGNED;
   int m_line = -1;
   int m_column = -1;
+  const std::filesystem::path* m_filepath;
 
   inline void setString(const std::string& newString) {m_value=newString;}
   inline void setType(const Type& newType) {m_type=newType;}
@@ -48,13 +50,18 @@ struct Token {
     default: return "UNKNOWN";
   }
 }
-  std::string positionToString() const {return m_line < 0 || m_column < 0 ? std::string("END OF FILE") : "line " + std::to_string(m_line) + ", column " + std::to_string(m_column);}
+  std::string positionToString() const {
+    if (m_filepath != nullptr) {
+      return '"'+m_filepath->string()+"\":"+std::to_string(m_line)+':'+std::to_string(m_column);
+    } 
+    return std::to_string(m_line)+':'+std::to_string(m_column);
+  }
 
-  Token(const std::string& val, const Type t, int ln, int col) :
-    m_value(val), m_type(t), m_line(ln), m_column(col) {}
+  Token(const std::string& val, const Type t, const std::filesystem::path* filepath, int ln, int col) :
+    m_value(val), m_type(t), m_filepath(filepath), m_line(ln), m_column(col) {}
   
-  Token(const char val, const Type t, int ln, int col) :
-    m_value{val}, m_type(t), m_line(ln), m_column(col) {}
+  Token(const char val, const Type t, const std::filesystem::path* filepath, int ln, int col) :
+    m_value{val}, m_type(t), m_filepath(filepath), m_line(ln), m_column(col) {}
 };
 
 struct Target {
@@ -77,6 +84,10 @@ struct Target {
   Format m_outputFormat;
   std::string m_outputDirectory;
   std::string m_outputName;
+  std::unordered_map<
+        std::filesystem::path, 
+        std::unique_ptr<Spasm::Program::ProgramForm>
+    > m_filePathProgramMap;
 
   std::unordered_set<Target*> m_dependantTargets;
 
@@ -101,7 +112,7 @@ struct Target {
       break;
     }
   }
-
+  std::filesystem::path searchForPathInIncluded(const std::string& sPath) const;
   
 };
 struct FList {
@@ -145,5 +156,5 @@ class SMakeProject {
 };
 
 void parseTokensToProject(std::vector<Token>& tokens, SMakeProject& targetProject, std::filesystem::path makefilePath, Debug::FullLogger* logger);
-std::vector<Token> lex(std::filesystem::path path, Debug::FullLogger* logger = nullptr);
+std::vector<Token> lex(std::filesystem::path& path, Debug::FullLogger* logger = nullptr);
 }
