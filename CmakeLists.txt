@@ -1,26 +1,27 @@
 cmake_minimum_required(VERSION 3.10)
 project(spasm)
 
-
-
-# Find all C++ source files in src directory
-file(GLOB_RECURSE SOURCES "src/src2/*.cpp")
+# Find all C++ source files in src3 directory
+file(GLOB_RECURSE SOURCES "src/src3/*.cpp")
 
 # Create executable target
 add_executable(spasm ${SOURCES})
+
+target_include_directories(spasm PRIVATE src/src3)
 
 if (WIN32)
   target_compile_definitions(spasm PRIVATE RELATIVE_FILE_PREFIX=../)
 elseif (APPLE)
   target_compile_definitions(spasm PRIVATE RELATIVE_FILE_PREFIX=)
 endif()
-# Optional: Set C++ standard
+
 set_target_properties(spasm PROPERTIES
-  CXX_STANDARD 17
+  CXX_STANDARD 20
   CXX_STANDARD_REQUIRED ON
 )
 
-add_custom_target(copy_resources ALL
+# Copy resources AFTER build
+add_custom_command(TARGET spasm POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/resources
             $<TARGET_FILE_DIR:spasm>/resources
