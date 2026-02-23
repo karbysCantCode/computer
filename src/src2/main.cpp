@@ -39,18 +39,18 @@
     }                                                       \
   }
 
-struct parseInfo {
-  const std::filesystem::path& m_path;
-  SMake::Target& m_target;
+// struct parseInfo {
+//   const std::filesystem::path& m_path;
+//   SMake::Target& m_target;
 
-  parseInfo(
-    const std::filesystem::path& path,
-    SMake::Target& target
-  ) : 
-    m_path(path),
-    m_target(target)
-  {}
-};
+//   parseInfo(
+//     const std::filesystem::path& path,
+//     SMake::Target& target
+//   ) : 
+//     m_path(path),
+//     m_target(target)
+//   {}
+// };
 
 // execute on MAC with: ./exeName Args
 
@@ -99,87 +99,87 @@ int main(int argc, char* argv[]) {
   }
 
   int errc = 0;
-  if (archFlag) {
-    std::filesystem::copy(archPath, std::filesystem::path(ARCH_CACHED_FILE_PATH), std::filesystem::copy_options::overwrite_existing);
-  }
-  Debug::FullLogger archLogger;
-  Arch::Architecture targetArch;
-  auto archTokens = Arch::Lexer::lex(archPath,&archLogger);
-  Arch::assembleTokens(archTokens,targetArch,&archLogger);
+  // if (archFlag) {
+  //   std::filesystem::copy(archPath, std::filesystem::path(ARCH_CACHED_FILE_PATH), std::filesystem::copy_options::overwrite_existing);
+  // }
+  // Debug::FullLogger archLogger;
+  // Arch::Architecture targetArch;
+  // auto archTokens = Arch::Lexer::lex(archPath,&archLogger);
+  // Arch::assembleTokens(archTokens,targetArch,&archLogger);
   
 
-  std::cout << targetArch.toString();
-  DumpLogger(archLogger, "ARCH");
+  // std::cout << targetArch.toString();
+  // DumpLogger(archLogger, "ARCH");
 
-  if (smakeFlag) {  
-    Debug::FullLogger logger;
-    SMake::SMakeProject project;
+  // if (smakeFlag) {  
+  //   Debug::FullLogger logger;
+  //   SMake::SMakeProject project;
 
-    auto tokens = SMake::lex(smakePath, &logger);
+  //   auto tokens = SMake::lex(smakePath, &logger);
 
-    DumpLogger(logger, "SMAKELEX");
+  //   DumpLogger(logger, "SMAKELEX");
     
 
-    SMake::parseTokensToProject(tokens, project, smakePath, &logger);
-    DumpLogger(logger, "SMAKEPARSER");
+  //   SMake::parseTokensToProject(tokens, project, smakePath, &logger);
+  //   DumpLogger(logger, "SMAKEPARSER");
  
-    std::cout << project.toString() << std::endl;
+  //   std::cout << project.toString() << std::endl;
 
-    std::stack<parseInfo> sourceToParseStack;
-    std::unordered_set<std::filesystem::path> parsedSet;
+  //   std::stack<parseInfo> sourceToParseStack;
+  //   std::unordered_set<std::filesystem::path> parsedSet;
 
-    for (auto& target : project.m_targets) {
-      for (const auto& path : target.second.m_sourceFilepaths) {
-        sourceToParseStack.push(parseInfo(path, target.second));
-      }
-    }
+  //   for (auto& target : project.m_targets) {
+  //     for (const auto& path : target.second.m_sourceFilepaths) {
+  //       sourceToParseStack.push(parseInfo(path, target.second));
+  //     }
+  //   }
 
-    Debug::FullLogger lexLogger;
-    Debug::FullLogger ppLogger;
-    Debug::FullLogger parseLogger;
+  //   Debug::FullLogger lexLogger;
+  //   Debug::FullLogger ppLogger;
+  //   Debug::FullLogger parseLogger;
 
 
-    while (!sourceToParseStack.empty()) {
-      const auto& sourceInfo = sourceToParseStack.top();
-      sourceToParseStack.pop();
-      parsedSet.insert(sourceInfo.m_path);
+  //   while (!sourceToParseStack.empty()) {
+  //     const auto& sourceInfo = sourceToParseStack.top();
+  //     sourceToParseStack.pop();
+  //     parsedSet.insert(sourceInfo.m_path);
 
-      std::cout << "SPASMPARSING" << sourceInfo.m_path.string() << '\n';
+  //     std::cout << "SPASMPARSING" << sourceInfo.m_path.string() << '\n';
 
-      //lex
-      auto tokens = Spasm::Lexer::lex(sourceInfo.m_path, targetArch.m_keywordSet, &lexLogger);
+  //     //lex
+  //     auto tokens = Spasm::Lexer::lex(sourceInfo.m_path, targetArch.m_keywordSet, &lexLogger);
       
-      //resolve the program object.
-      Spasm::Program::ProgramForm* programPtr = nullptr;
-      auto it = sourceInfo.m_target.m_filePathProgramMap.find(sourceInfo.m_path);
-      if (it == sourceInfo.m_target.m_filePathProgramMap.end()) {
-        auto program = std::make_unique<Spasm::Program::ProgramForm>();
-        programPtr = program.get();
-        sourceInfo.m_target.m_filePathProgramMap.emplace(sourceInfo.m_path, std::move(program));
-      } else {
-        programPtr = it->second.get();
-        if (programPtr == nullptr) {
-          it->second = std::make_unique<Spasm::Program::ProgramForm>();
-          programPtr = it->second.get();
-        }
-      }
+  //     //resolve the program object.
+  //     Spasm::Program::ProgramForm* programPtr = nullptr;
+  //     auto it = sourceInfo.m_target.m_filePathProgramMap.find(sourceInfo.m_path);
+  //     if (it == sourceInfo.m_target.m_filePathProgramMap.end()) {
+  //       auto program = std::make_unique<Spasm::Program::ProgramForm>();
+  //       programPtr = program.get();
+  //       sourceInfo.m_target.m_filePathProgramMap.emplace(sourceInfo.m_path, std::move(program));
+  //     } else {
+  //       programPtr = it->second.get();
+  //       if (programPtr == nullptr) {
+  //         it->second = std::make_unique<Spasm::Program::ProgramForm>();
+  //         programPtr = it->second.get();
+  //       }
+  //     }
 
-      //process tokens
+  //     //process tokens
 
-      Preprocessor pp(&ppLogger);
-      auto preprocessedTokens = pp.run(tokens, *programPtr, sourceInfo.m_target);
-      std::cout << "tokenLength:" << preprocessedTokens.m_tokens.size() << '\n';
-      preprocessedTokens.reset();
-      Spasm::Program::ProgramParser programParser(&parseLogger);
-      programParser.run(preprocessedTokens, targetArch, *programPtr, sourceInfo.m_path);
-      std::cout << "instrlength " << (*programPtr).m_statements.size() << '\n';
-      for (const auto& statement : (*programPtr).m_statements) {
-        std::cout << "[state]" << statement->toString();
-      }
-    }
-    DumpLoggerRaw(lexLogger);
-    DumpLoggerRaw(ppLogger);
-    DumpLoggerRaw(parseLogger);
+  //     Preprocessor pp(&ppLogger);
+  //     auto preprocessedTokens = pp.run(tokens, *programPtr, sourceInfo.m_target);
+  //     std::cout << "tokenLength:" << preprocessedTokens.m_tokens.size() << '\n';
+  //     preprocessedTokens.reset();
+  //     Spasm::Program::ProgramParser programParser(&parseLogger);
+  //     programParser.run(preprocessedTokens, targetArch, *programPtr, sourceInfo.m_path);
+  //     std::cout << "instrlength " << (*programPtr).m_statements.size() << '\n';
+  //     for (const auto& statement : (*programPtr).m_statements) {
+  //       std::cout << "[state]" << statement->toString();
+  //     }
+  //   }
+  //   DumpLoggerRaw(lexLogger);
+  //   DumpLoggerRaw(ppLogger);
+  //   DumpLoggerRaw(parseLogger);
 
 
     // DumpLogger(lexLogger, "LEXER");
@@ -219,13 +219,13 @@ int main(int argc, char* argv[]) {
 
     //implement byte length calculation for instructions
 
-    return errc;
-  }
+  //   return errc;
+  // }
 
-  if (asmFlag) {
+  // if (asmFlag) {
 
-    return errc;
-  }
+  //   return errc;
+  // }
 
 
 

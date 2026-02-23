@@ -10,8 +10,8 @@
 //#include "arch.hpp"
 #include "spasm.hpp"
 #include "debugHelpers.hpp"
-#include "smake.hpp"
-#include "spasmMacro.hpp"
+#include "SMake/smake.hpp"
+#include "Spasm/spasmMacro.hpp"
 
 class Preprocessor {
   public:
@@ -19,46 +19,21 @@ class Preprocessor {
     : m_logger(logger) {};
 
   Spasm::Lexer::TokenHolder run(
-    std::vector<Spasm::Lexer::Token>& inputTokens,
-    Spasm::Program::ProgramForm& program, 
-    SMake::Target& target, 
-    std::stack<parseInfo>& parseStack, 
-    std::unordered_set<std::filesystem::path>& parsedSet
+    Spasm::Lexer::TokenHolder& inputHolder,
+    Spasm::Program::ProgramForm& program
   );
 
 
   Debug::FullLogger* m_logger = nullptr;
   private:
-  struct TokenStream {
-    std::vector<Spasm::Lexer::Token> m_tokens;
-    size_t m_index = 0;
-
-    TokenStream(const std::vector<Spasm::Lexer::Token>& tokens) 
-      : m_tokens(tokens) {};
-
-    inline bool isAtEnd() const {return !(m_index < m_tokens.size());}
-    inline Spasm::Lexer::Token peek(size_t peekDistance = 0) {
-      return m_index+peekDistance < m_tokens.size() ? 
-        m_tokens[m_index+peekDistance] : 
-        Spasm::Lexer::Token("EOF", Spasm::Lexer::Token::Type::UNASSIGNED,nullptr, -1,-1);
-    };
-    inline Spasm::Lexer::Token advance() {
-      auto retVal = isAtEnd() ? Spasm::Lexer::Token("EOF", Spasm::Lexer::Token::Type::UNASSIGNED,nullptr, -1,-1) : m_tokens[m_index];
-      m_index++;
-      return retVal;
-    };
-    inline void skip(size_t distance = 1) {
-      m_index += distance;
-    };
-  };
-  std::stack<TokenStream> p_stack;
+  std::stack<Spasm::Lexer::TokenHolder> p_stack;
   std::unordered_map<std::string, std::unique_ptr<Macro::Macro>> p_macroMap;
 
 
-  void handleTokenStream(TokenStream&, std::vector<Spasm::Lexer::Token>&, SMake::Target&, Spasm::Program::ProgramForm&);
-  void handleDefine(TokenStream&);
-  void handleInclude(TokenStream&, SMake::Target&, Spasm::Program::ProgramForm&, std::stack<parseInfo>&, std::unordered_set<std::filesystem::path>&);
-  bool expandMacroIfExists(TokenStream&, std::unique_ptr<Macro::Macro>&);
+  void handleTokenHolder(Spasm::Lexer::TokenHolder&, std::vector<Spasm::Lexer::Token>&, Spasm::Program::ProgramForm&);
+  void handleDefine(Spasm::Lexer::TokenHolder&);
+  void handleInclude(Spasm::Lexer::TokenHolder&, Spasm::Program::ProgramForm&);
+  bool expandMacroIfExists(Spasm::Lexer::TokenHolder&, std::unique_ptr<Macro::Macro>&);
 
 
   void logError(const Spasm::Lexer::Token& errToken, const std::string& message) const;

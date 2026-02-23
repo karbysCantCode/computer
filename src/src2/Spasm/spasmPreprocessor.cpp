@@ -8,24 +8,23 @@ enum class DEFINEDIRECTIVETYPE {
 using pp = Preprocessor;
 
 Spasm::Lexer::TokenHolder pp::run(
-  std::vector<Spasm::Lexer::Token>& inputTokens,
-  Spasm::Program::ProgramForm& program, 
-  SMake::Target& target
+  Spasm::Lexer::TokenHolder& inputHolder,
+  Spasm::Program::ProgramForm& program
 ) {
   Spasm::Lexer::TokenHolder output;
-  output.m_tokens.reserve(inputTokens.size());
-  p_stack.emplace(TokenStream(inputTokens));
+  output.m_tokens.reserve(inputHolder.m_tokens.size());
+  p_stack.emplace(inputHolder);
 
 
   while (!p_stack.empty()) {
-    auto& currentStream = p_stack.top();
+    auto& currentHolder = p_stack.top();
 
-    if (!(currentStream.m_index < currentStream.m_tokens.size())) {
+    if (currentHolder.isAtEnd()) {
       p_stack.pop();
       continue;
     }
 
-    handleTokenStream(currentStream, output.m_tokens, target, program);
+    handleTokenHolder(currentHolder, output.m_tokens, program);
   }
 
   //cleanup
@@ -35,30 +34,30 @@ Spasm::Lexer::TokenHolder pp::run(
   return output;
 }
 
-void pp::handleTokenStream(TokenStream& stream, std::vector<Spasm::Lexer::Token>& output, SMake::Target& target, Spasm::Program::ProgramForm& program) {
-  while (!stream.isAtEnd()) {
-    const auto& token = stream.peek();
+void pp::handleTokenHolder(Spasm::Lexer::TokenHolder& holder, std::vector<Spasm::Lexer::Token>& output, Spasm::Program::ProgramForm& program) {
+  while (!holder.isAtEnd()) {
+    const auto& token = holder.peek();
     if (!token.isDirective()) {
       //check if macro
       const auto& it = p_macroMap.find(token.m_value);
       if (it != p_macroMap.end()) {
-        stream.skip(); // skip macro identifier
-        expandMacroIfExists(stream, it->second);
+        holder.skip(); // skip macro identifier
+        expandMacroIfExists(holder, it->second);
         break;
       }
 
-      output.push_back(stream.advance());
+      output.push_back(holder.consume());
       continue;
     }
 
     switch (token.m_nicheType) {
       using ty = Spasm::Lexer::Token::NicheType;
       case ty::DIRECTIVE_DEFINE: {
-        handleDefine(stream);
+        handleDefine(holder);
         break;
       }
       case ty::DIRECTIVE_INCLUDE: {
-        handleInclude(stream, target, program);
+        handleInclude(holder, program);
         break;
       }
       case ty::DIRECTIVE_ENTRY: {
@@ -67,32 +66,32 @@ void pp::handleTokenStream(TokenStream& stream, std::vector<Spasm::Lexer::Token>
       }
       default:
         logError(token, "Unknown directive type \"" + token.m_value + '"');
-        stream.skip();
+        holder.skip();
         break;
     }
   }
 }
 
-void pp::handleDefine(TokenStream& stream) {
+void pp::handleDefine(Spasm::Lexer::TokenHolder& holder) {
 
-  const auto& defineStartToken = stream.advance(); //skip @define token
+  const auto& defineStartToken = holder.consume(); //skip @define token
 
-  std::string macroName = stream.advance().m_value;
+  std::string macroName = holder.consume().m_value;
   auto newMacroIt = p_macroMap.find(macroName);
 
   DEFINEDIRECTIVETYPE type = DEFINEDIRECTIVETYPE::INLINE;
 
-  if (stream.peek().m_type == Spasm::Lexer::Token::Type::OPENPAREN) {
+  if (holder.peek().m_type == Spasm::Lexer::Token::Type::OPENPAREN) {
     type = DEFINEDIRECTIVETYPE::FUNCTION;
-    stream.skip(1); // skip open paren
+    holder.skip(1); // skip open paren
   }
 
   if (newMacroIt != p_macroMap.end()) { 
     logError(defineStartToken, "Redefinition of macro \"" + macroName + '"');
     if (type == DEFINEDIRECTIVETYPE::FUNCTION) {
-      while (stream.peek().m_type != Spasm::Lexer::Token::Type::CLOSEBLOCK) {stream.skip(1);}
+      while (holder.peek().m_type != Spasm::Lexer::Token::Type::CLOSEBLOCK) {holder.skip(1);}
     } else {
-      while (stream.peek().m_type != Spasm::Lexer::Token::Type::NEWLINE) {stream.skip(1);}
+      while (holder.peek().m_type != Spasm::Lexer::Token::Type::NEWLINE) {holder.skip(1);}
     }
     return;
   }
@@ -103,43 +102,43 @@ void pp::handleDefine(TokenStream& stream) {
     auto macro = std::make_unique<Macro::FunctionMacro>();
     bool isEnd = false;
     size_t argCount = 0;
-    while (!stream.isAtEnd() && !stream.peek().isCloseParen()) {
+    while (!holder.isAtEnd() && !holder.peek().isCloseParen()) {
       //get args
 
-      macro->args[stream.advance().m_value] = argCount;
+      macro->args[holder.consume().m_value] = argCount;
       argCount++;
 
-      if (stream.peek().isComma()) {
-        stream.skip();
+      if (holder.peek().isComma()) {
+        holder.skip();
         continue;
 
-      } else if (!stream.peek().isCloseParen()) {
-        logError(stream.peek(),"Unexpected token type (comma or close paren expected), got " + std::string(stream.peek().typeToString()) + '"');
+      } else if (!holder.peek().isCloseParen()) {
+        logError(holder.peek(),"Unexpected token type (comma or close paren expected), got " + std::string(holder.peek().typeToString()) + '"');
         break;
 
       } else {
-        stream.skip();
+        holder.skip();
         break;
       }
     }
     //
-    if (!stream.peek().isOpenBlock()) {
-      logError(stream.peek(), "Function block missing, expected curly brace, got \"" + stream.peek().m_value + '"');
+    if (!holder.peek().isOpenBlock()) {
+      logError(holder.peek(), "Function block missing, expected curly brace, got \"" + holder.peek().m_value + '"');
       p_macroMap[macroName] = std::move(macro);
       return;
     }
 
-    stream.skip(1); // skip '{'
-    while (!stream.peek().isCloseBlock() && !stream.isAtEnd()) {
-      if (stream.peek().m_value == macroName) {
-        logError(stream.peek(), "Macroname not allowed inside macro definition.");
-        while (!stream.peek().isCloseBlock() && !stream.isAtEnd()) {stream.m_index++;}
+    holder.skip(1); // skip '{'
+    while (!holder.peek().isCloseBlock() && !holder.isAtEnd()) {
+      if (holder.peek().m_value == macroName) {
+        logError(holder.peek(), "Macroname not allowed inside macro definition.");
+        while (!holder.peek().isCloseBlock() && !holder.isAtEnd()) {holder.skip();}
         break;
       } else {
-        macro->replacement.push_back(stream.advance());
+        macro->replacement.push_back(holder.consume());
       }
     }
-    stream.skip(1);
+    holder.skip(1);
 
     p_macroMap[macroName] = std::move(macro);
     break;
@@ -147,8 +146,8 @@ void pp::handleDefine(TokenStream& stream) {
   
   case DEFINEDIRECTIVETYPE::INLINE: {
     auto macro = std::make_unique<Macro::ReplacementMacro>();
-    while (!stream.isAtEnd() && stream.peek().m_type != Spasm::Lexer::Token::Type::NEWLINE) {
-      macro->replacementBody.push_back(stream.advance());
+    while (!holder.isAtEnd() && holder.peek().m_type != Spasm::Lexer::Token::Type::NEWLINE) {
+      macro->replacementBody.push_back(holder.consume());
     }
     p_macroMap[macroName] = std::move(macro);
     break;
@@ -160,34 +159,32 @@ void pp::handleDefine(TokenStream& stream) {
     break;
   }
 }
-void pp::handleInclude(TokenStream& stream, SMake::Target& target, Spasm::Program::ProgramForm& program, std::stack<parseInfo>& parseStack, std::unordered_set<std::filesystem::path>& parsedSet) {
-  stream.skip();
+void pp::handleInclude(Spasm::Lexer::TokenHolder& holder, Spasm::Program::ProgramForm& program) {
+  holder.skip();
 
-  const auto& fileToken = stream.advance();
-  auto filePath = target.searchForPathInIncluded(fileToken.m_value).lexically_normal();
-  if (filePath.empty()) {
-    logError(fileToken, "Expanded to empty path, include \"" + fileToken.m_value + "\" could not be resolved.");
-    return;
-  }
+  const auto& fileToken = holder.consume();
+  program.m_includedPrograms.emplace(fileToken.m_value, fileToken);
+  // auto filePath = target.searchForPathInIncluded(fileToken.m_value).lexically_normal();
+  // if (filePath.empty()) {
+  //   logError(fileToken, "Expanded to empty path, include \"" + fileToken.m_value + "\" could not be resolved.");
+  //   return;
+  // }
   
-  std::unique_ptr<Spasm::Program::ProgramForm>* includedProgramUniquePtrPtr = nullptr;
+  // std::unique_ptr<Spasm::Program::ProgramForm>* includedProgramUniquePtrPtr = nullptr;
   
-  auto progMapIt = target.m_filePathProgramMap.find(filePath);
-  if (progMapIt == target.m_filePathProgramMap.end()) {
-    auto newUniqueProgramPtr = std::make_unique<Spasm::Program::ProgramForm>();
-    auto [newit, inserted] = target.m_filePathProgramMap.emplace(filePath, std::move(newUniqueProgramPtr));
-    includedProgramUniquePtrPtr = &newit->second;
-  } else {
-    includedProgramUniquePtrPtr = &progMapIt->second;
-  }
+  // auto progMapIt = target.m_filePathProgramMap.find(filePath);
+  // if (progMapIt == target.m_filePathProgramMap.end()) {
+  //   auto newUniqueProgramPtr = std::make_unique<Spasm::Program::ProgramForm>();
+  //   auto [newit, inserted] = target.m_filePathProgramMap.emplace(filePath, std::move(newUniqueProgramPtr));
+  //   includedProgramUniquePtrPtr = &newit->second;
+  // } else {
+  //   includedProgramUniquePtrPtr = &progMapIt->second;
+  // }
 
-  if (parsedSet.find(filePath) == parsedSet.end()) {
-    parseStack.emplace(target, filePath);
-  }
-  program.m_includedPrograms.emplace(filePath, includedProgramUniquePtrPtr);
+  // program.m_includedPrograms.emplace(filePath, includedProgramUniquePtrPtr);
 }
-bool pp::expandMacroIfExists(TokenStream& stream, std::unique_ptr<Macro::Macro>& macro) {
-  p_stack.push(macro->getReplacment(stream.m_index, stream.m_tokens));
+bool pp::expandMacroIfExists(Spasm::Lexer::TokenHolder& holder, std::unique_ptr<Macro::Macro>& macro) {
+  p_stack.push(macro->getReplacment(holder));
   return true;
 }
 

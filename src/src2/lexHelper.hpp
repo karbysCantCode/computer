@@ -11,15 +11,25 @@ class LexHelper {
   size_t m_index = 0;
   size_t m_column = 1;
   size_t m_line = 1;
-  const std::string m_source;
-  const std::unordered_set<std::string>* m_keywords;
+  std::string m_source;
+  std::unordered_set<std::string>* m_keywords;
   Debug::MessageLogger* m_errorLogger;
 
-  LexHelper(const std::string source, const std::unordered_set<std::string>* keywords = nullptr, Debug::MessageLogger* errorLogger = nullptr) : 
+  LexHelper(const std::string& source, std::unordered_set<std::string>* keywords = nullptr, Debug::MessageLogger* errorLogger = nullptr) : 
     m_source(source),
     m_keywords(keywords),
     m_errorLogger(errorLogger) {}
 
+  LexHelper() {}
+
+  inline void reset() {
+    m_index = 0;
+    m_column = 0;
+    m_line = 1;
+    m_source.clear();
+    m_keywords = nullptr;
+    m_errorLogger = nullptr;
+  }
   inline char peek(size_t distance = 0) {
     return m_index + distance < m_source.size() ? m_source[m_index+distance] : '\0';
   };

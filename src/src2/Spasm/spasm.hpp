@@ -8,7 +8,9 @@
 #include <variant>
 
 #include "debugHelpers.hpp"
-#include "arch.hpp"
+#include "Arch/arch.hpp"
+#include "lexHelper.hpp"
+#include "fileHelper.hpp"
 
 
 
@@ -133,21 +135,57 @@ namespace Spasm {
 
     };
 
-    std::vector<Token> lex(const std::filesystem::path& path, std::unordered_set<std::string>& keywords, Debug::FullLogger* logger = nullptr);
     struct TokenHolder {
       public:
       std::vector<Token> m_tokens;
 
       inline bool isAtEnd() const {return !(p_index < m_tokens.size());}
       inline bool notAtEnd() const {return (p_index < m_tokens.size());}
-      inline const Token peek(size_t distance = 0) const;
-      inline const Token consume();
-      inline void skip(size_t distance = 1);
-      inline void skipUntilType(Token::Type);
+      inline const Token peek(size_t distance = 0) const {
+        const auto absDist = p_index + distance;
+        return absDist < m_tokens.size() ? m_tokens[absDist] : Token(Token::Type::UNASSIGNED, &p_filepath);
+      }
+      inline const Token consume() {
+        const auto& rettoken = notAtEnd() ? m_tokens[p_index] : Token(Token::Type::UNASSIGNED, &p_filepath);
+        p_index++;
+        return rettoken;
+      }
+      inline void skip(size_t distance = 1) {
+        p_index += distance;
+      }
+      inline void skipUntilType(Token::Type type) {
+        while (notAtEnd() && peek().m_type != type)
+        {
+          skip();
+        }
+      }
       inline void reset() {p_index = 0;}
+
+      TokenHolder() {}
+      TokenHolder(const std::vector<Spasm::Lexer::Token>& tokens) : m_tokens(tokens) {}
       private:
       size_t p_index;
       std::filesystem::path p_filepath;
+    };
+
+    class Lexer {
+      public:
+      Lexer(Debug::FullLogger* logger) : p_logger(logger) {}
+      TokenHolder run(const std::filesystem::path& path, std::unordered_set<std::string>& keywords);
+
+      private:
+      Debug::FullLogger* p_logger;
+      std::filesystem::path p_currentPath;
+      LexHelper p_lexHelper;
+      inline void logError(const std::string& message) {
+        if (p_logger != nullptr) p_logger->Errors.logMessage('"'+p_currentPath.string()+"\":"+std::to_string(p_lexHelper.m_line)+':'+std::to_string(p_lexHelper.m_column)+": error: " + message);
+      };
+      inline void logWarning(const std::string& message) {
+        if (p_logger != nullptr) p_logger->Warnings.logMessage('"'+p_currentPath.string()+"\":"+std::to_string(p_lexHelper.m_line)+':'+std::to_string(p_lexHelper.m_column)+": warning: " + message);
+      };
+      inline void logDebug(const std::string& message) {
+        if (p_logger != nullptr) p_logger->Debugs.logMessage('"'+p_currentPath.string()+"\":"+std::to_string(p_lexHelper.m_line)+':'+std::to_string(p_lexHelper.m_column)+": debug: " + message);
+      };
     };
   }
 
@@ -244,23 +282,39 @@ namespace Spasm {
       the top (or bottom?) of the statement array.
       
       */
-      struct Label : Statement {
-        std::string m_name;
-        Label* m_parent = nullptr;
-        std::unordered_map<std::string, Label*> m_children;
-        bool m_declared = false;
 
-        Label(std::string name, Label* parent = nullptr, bool declared = false) : m_name(name), m_parent(parent), m_declared(declared) {}
-      
-        std::string toString(size_t padding = 0, size_t indent = 0, size_t minArgWidth = 5, bool basicData = true) const override;
+      struct Symbol : Statement {
+        enum class Type {
+          LABEL,
+          DECLARATION
+        };
+        std::string m_name;
+        bool m_declared = false;
+        const Type m_type;
+        std::unordered_map<std::string, Symbol*> m_children;
+
+        Symbol(Type type) : m_type(type) {} 
+        virtual ~Symbol() = default;
       };
 
-      struct Declaration : Statement {
-        std::string m_declaredName;
+      struct Label : Symbol {
+        Label* m_parent;
+
+        Label(std::string name, Label* parent = nullptr, bool declared = false) : Symbol(Type::LABEL), m_parent(parent) {
+          m_declared = declared;
+          m_name = name;
+        }
+        std::string getNameToParent();
+        std::string toString(size_t padding = 0, size_t indent = 0, size_t minArgWidth = 5, bool basicData = true) const override;
+        
+      };
+
+      struct Declaration : Symbol {
         Arch::DataType* m_dataType;
         std::unique_ptr<Operands::Operand> m_declaration;
 
         std::string toString(size_t padding = 0, size_t indent = 0, size_t minArgWidth = 5, bool basicData = true) const override;
+        Declaration() : Symbol(Type::DECLARATION) {}
       };
 
       struct Instruction : Statement {
@@ -277,11 +331,10 @@ namespace Spasm {
       public:
       std::filesystem::path m_sourceFilePath;
       std::vector<std::unique_ptr<Expressions::Statement>> m_statements;
-      std::unordered_map<std::filesystem::path, std::unique_ptr<Spasm::Program::ProgramForm>*> m_includedPrograms;
-      std::unordered_map<std::string, Expressions::Label*> m_globalLabels;
-      std::unordered_map<std::string, Expressions::Declaration*> m_dataDeclarations;
-      std::unordered_map<std::string, std::unique_ptr<Expressions::Label>> m_unownedLabels;
-
+      std::unordered_map<std::filesystem::path, Spasm::Lexer::Token> m_includedPrograms;
+      std::unordered_map<std::string, Expressions::Symbol*> m_globalSymbols;
+      std::unordered_map<std::string, std::unique_ptr<Expressions::Symbol>> m_unownedSymbols;
+      
     };
     
     class ProgramParser {
@@ -317,9 +370,27 @@ namespace Spasm {
       void handlenDatatype(Spasm::Lexer::TokenHolder&);
       //void handleLabel(Spasm::Lexer::TokenHolder&);
 
-      Program::Expressions::Label* consumeTokensForLabel(Lexer::Token::Type delimiter, Spasm::Lexer::TokenHolder& tokenHolder, Spasm::Program::ProgramForm& currentProgram, bool delcNewIfNotExist = false, bool delimOnNonPeriod = false);
+      Program::Expressions::Symbol* consumeTokensForSymbol(Spasm::Lexer::TokenHolder& tokenHolder, Spasm::Program::ProgramForm& currentProgram);
     };
-    bool parseProgram(std::vector<Spasm::Lexer::Token>& tokens, Arch::Architecture& arch, Spasm::Program::ProgramForm& program, Debug::FullLogger* logger = nullptr, std::filesystem::path path = "");
+
+    struct LinkedUnit {
+      std::vector<ProgramForm> m_programs;
+      bool m_isLinked = false;
+      
+    };
+
+    class Linker {
+      public:
+      bool link(LinkedUnit&);
+      private:
+    };
+
+    class Assember {
+      public:
+
+      private:
+    }
+
 
   };
 }

@@ -1,8 +1,7 @@
 #include "spasmMacro.hpp"
 
 std::vector<Spasm::Lexer::Token> Macro::FunctionMacro::getReplacment(
-  size_t& index, 
-  std::vector<Spasm::Lexer::Token>& parsingStream
+  Spasm::Lexer::TokenHolder& holder
 ) {
   std::vector<std::vector<Spasm::Lexer::Token>> localArgs;
 
@@ -10,9 +9,9 @@ std::vector<Spasm::Lexer::Token> Macro::FunctionMacro::getReplacment(
   bool isBlame = true;
 
   std::vector<Spasm::Lexer::Token> currentArg;
-  while (localArgs.size() < args.size() && index < parsingStream.size()) {
-    const Spasm::Lexer::Token& token = parsingStream[index];
-    index++;
+  while (localArgs.size() < args.size() && holder.notAtEnd()) {
+    const Spasm::Lexer::Token& token = holder.peek();
+    holder.skip();
     
     if (token.isOneOf({
           Spasm::Lexer::Token::Type::COMMA,

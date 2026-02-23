@@ -10,7 +10,7 @@
 #include <cassert>
 #include <filesystem>
 
-#include "debugHelpers.hpp"
+#include "../debugHelpers.hpp"
 
 namespace Arch {
 

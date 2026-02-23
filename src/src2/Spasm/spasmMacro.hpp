@@ -13,20 +13,20 @@ namespace Macro {
   virtual ~Macro() = default;
 
   //returns the index after the replacement
-  virtual std::vector<Spasm::Lexer::Token> getReplacment(size_t& index, std::vector<Spasm::Lexer::Token>& parsingStream) {return {};}
+  virtual std::vector<Spasm::Lexer::Token> getReplacment(Spasm::Lexer::TokenHolder& holder) {return {};}
 };
 
 struct FunctionMacro : Macro {
   std::unordered_map<std::string, size_t> args;
   std::vector<Spasm::Lexer::Token> replacement;
 
-  std::vector<Spasm::Lexer::Token> getReplacment(size_t& index, std::vector<Spasm::Lexer::Token>& parsingStream) override;
+  std::vector<Spasm::Lexer::Token> getReplacment(Spasm::Lexer::TokenHolder& holder) override;
 };
 
 struct ReplacementMacro : Macro {
   std::vector<Spasm::Lexer::Token> replacementBody;
 
-  std::vector<Spasm::Lexer::Token> getReplacment(size_t& index, std::vector<Spasm::Lexer::Token>& parsingStream) override {
+  std::vector<Spasm::Lexer::Token> getReplacment(Spasm::Lexer::TokenHolder& holder) override {
     return replacementBody;
   }
 

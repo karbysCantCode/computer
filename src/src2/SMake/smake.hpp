@@ -7,7 +7,7 @@
 #include <sstream>
 
 #include "debugHelpers.hpp"
-#include "spasm.hpp"
+#include "Spasm/spasm.hpp"
 
 
 
