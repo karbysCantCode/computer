@@ -1,0 +1,59 @@
+ALU CONTROL:
+0     - shift modules rotate mode (needs to implement rotate in lsh)
+1     - CIN to adder enable
+2-3   - Carry flag select
+    0 - Adder Cout
+    1 - Not Adder Cout -- actually unused
+    2 - Rsh / Ror shift overflow
+    3 - Lsh / Rol shift overflow
+4     - Carry flag enable
+5     - Overflow flag enable
+6     - Negative flag enable
+7-8   - Overflow flag select
+    0 - Adder COUT
+    1 - Adder COUT XOR Adder Result MSB
+    2 - ~(A_MSB xor B_MSB) and (A_MSB xor result_MSB)
+    3 - Multiplier upper word NOT zero
+9-11  - Result select
+    0 - ADD
+    1 - RIGHT SHIFT
+    2 - OR
+    3 - AND
+    4 - Multiplier Lower
+    5 - Multiplier Upper
+    6 - XOR
+    7 - LEFT SHIFT
+
+12    - Adder CIN
+13    - invert adder B
+
+                  : MSB -> LSB
+0  ADD            :0 0 000 10 1 1 1 00 0 0
+1  ADD with Carry :0 0 000 10 1 1 1 00 1 0
+2  Sub            :1 1 000 10 1 1 1 00 0 0
+3  Sub with Carry :1 0 000 10 1 1 1 00 1 0
+4  Multiply Lower :0 0 100 11 1 1 0 00 0 0
+5  multiply upper :0 0 101 00 1 0 0 00 0 0
+6  shift LEFT     :0 0 111 00 1 0 1 11 0 0
+7  shift RIGHT    :0 0 001 00 1 0 1 10 0 0
+8  rotate LEFT    :0 0 111 00 1 0 1 11 0 1
+9  rotate RIGHT   :0 0 001 00 1 0 1 10 0 1
+10 AND            :0 0 011 00 1 0 0 00 0 0
+11 OR             :0 0 010 00 1 0 0 00 0 0
+12 XOR            :0 0 110 00 1 0 0 00 0 0
+13 NOT            :1 0 000 00 1 0 0 00 0 0
+
+
+
+Read stage CONTROL
+0-2  - 16 path A select
+3-5  - 16 path B select
+6-7  - Reg 16 write index select
+8    - Normal format reg 16, A,B read enable
+9    - reg 16 A read enable
+10   - reg 16 B read enable
+11   - Two format reg 16 AB select enable & enable
+12   - 16 path B enable
+13   - 16 path A enable
+14   - 32 bit read select, TWO field B assert (othwerise TWO field A)
+15   - 32 bit half read select, TWO field B assert (othwerise TWO field A)

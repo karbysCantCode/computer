@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "SourceLocation.hpp"
 
@@ -29,4 +30,5 @@ inline TokenT consume() {
 }
 inline void skip(size_t distance = 1) {m_index++;}
 inline void reset() {m_index = 0;}
+inline bool match(size_t distance = 0) const 
 };

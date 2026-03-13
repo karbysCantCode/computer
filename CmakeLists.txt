@@ -26,3 +26,5 @@ add_custom_command(TARGET spasm POST_BUILD
             ${CMAKE_SOURCE_DIR}/resources
             $<TARGET_FILE_DIR:spasm>/resources
 )
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

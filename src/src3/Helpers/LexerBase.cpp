@@ -12,11 +12,11 @@ char LexerBase::consume() {
   return ret;
 }
 
-char LexerBase::peek(size_t distance) const {
-  const size_t val = distance + p_index;
+char LexerBase::peek(int distance) const {
+  const int val = distance + p_index;
   return val < p_source.size() ? p_source[val] : '\0';
 }
 
-bool LexerBase::match(char c, size_t distance) const {
+bool LexerBase::match(char c, int distance) const {
   return peek(distance) == c;
 }

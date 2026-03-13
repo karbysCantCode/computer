@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_set>
+#include <unordered_map>
 #include <string>
 #include <variant>
 
@@ -41,23 +42,33 @@ class Architecture {
     std::string m_formatName;
     std::vector<size_t> m_formatOperandSizes;
 
-    void inline insertOperandSize(size_t size) {m_formatOperandSizes.push(size);}
+    void inline insertOperandSize(size_t size) {m_formatOperandSizes.push_back(size);}
 
     FormatDefinition(const std::string& name) : m_formatName(name) {}
   };
 
   struct RegisterOperand {
+    std::string alias;
     std::unordered_set<std::string> acceptedRegisterNames;
+
+    RegisterOperand(const std::string& alia) : alias(alia) {}
   };
   struct ImmediateOperand {
+    std::string alias;
     int min;
     int max;
+
+    ImmediateOperand(const std::string& alia, int in, int ax) : alias(alia), min(in), max(ax) {}
   };
   struct ConstantIntOperand {
     int constant;
+
+    ConstantIntOperand(int constt) : constant(constt) {}
   };
   struct ConstantStringOperand {
     std::string constant;
+
+    ConstantStringOperand(const std::string& constt) : constant(constt) {}
   };
 
   struct InstructionDefinition {  
@@ -65,14 +76,19 @@ class Architecture {
     std::string m_name;
     std::vector<std::variant<RegisterOperand, ImmediateOperand, ConstantIntOperand, ConstantStringOperand>> m_operands;
     int m_opcode = -1;
+    int m_byteLength = 2;
+
+    const FormatDefinition& m_format;
+
+    InstructionDefinition(const std::string& name, int opcode, int byteLength, const FormatDefinition& format) : m_name(name), m_opcode(opcode), m_byteLength(byteLength), m_format(format) {}
   };
 
   Architecture(TokenHolder& sourceHolder, Debug::FullLogger* logger);
 
-  std::unordered_set<std::string&, InstructionDefinition> m_instructionSet;
-  std::unordered_set<std::string&, RegisterDefinition> m_registerSet;
-  std::unordered_set<std::string&, ControlSignalDefinition> m_controlSignalSet;
-  std::unordered_set<std::string&, FormatDefinition> m_formatSet;
+  std::unordered_map<std::string, InstructionDefinition> m_instructionSet;
+  std::unordered_map<std::string, RegisterDefinition> m_registerSet;
+  std::unordered_map<std::string, ControlSignalDefinition> m_controlSignalSet;
+  std::unordered_map<std::string, FormatDefinition> m_formatSet;
 
   size_t m_bitwidth;
   
@@ -93,6 +109,15 @@ class Architecture {
   void consumeFormat(TokenHolder&);
   void consumeBitwidth(TokenHolder&);
   void consumeInstruction(TokenHolder&);
+
+  struct RegisterRangeInfo {
+    bool hasDash = false;
+    std::string prefix;
+    size_t lowValue = 0;
+    size_t highValue = 0;
+  };
+
+  RegisterRangeInfo parseRegisterRange(const std::string&, const Token&) const;
 };
 
 }

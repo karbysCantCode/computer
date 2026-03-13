@@ -4,6 +4,7 @@
 #include <format>
 
 struct SourceLocation {
+public:
   std::filesystem::path filePath;
   size_t line;
   size_t column;
