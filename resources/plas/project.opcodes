@@ -75,14 +75,14 @@
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
+                    1,
                     0,
                     1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                     0,
                     1,
                     1,
@@ -114,7 +114,7 @@
                     1,
                     0,
                     0,
-                    0,
+                    1,
                     0,
                     0,
                     0,
@@ -142,14 +142,14 @@
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
+                    1,
                     0,
                     1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                     0,
                     1,
                     1,
@@ -209,14 +209,14 @@
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
+                    1,
                     0,
                     1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                     0,
                     1,
                     1,
@@ -276,14 +276,14 @@
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
+                    1,
                     0,
                     1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                     0,
                     1,
                     1,
@@ -343,14 +343,14 @@
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
+                    1,
                     0,
                     1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                     0,
                     1,
                     1,
@@ -410,14 +410,14 @@
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
+                    1,
                     0,
                     1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                     0,
                     1,
                     1,
@@ -477,14 +477,14 @@
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
+                    1,
                     0,
                     1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                     0,
                     1,
                     1,
@@ -544,14 +544,14 @@
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
+                    1,
                     0,
                     1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                     0,
                     1,
                     1,
@@ -611,14 +611,14 @@
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
+                    1,
                     0,
                     1,
-                    1,
-                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                     0,
                     1,
                     1,
@@ -643,7 +643,7 @@
                     0,
                     1,
                     0,
-                    0
+                    1
                 ],
                 "Memory Control": [
                     0,
@@ -1821,11 +1821,11 @@
                     0,
                     0,
                     0,
-                    0,
                     1,
                     0,
                     0,
                     0,
+                    1,
                     1,
                     0,
                     0,
@@ -1878,7 +1878,7 @@
         },
         {
             "input": 28,
-            "comment": "",
+            "comment": "#lodi",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -1945,7 +1945,7 @@
         },
         {
             "input": 29,
-            "comment": "",
+            "comment": "#lodr",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2012,7 +2012,7 @@
         },
         {
             "input": 30,
-            "comment": "",
+            "comment": "#lodlr",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2079,7 +2079,7 @@
         },
         {
             "input": 31,
-            "comment": "",
+            "comment": "#stoi",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2146,7 +2146,7 @@
         },
         {
             "input": 32,
-            "comment": "",
+            "comment": "#stor",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2213,7 +2213,7 @@
         },
         {
             "input": 33,
-            "comment": "",
+            "comment": "#stolr",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2280,7 +2280,7 @@
         },
         {
             "input": 34,
-            "comment": "",
+            "comment": "#push",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2347,7 +2347,7 @@
         },
         {
             "input": 35,
-            "comment": "",
+            "comment": "#pop",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2414,7 +2414,7 @@
         },
         {
             "input": 36,
-            "comment": "",
+            "comment": "#cmov",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2481,7 +2481,7 @@
         },
         {
             "input": 37,
-            "comment": "",
+            "comment": "#swap",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2548,7 +2548,7 @@
         },
         {
             "input": 38,
-            "comment": "",
+            "comment": "#jmpis",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2615,7 +2615,7 @@
         },
         {
             "input": 39,
-            "comment": "",
+            "comment": "#jmpia",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2682,7 +2682,7 @@
         },
         {
             "input": 40,
-            "comment": "",
+            "comment": "#brcis",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2749,7 +2749,7 @@
         },
         {
             "input": 41,
-            "comment": "",
+            "comment": "#brcia",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2816,7 +2816,7 @@
         },
         {
             "input": 42,
-            "comment": "",
+            "comment": "#jmpr",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2883,7 +2883,7 @@
         },
         {
             "input": 43,
-            "comment": "",
+            "comment": "#brcr",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -2950,7 +2950,7 @@
         },
         {
             "input": 44,
-            "comment": "",
+            "comment": "#not",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -3017,7 +3017,7 @@
         },
         {
             "input": 45,
-            "comment": "",
+            "comment": "#cheo",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -3084,7 +3084,7 @@
         },
         {
             "input": 46,
-            "comment": "",
+            "comment": "#mmuo",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -4223,7 +4223,7 @@
         },
         {
             "input": 63,
-            "comment": "",
+            "comment": "#halt",
             "plas": {
                 "Read and Decode control": [
                     0,

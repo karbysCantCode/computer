@@ -11,8 +11,9 @@
 .reg vm     2  23
 
 .format normal   6 4 3 3
+.format bitsel   6 1 1 1 1 1 5  ; uses the same idea as two, where last 5 bits are a full reg index
 .format normaug  6 4 6
-.format two      6 5 5
+.format two      6 5 5          ; the first is only a write field, the second is any register, but 32 halfs or special reg go to path B
 .format immfull  6 10
 
 ; #######
@@ -88,12 +89,12 @@ halt 2 63 normal NON
 
 
 ;NOTE immediate jumps should probaby just be full immediates since they twist the pipeline funny, also 10 bits in instr + 16 bit word can be absolute too?
-jmpis 2 38 immfull IMM 0:1023
-jmpia 2 39 immfull IMM 0:1023
+jmpis 2 38 immfull IMM distance 0:1023
+jmpia 2 39 immfull IMM distance 0:1023
 jmpr  2 42 two  REG rs r0-r15<mo<sp<fp<ip NON
 
-brcis 2 40 normaug  IMM 0:15 IMM 0:63
-brcia 2 41 normaug  IMM 0:15 IMM 0:63
+brcis 2 40 normaug  IMM condition 0:15 IMM distance 0:63
+brcia 2 41 normaug  IMM condition 0:15 IMM distance 0:63
 brcr  2 43 two      REG rs r0-r15<mo<sp<fp<ip NON
 
 ;interrupt
@@ -113,5 +114,7 @@ brcr  2 43 two      REG rs r0-r15<mo<sp<fp<ip NON
 ;flush dcache line (index) a/b 
 
 ; instruction with -> bits inval/flush, address/line, a/b
-
+CHEO 2 45 bitsel IMM IorDCache_OR_LowerFlagMaskEnable 0:1 IMM InvalOrFlush_OR_invalidateTargetPage 0:1 IMM AddressOrLine_OR_invalidateTransPage 0:1 IMM setAorB_OR_InvalidateAll 0:1 IMM MMUorCACHE 0:1 REG rs r0-r15<mo<sp<fp<ip
+MMUF 2 45 bitsel CONST 1 CONST 0 CONST 0 CONST 0 CONST 1 IMM flagmask 0:8
+;10XX1 turns the 2nd into flagmask
 ; instruction with -> bits lower flag mask en, ival targ page en, ival trans page en

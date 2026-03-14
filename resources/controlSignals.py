@@ -119,6 +119,7 @@ class PLA_GUI:
         self.comments = {}
         self.current_entries = {}
         self.selected_opcode = None
+        self.dark_mode = False
 
         root.title("PLA Microcode Project Editor")
 
@@ -167,7 +168,7 @@ class PLA_GUI:
         ttk.Button(top, text="Save Project", command=self.save_project).pack(side="right")
         ttk.Button(top, text="Load Project", command=self.load_project).pack(side="right")
         ttk.Button(top, text="Export PLAs", command=self.export_plas).pack(side="right")
-
+        ttk.Button(top, text="Toggle Dark Mode", command=self.toggle_dark_mode).pack(side="right")
         # Comment
         comment_frame = ttk.Frame(right)
         comment_frame.pack(fill="x", pady=5)
@@ -471,6 +472,53 @@ class PLA_GUI:
         elif event.num == 5:
             self.canvas.yview_scroll(20, "units")
 
+    def toggle_dark_mode(self):
+        self.dark_mode = not self.dark_mode
+        style = ttk.Style()
+
+        if self.dark_mode:
+            bg = "#1e1e1e"
+            fg = "#ffffff"
+            field = "#2a2a2a"
+            list_bg = "#252526"
+        else:
+            bg = "#f0f0f0"
+            fg = "#000000"
+            field = "#ffffff"
+            list_bg = "#ffffff"
+
+        # force a theme that allows overrides
+        style.theme_use("default")
+
+        # root
+        self.root.configure(bg=bg)
+
+        # base ttk styles
+        style.configure(".", background=bg, foreground=fg)
+
+        style.configure("TFrame", background=bg)
+        style.configure("TLabel", background=bg, foreground=fg)
+        style.configure("TLabelFrame", background=bg, foreground=fg)
+        style.configure("TLabelFrame.Label", background=bg, foreground=fg)
+
+        style.configure("TButton", background=field, foreground=fg)
+        style.configure("TCheckbutton", background=bg, foreground=fg)
+        style.configure("TRadiobutton", background=bg, foreground=fg)
+
+        style.configure("TEntry",
+            fieldbackground=field,
+            foreground=fg
+        )
+
+        # entry cursor/text
+        style.map("TEntry",
+            foreground=[("disabled", fg), ("!disabled", fg)]
+        )
+
+        # widgets not using ttk styling
+        self.opcode_listbox.configure(bg=list_bg, fg=fg)
+        self.canvas.configure(bg=bg)
+
 # ===============================
 # ====== YOUR PLA SETUP =========
 # ===============================
@@ -521,48 +569,29 @@ def build_alu_control_pla():
     return pla
 
 def build_read_control_pla():
-    pla = PLA(input_width=6, output_width=16)
+    pla = PLA(input_width=6, output_width=11)
 
-    pla.register_range("16_BIT_PATH_A_ASSERT_SELECT", 0, 2, {
-        "16 Bit register A" : 0,
-        "32 Bit upper half" : 1,
-        "32 Bit lower half" : 2,
-        "Context register" : 3,
-        "Privellege register" : 4,
-        "Memory Region Register" : 5,
-        "Virtual mode register" : 6,
-        "Fetch unit result (next instruction, used for imm)" : 7
+    pla.register_bit("mute EXE forwarding", 0)
+    pla.register_bit("mute MEM forwarding", 1)
+    pla.register_bit("inject instruction", 2)
+    pla.register_bit("16bit path A allow data", 3)
+    pla.register_bit("16bit path A pull immediate from instruction stream", 4)
+    pla.register_bit("16bit path B allow data", 5)
+    pla.register_bit("16bit path B pull immediate from instruction stream", 6)
+    pla.register_bit("two first field write select automatic mode enable", 7)
+    pla.register_bit("two field two to path B (otherwise normal field 3)", 8)
+    pla.register_bit("normal field 3 to path A (otherwise normal field 2)", 8)
+    pla.register_range("r0-r15 write field select", 10, 11, {
+        "Normal field 1" : 0,
+        "Two field 1 (only r0-r15)" : 1,
+        "Normal field 2" : 2
     })
-    pla.register_range("16_BIT_PATH_B_ASSERT_SELECT", 3, 5, {
-        "16 Bit register B" : 0,
-        "32 Bit lower half" : 1,
-        "32 Bit upper half" : 2,
-        "Context register" : 3,
-        "Privellge register" : 4,
-        "Memory region register" : 5,
-        "Virtual mode" : 6,
-        "Fetch unit result (next instruction, used for imm)" : 7,
-    })
-    pla.register_range("16_BIT_WRITE_INSTRUCTION_FIELD_SELECT", 6, 7, {
-        "Normal Field 1" : 0,
-        "Normal Field 2" : 1,
-        "Two Field 1" : 2,
-    })
-    pla.register_onehot("16 bit path ab assert format select", {
-        "ENABLE_NORMAL_FORMAT_TO_ASSERT_16_BIT_PATH_A_B_ASSERT" : 8,
-        "ENABLE_TWO_FORMAT_TO_ASSERT_16_BIT_PATH_A_B_ASSERT" : 11
-    })
-
-    pla.register_bit("16_BIT_REGISTER_READ_A_ENABLE", 9 )
-    pla.register_bit("16_BIT_REGISTER_READ_B_ENABLE", 10)
     
-    pla.register_bit("16_BIT_PATH_A_ASSERT_ENABLE", 12)
-    pla.register_bit("16_BIT_PATH_B_ASSERT_ENABLE", 13)
-    pla.register_bit("32_BIT_FULL_READ_SELECT_TWO_FIELD_B_ASSERT_(OTHERWISE FIELD A)", 14)
-    pla.register_bit("32_BIT_HALF_READ_SELECT_TWO_FIELD_B_ASSERT_(OTHERWISE FIELD A)", 15)
     return pla
+
+
 def build_execute_control_pla():
-    pla = PLA(input_width=6, output_width=18)
+    pla = PLA(input_width=6, output_width=19)
 
     pla.register_onehot("32 bit Memory addrews Path assert", {
         "32_BIT_AGU_ASSERT_MEMORY_PATH" : 0,
@@ -602,6 +631,7 @@ def build_execute_control_pla():
     })
     pla.register_bit("AGU_SUBTRACT_MODE", 16)
     pla.register_bit("ALU_FLAGS_WRITE_ENABLE", 17)
+    pla.register_bit("Allow 16 bit path A to 32 bit memory path side flip opposite to automatic 32bit reg half", 18)
 
 
 
@@ -617,26 +647,16 @@ def build_writeback_control_pla():
     return pla
 
 def build_memory_control_pla():
-    pla = PLA(input_width=6, output_width=16)
+    pla = PLA(input_width=6, output_width=6)
 
-    pla.register_onehot("16 bit path assert", {
-        "Data cache assert to 16 bit path" : 0,
-        "16 bit execute result to 16 bit path" : 1
+    pla.register_bit("Enable memory or cache state operation", 0)
+    pla.register_bit("Two byte data operation", 1)
+    pla.register_bit("Data mode write (otherwise data mode read)", 2)
+    pla.register_onehot("16 Bit result", {
+        "Memory result" : 3,
+        "EXE result" : 4
     })
-    pla.register_bit("MMU Two byte operation", 2)
-    pla.register_bit("Data write operation (otherewise read)", 3)
-    pla.register_bit("Lower flag mask enable", 4)
-    pla.register_bit("Invalidate target page enable", 5)
-    pla.register_bit("Invalidate transpation page enable", 6)
-    pla.register_bit("Invalidate all enable", 7)
-    pla.register_bit("ICache invalidate address", 8)
-    pla.register_bit("ICache invalidate line", 9)
-    pla.register_bit("ICache line set select (0 = set A, 1 = set B)", 10)
-    pla.register_bit("DCache flush address", 11)
-    pla.register_bit("DCache invalidate address", 12)
-    pla.register_bit("DCache flush line", 13)
-    pla.register_bit("DCache invalidate line", 14)
-    pla.register_bit("DCache line set select (0 = set A, 1 = set B)", 15)
+    pla.register_bit("Data operation (r/w) enable", 5)
 
     return pla
 # ===============================
