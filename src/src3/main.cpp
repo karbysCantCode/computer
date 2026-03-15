@@ -43,6 +43,10 @@ int main(int argc, char* argv[]) {
     }
   }
   SMake::printProject(project);
+
+  for (auto& target : project.m_targets) {
+    
+  }
   
   return 0;
 }

@@ -146,6 +146,7 @@ bool SMakeLexer::isWhitespace() {
   switch (peek()) {
     case ' ':
     case '\n':
+    case '\t':
     return true;
     default:
     return false;
