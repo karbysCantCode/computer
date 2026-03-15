@@ -67,5 +67,6 @@ namespace Spasm {
     Debug::FullLogger* p_logger;
 
     bool isWhitespace();
+    bool isAtWordBoundary();
   };
 }
