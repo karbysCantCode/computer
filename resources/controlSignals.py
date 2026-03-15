@@ -126,16 +126,11 @@ class PLA_GUI:
         main = ttk.Frame(root)
         main.pack(fill="both", expand=True)
 
-        # Split layout
         left = ttk.Frame(main)
         left.pack(side="left", fill="y")
 
         right = ttk.Frame(main)
         right.pack(side="right", fill="both", expand=True)
-
-        # =========================
-        # LEFT PANEL (Opcode List)
-        # =========================
 
         ttk.Label(left, text="Opcodes").pack()
 
@@ -151,10 +146,6 @@ class PLA_GUI:
         ttk.Button(left, text="Delete", command=self.delete_opcode).pack(fill="x", padx=5, pady=2)
         ttk.Button(left, text="Duplicate", command=self.duplicate_opcode).pack(fill="x", padx=5, pady=2)
 
-        # =========================
-        # RIGHT PANEL (Editor)
-        # =========================
-
         top = ttk.Frame(right)
         top.pack(fill="x")
 
@@ -169,7 +160,7 @@ class PLA_GUI:
         ttk.Button(top, text="Load Project", command=self.load_project).pack(side="right")
         ttk.Button(top, text="Export PLAs", command=self.export_plas).pack(side="right")
         ttk.Button(top, text="Toggle Dark Mode", command=self.toggle_dark_mode).pack(side="right")
-        # Comment
+
         comment_frame = ttk.Frame(right)
         comment_frame.pack(fill="x", pady=5)
 
@@ -178,7 +169,6 @@ class PLA_GUI:
         self.comment_var.trace_add("write", self.update_comment)
         ttk.Entry(comment_frame, textvariable=self.comment_var).pack(fill="x", expand=True, side="left")
 
-        # Scroll area
         canvas = tk.Canvas(right)
         scrollbar = ttk.Scrollbar(right, command=canvas.yview)
         canvas.configure(yscrollcommand=scrollbar.set)
@@ -194,10 +184,6 @@ class PLA_GUI:
         self.enable_trackpad_scrolling()
         self.widgets = {}
         self.build_controls()
-
-    # =========================
-    # Opcode List Management
-    # =========================
 
     def refresh_opcode_list(self, *args):
         self.opcode_listbox.delete(0, tk.END)
@@ -248,14 +234,18 @@ class PLA_GUI:
             if val in pla.entries:
                 old = pla.entries[val]
                 new = pla.create_entry(new_val)
-                new.output_bits = old.output_bits.copy()
+
+                # safe copy respecting PLA width
+                bits = old.output_bits
+                if len(bits) > pla.output_width:
+                    bits = bits[:pla.output_width]
+                elif len(bits) < pla.output_width:
+                    bits = bits + [0]*(pla.output_width-len(bits))
+
+                new.output_bits = bits.copy()
 
         self.comments[new_val] = self.comments.get(val, "") + " (copy)"
         self.refresh_opcode_list()
-
-    # =========================
-    # Load / Edit Entries
-    # =========================
 
     def load_entries(self):
         try:
@@ -282,16 +272,15 @@ class PLA_GUI:
             entry = self.current_entries[name]
             for field_name, field in pla.fields.items():
                 var = self.widgets[name][field_name]
-                var.set(entry.get_field_value(field))
+                try:
+                    var.set(entry.get_field_value(field))
+                except:
+                    var.set(0)
 
     def update_comment(self,*args):
         if self.selected_opcode is not None:
             self.comments[self.selected_opcode] = self.comment_var.get()
             self.refresh_opcode_list()
-
-    # =========================
-    # Duplicate ALU Validation
-    # =========================
 
     def validate_duplicate_alu(self):
         if "Execute Control" not in self.plas:
@@ -300,18 +289,6 @@ class PLA_GUI:
         current = self.plas["Execute Control"].entries.get(self.selected_opcode)
         if not current:
             return
-
-        current_bits = current.output_bits
-
-        # for val, entry in self.plas["Execute Control"].entries.items():
-        #     if val != self.selected_opcode and entry.output_bits == current_bits:
-        #         messagebox.showwarning("Duplicate ALU config",
-        #             f"ALU config identical to opcode {format(val,'06b')}")
-        #         return
-
-    # =========================
-    # Controls Build
-    # =========================
 
     def build_controls(self):
         for widget in self.controls_frame.winfo_children():
@@ -327,7 +304,6 @@ class PLA_GUI:
                 sub = ttk.LabelFrame(frame, text=field_name)
                 sub.pack(fill="x", padx=5, pady=3)
 
-                # ONE HOT
                 if field.onehot:
                     var = tk.StringVar()
                     self.widgets[pla_name][field_name] = var
@@ -341,7 +317,6 @@ class PLA_GUI:
                             command=lambda p=pla_name, f=field_name: self.update_field(p, f)
                         ).pack(anchor="w")
 
-                # MULTIBIT
                 elif field.labels:
                     var = tk.IntVar()
                     self.widgets[pla_name][field_name] = var
@@ -355,7 +330,6 @@ class PLA_GUI:
                             command=lambda p=pla_name, f=field_name: self.update_field(p, f)
                         ).pack(anchor="w")
 
-                # SINGLE BIT
                 else:
                     var = tk.IntVar()
                     self.widgets[pla_name][field_name] = var
@@ -373,10 +347,6 @@ class PLA_GUI:
             return
         entry.set(field_name, self.widgets[pla_name][field_name].get())
         self.validate_duplicate_alu()
-
-    # =========================
-    # Save / Load Project
-    # =========================
 
     def save_project(self):
         file = filedialog.asksaveasfilename(defaultextension=".opcodes")
@@ -413,16 +383,24 @@ class PLA_GUI:
 
         for op in data["opcodes"]:
             val = op["input"]
+
             for name,bits in op["plas"].items():
-                entry = self.plas[name].create_entry(val)
-                entry.output_bits = bits
-            self.comments[val] = op["comment"]
+                if name not in self.plas:
+                    continue
+
+                pla = self.plas[name]
+                entry = pla.create_entry(val)
+
+                # --- SAFE RESIZE TO CURRENT PLA WIDTH ---
+                resized = [0]*pla.output_width
+                for i in range(min(len(bits), pla.output_width)):
+                    resized[i] = bits[i]
+
+                entry.output_bits = resized
+
+            self.comments[val] = op.get("comment","")
 
         self.refresh_opcode_list()
-
-    # =========================
-    # Export PLA Text Files
-    # =========================
 
     def export_plas(self):
         directory = filedialog.askdirectory()
@@ -433,11 +411,9 @@ class PLA_GUI:
             with open(f"{directory}/{name}.txt","w") as f:
                 for val in sorted(pla.entries.keys()):
                     entry=pla.entries[val]
-                    # comment=self.comments.get(val,"")
                     line=f"{entry.get_input_binary()} {entry.get_output_binary()}"
-                    # if comment:
-                    #     line+=" ; "+comment
                     f.write(line+"\n")
+
 
 
     def enable_trackpad_scrolling(self):
@@ -569,7 +545,7 @@ def build_alu_control_pla():
     return pla
 
 def build_read_control_pla():
-    pla = PLA(input_width=6, output_width=11)
+    pla = PLA(input_width=6, output_width=19)
 
     pla.register_bit("mute EXE forwarding", 0)
     pla.register_bit("mute MEM forwarding", 1)
@@ -577,21 +553,42 @@ def build_read_control_pla():
     pla.register_bit("16bit path A allow data", 3)
     pla.register_bit("16bit path A pull immediate from instruction stream", 4)
     pla.register_bit("16bit path B allow data", 5)
-    pla.register_bit("16bit path B pull immediate from instruction stream", 6)
-    pla.register_bit("two first field write select automatic mode enable", 7)
-    pla.register_bit("two field two to path B (otherwise normal field 3)", 8)
-    pla.register_bit("normal field 3 to path A (otherwise normal field 2)", 8)
-    pla.register_range("r0-r15 write field select", 10, 11, {
+    pla.register_range("16 bit path B data select", 6, 7, {
+        "r0-r15" : 0,
+        "instruction stream immediate" : 1,
+        "intra-instruction immediate" : 2,
+    })
+    pla.register_bit("two first field write select automatic mode enable", 8)
+    pla.register_range("field to path A register select", 9,10, {
+        "normal field 2" : 0,
+        "normal field 3" : 1,
+        "two field 2" : 2,
+        "memory offset / instruction (based on bit enable below)" : 3
+    })
+    pla.register_range("r0-r15 write field select", 11, 12, {
         "Normal field 1" : 0,
         "Two field 1 (only r0-r15)" : 1,
         "Normal field 2" : 2
+    })
+    pla.register_range("intra-instruction immediate range to data path B (intra-instruction has to be selected for this to work)", 13,14, {
+        "full 10 bit immediate" : 0,
+        "6lsb immediate" : 1,
+        "3lsb immediate" : 2,
+        "4msb immediate" : 3,
+    })
+    pla.register_bit("instruction register instead of memory offset", 15)
+    pla.register_bit("disable msb of 6lsb immediate (effectively 5lsb)", 16)
+    pla.register_range("path B field", 17,18, {
+        "normal field 3" : 0,
+        "two field 2" : 1,
+        "normal field 1" : 2,
     })
     
     return pla
 
 
 def build_execute_control_pla():
-    pla = PLA(input_width=6, output_width=19)
+    pla = PLA(input_width=6, output_width=23)
 
     pla.register_onehot("32 bit Memory addrews Path assert", {
         "32_BIT_AGU_ASSERT_MEMORY_PATH" : 0,
@@ -632,7 +629,10 @@ def build_execute_control_pla():
     pla.register_bit("AGU_SUBTRACT_MODE", 16)
     pla.register_bit("ALU_FLAGS_WRITE_ENABLE", 17)
     pla.register_bit("Allow 16 bit path A to 32 bit memory path side flip opposite to automatic 32bit reg half", 18)
-
+    pla.register_bit("write enable fetch unit counter", 19)
+    pla.register_bit("make write enable dependant on condition eval (write enable fetch unit must be active for this to work)", 20)
+    pla.register_bit("make write to register signals dependant on condition eval", 21)
+    pla.register_bit("path B to AGU instead of path A", 22)
 
 
     return pla
@@ -647,7 +647,7 @@ def build_writeback_control_pla():
     return pla
 
 def build_memory_control_pla():
-    pla = PLA(input_width=6, output_width=6)
+    pla = PLA(input_width=6, output_width=7)
 
     pla.register_bit("Enable memory or cache state operation", 0)
     pla.register_bit("Two byte data operation", 1)
@@ -657,6 +657,7 @@ def build_memory_control_pla():
         "EXE result" : 4
     })
     pla.register_bit("Data operation (r/w) enable", 5)
+    pla.register_bit("Auto two byte data operation", 6)
 
     return pla
 # ===============================

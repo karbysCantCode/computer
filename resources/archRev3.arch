@@ -14,6 +14,8 @@
 .format bitsel   6 1 1 1 1 1 5  ; uses the same idea as two, where last 5 bits are a full reg index
 .format normaug  6 4 6
 .format two      6 5 5          ; the first is only a write field, the second is any register, but 32 halfs or special reg go to path B
+.format memtwo   6 1 4 5        ; AUTO TWO BYTE DATA OPERATION IS ON THIS FIRST ARG BIT!
+.format memnarg  6 4 1 5        ; AUTO TWO BYTE DATA OPERATION IS ON THIS 2ND ARG BIT **IF** "disable msb of 6lsb immediate (effectively 5lsb)" is set!!
 .format immfull  6 10
 
 ; #######
@@ -63,17 +65,28 @@ clz  2 24 four   REG rd r0-r15 REG ra r0-r15 NON
 ; #######
 
 mov  2 24 two    REG rd r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm REG rs r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm
-movi 4 25 normal REG rd r0-r15
+movi 4 25 normal REG rd r0-r15 CONST 0 CONST 0
 cmov
 swap
 
-lodi
-lodr
-lodlr
+lea    2 XX memnarg REG rd r0-r15 CONST 0 IMM 0:31                  ; lea intra imm
+leal   4 XX memtwo  CONST 0 REG rd r0-r15 NON IMM 0:65535           ; lea long imm
+lear   2 XX memtwo  CONST 0 REG rd r0-r15 REG rs r0-r15             ; lea register
+lodlr  2 XX memtwo  CONST 0 REG rd r0-r15 REG rs r0-r15<mo<sp<fp<ip ; load abs
+lea2   2 XX memnarg REG rd r0-r15 CONST 1 IMM 0:31                  ; lea intra imm
+leal2  4 XX memtwo  CONST 1 REG rd r0-r15 NON IMM 0:65535           ; lea long imm
+lear2  2 XX memtwo  CONST 1 REG rd r0-r15 REG rs r0-r15             ; lea register
+lodlr2 2 XX memtwo  CONST 1 REG rd r0-r15 REG rs r0-r15<mo<sp<fp<ip ; load abs
 
-stoi
-stor
-stolr
+
+stea    2 XX memnarg REG rs r0-r15 CONST 0 IMM 0:31                  ; stea intra imm
+steal   4 XX memtwo  CONST 0 REG rs r0-r15 NON IMM 0:65535           ; stea long imm
+stear   2 XX memtwo  CONST 0 REG rs r0-r15 REG rAddr r0-r15             ; stea register
+stolr   2 XX memtwo  CONST 0 REG rs r0-r15 REG rAddr r0-r15<mo<sp<fp<ip ; store abs
+stea2   2 XX memnarg REG rs r0-r15 CONST 1 IMM 0:31                  ; stea intra imm
+steal2  4 XX memtwo  CONST 1 REG rs r0-r15 NON IMM 0:65535           ; stea long imm
+stear2  2 XX memtwo  CONST 1 REG rs r0-r15 REG rAddr r0-r15             ; stea register
+stolr2  2 XX memtwo  CONST 1 REG rs r0-r15 REG rAddr r0-r15<mo<sp<fp<ip ; store abs
 
 push
 pop
