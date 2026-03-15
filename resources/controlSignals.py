@@ -439,7 +439,7 @@ class PLA_GUI:
 
     def _on_mousewheel(self, event):
         # macOS trackpad sends small delta values
-        self.canvas.yview_scroll(int(-event.delta/2), "units")
+        self.canvas.yview_scroll(int(-event.delta/100), "units")
 
 
     def _on_mousewheel_linux(self, event):
@@ -545,7 +545,7 @@ def build_alu_control_pla():
     return pla
 
 def build_read_control_pla():
-    pla = PLA(input_width=6, output_width=19)
+    pla = PLA(input_width=6, output_width=22)
 
     pla.register_bit("mute EXE forwarding", 0)
     pla.register_bit("mute MEM forwarding", 1)
@@ -563,7 +563,7 @@ def build_read_control_pla():
         "normal field 2" : 0,
         "normal field 3" : 1,
         "two field 2" : 2,
-        "memory offset / instruction (based on bit enable below)" : 3
+        "normal field 1" : 3
     })
     pla.register_range("r0-r15 write field select", 11, 12, {
         "Normal field 1" : 0,
@@ -576,14 +576,17 @@ def build_read_control_pla():
         "3lsb immediate" : 2,
         "4msb immediate" : 3,
     })
-    pla.register_bit("instruction register instead of memory offset", 15)
     pla.register_bit("disable msb of 6lsb immediate (effectively 5lsb)", 16)
     pla.register_range("path B field", 17,18, {
         "normal field 3" : 0,
         "two field 2" : 1,
         "normal field 1" : 2,
+        "two field 1" : 3
     })
-    
+    pla.register_bit("force assert memory or instruction 32 reg to 32 path via top half A (A path still accesible for r0-r15)",21)
+    pla.register_bit("instruction register instead of memory offset", 15)
+    pla.register_bit("Allow instruction immediate to A path (if A path isnt allowing data)", 19)
+    pla.register_bit("Use two field 2 for 32 and spec reg write selecting (auto doesn't work with this.)", 20)
     return pla
 
 

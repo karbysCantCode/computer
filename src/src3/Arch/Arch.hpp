@@ -120,4 +120,6 @@ class Architecture {
   RegisterRangeInfo parseRegisterRange(const std::string&, const Token&) const;
 };
 
+Architecture architecturePipeline(std::filesystem::path& archPath, Debug::FullLogger* logger);
 }
+

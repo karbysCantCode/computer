@@ -1,6 +1,7 @@
 #include "Arch/Arch.hpp"
 
 #include "Helpers/Debug.hpp"
+#include "Helpers/FileHelper.hpp"
 #include <format>
 
 namespace Arch {
@@ -24,6 +25,7 @@ Architecture::Architecture(TokenHolder& sourceHolder, Debug::FullLogger* logger)
       case Token::Type::UNASSIGNED:
       {
         logError(sourceHolder.peek(), "Got unassigned token.");
+        sourceHolder.skip();
       }
       break;
       case Token::Type::IDENTIFIER:
@@ -285,5 +287,12 @@ Architecture::RegisterRangeInfo Architecture::parseRegisterRange(const std::stri
   return info;
 }
 
+Architecture architecturePipeline(std::filesystem::path& archPath, Debug::FullLogger* logger) {
+  auto src = FileHelper::openFileToString(archPath);
+  ArchLexer lexer(src);
+  auto tokens = lexer.run(src, archPath);
+  Architecture arch(tokens, logger);
+  return arch;
+}
 
 }

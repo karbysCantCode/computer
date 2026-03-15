@@ -56,10 +56,6 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
       );
       }
       break;
-
-
-
-
       case '\n':
       {
       //newline
@@ -73,13 +69,9 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
       );
       }
       break;
-
-
-
-
-
       default:
       sliceType = Token::Type::IDENTIFIER;
+      consume();
       while (notAtEnd() && !isAtWordBoundary()) {
         consume();
       }

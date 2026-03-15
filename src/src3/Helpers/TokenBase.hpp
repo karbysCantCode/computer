@@ -26,9 +26,9 @@ inline TokenT peek(size_t distance = 0) const {
   return pos < m_tokens.size() ? m_tokens[pos] : m_tokens[m_tokens.size()-1];
 }
 inline TokenT consume() {
-  return notAtEnd() ? m_tokens[m_index] : m_tokens[m_tokens.size()-1];
+  return notAtEnd() ? m_tokens[m_index++] : m_tokens[m_tokens.size()-1];
 }
-inline void skip(size_t distance = 1) {m_index++;}
+inline void skip(size_t distance = 1) {m_index += distance;}
 inline void reset() {m_index = 0;}
-inline bool match(size_t distance = 0) const 
+bool match(size_t distance = 0) const; 
 };

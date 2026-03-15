@@ -18,6 +18,7 @@ TokenHolder SMakeLexer::run(const std::string& source, const std::filesystem::pa
   std::string_view currentString{p_source.data(), 0};
 
   while (notAtEnd()) {
+    while(isWhitespace()) {consume();}
     sliceStartIndex = p_index;
     sliceStartLocation.line = p_line;
     sliceStartLocation.column = p_column;
@@ -44,6 +45,14 @@ TokenHolder SMakeLexer::run(const std::string& source, const std::filesystem::pa
         output.m_tokens.emplace_back(
           std::string_view{sliceStartPtr,1}, 
           Token::Type::OPENBLOCK, 
+          sliceStartLocation
+        );
+      break;
+      case '\n':
+        consume();
+        output.m_tokens.emplace_back(
+          std::string_view{sliceStartPtr,1}, 
+          Token::Type::NEWLINE, 
           sliceStartLocation
         );
       break;
@@ -93,7 +102,10 @@ TokenHolder SMakeLexer::run(const std::string& source, const std::filesystem::pa
         );
         consume(); // eat "
       break;
-    }
+      }
+      case '\0':{
+        p_index = p_source.size();
+      break;}
       default:
       {
       while(!isAtWordBoundary() && notAtEnd()) {
@@ -102,13 +114,13 @@ TokenHolder SMakeLexer::run(const std::string& source, const std::filesystem::pa
       const size_t length = p_index - sliceStartIndex;
       output.m_tokens.emplace_back(
         std::string_view{sliceStartPtr,length}, 
-        Token::Type::KEYWORD, 
+        Token::Type::IDENTIFIER, 
         sliceStartLocation
       );
       }
     }
   }
-
+  output.reset();
   return output;
 }
 
@@ -124,6 +136,16 @@ bool SMakeLexer::isAtWordBoundary() {
     case ',':
     case '.':
     case '"':
+    return true;
+    default:
+    return false;
+  }
+}
+
+bool SMakeLexer::isWhitespace() {
+  switch (peek()) {
+    case ' ':
+    case '\n':
     return true;
     default:
     return false;
