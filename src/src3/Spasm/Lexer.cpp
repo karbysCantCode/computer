@@ -254,13 +254,24 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
       }
       case '-':
       {
-
-        consume();
-        output.m_tokens.emplace_back(
-          std::string_view{sliceStartPtr,1}, 
-          Token::Type::SUBTRACT, 
-          sliceStartLocation
-        );
+        if (isdigit(peek(1))) {
+          const auto nt = getNicheTypeAndSetSliceOverNumber();
+          const size_t length = p_index - sliceStartIndex;
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,length}, 
+            Token::Type::NUMBER,
+            sliceStartLocation,
+            nt
+          );
+        } else {
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,1}, 
+            Token::Type::SUBTRACT, 
+            sliceStartLocation
+          );
+        }
+        
         continue;
         break;
       }
@@ -309,49 +320,26 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
         break;
       }
       default: {
-        int number = 0;
-        if (isdigit(peek()) || match('-')) {
-          //number
-          //zero prefixed number
-          Token::NicheType nt = Token::NicheType::UNASSIGNED;
-          if (peek() == '0') {
+        if (isdigit(peek())) {
+          const auto nt = getNicheTypeAndSetSliceOverNumber();
+          const size_t length = p_index - sliceStartIndex;
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr, length}, 
+            Token::Type::NUMBER, 
+            sliceStartLocation,
+            nt
+          );
+        } else {
+          while (!isAtWordBoundary() && notAtEnd()) {
             consume();
-            if (match('x')) {
-              nt = Token::NicheType::NUMBER_HEX;
-              consume();
-              setSliceStart;
-              number = consumeNumber(16, sliceStartIndex);
-            } else if (match('b')) {
-              nt = Token::NicheType::NUMBER_BIN;
-              consume();
-              setSliceStart;
-              number = consumeNumber(2, sliceStartIndex);
-            } else if (isdigit(peek()) || !isAtWordBoundary()) {
-              nt = Token::NicheType::NUMBER_DEC;
-              //continue with normal consumption, number just starts with zero
-              number = consumeNumber(10, sliceStartIndex);
-            } else {
-
-              //error
-            }
-          } else {
-            number = consumeNumber(10, sliceStartIndex);
           }
+          const size_t length = p_index - sliceStartIndex;
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr, length}, 
+            Token::Type::IDENTIFIER, 
+            sliceStartLocation
+          );
         }
-        if (peek)
-        consume();
-        setSliceStart;
-        while (!match('"') && notAtEnd()) {
-          consume();
-        }
-        consume();
-        const size_t length = p_index - sliceStartIndex;
-        output.m_tokens.emplace_back(
-          std::string_view{sliceStartPtr, length}, 
-          Token::Type::STRING, 
-          sliceStartLocation
-        );
-
       }
     }
 
@@ -399,15 +387,33 @@ bool SpasmLexer::isAtWordBoundary() {
   
 }
 
-int SpasmLexer::consumeNumber(int base, size_t startIndex) {
+void SpasmLexer::consumeUntilNotNumber() {
   while (isdigit(peek()) && notAtEnd()) {consume();}
-  return std::stoi(p_source.substr(startIndex, p_index - startIndex), nullptr, base);
 }
 
 Token::NicheType SpasmLexer::getNicheTypeAndSetSliceOverNumber() {
   Token::NicheType type = Token::NicheType::UNASSIGNED;
-  ?????????????????????
-  if (match('-'))
+  
+
+  if (match('-')) {consume();}
+  if (match('0')) {
+    consume();
+    if (match('x')) {
+      type = Token::NicheType::NUMBER_HEX;
+      consumeUntilNotNumber();
+    } else if (match('b')) {
+      type = Token::NicheType::NUMBER_BIN;
+      consumeUntilNotNumber();
+    } else if (isdigit(peek()) || isAtWordBoundary()) {
+      type = Token::NicheType::NUMBER_DEC;
+      consumeUntilNotNumber();
+    } else {
+      //err
+    }
+  } else if (isdigit(peek())) {
+    type = Token::NicheType::NUMBER_DEC;
+    consumeUntilNotNumber();
+  }
 
   return type;
 }

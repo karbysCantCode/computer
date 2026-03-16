@@ -13,6 +13,7 @@ namespace Spasm {
     void parseTokens();
 
     private:
+    
   };
 
   void spasmPipeline();
