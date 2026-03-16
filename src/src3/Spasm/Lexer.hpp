@@ -52,6 +52,8 @@ namespace Spasm {
 
     Type type = Type::UNASSIGNED;
     NicheType nicheType = NicheType::UNASSIGNED;
+
+    Token(const std::string_view& val, Type t, const SourceLocation& srcLoc, NicheType nt = NicheType::UNASSIGNED) : TokenBase(val, srcLoc), type(t), nicheType(nt) {}
   };
 
   struct TokenHolder : TokenBaseHolder<Token> {
@@ -68,5 +70,6 @@ namespace Spasm {
 
     bool isWhitespace();
     bool isAtWordBoundary();
+    Token::NicheType getNicheTypeAndSetSliceOverNumber();
   };
 }

@@ -64,14 +64,14 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
         //STRING
         consume();
         setSliceStart;
-        static_assert(false); //pickup here.
         while (!match('"') && notAtEnd()) {
           consume();
         }
         consume();
+        const size_t length = p_index - sliceStartIndex;
         output.m_tokens.emplace_back(
-          std::string_view{sliceStartPtr,1}, 
-          Token::Type::CLOSEPAREN, 
+          std::string_view{sliceStartPtr, length}, 
+          Token::Type::STRING, 
           sliceStartLocation
         );
 
@@ -159,10 +159,26 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
       {
         //directive
         consume();
-        std::string directiveWord;
-        while (!isAtWordBoundary() && notAtEnd()) {
-          directiveWord.push_back(consume());
+        setSliceStart;
+        while (!isAtWordBoundary()) {
+          consume();
         }
+        const size_t length = p_index - sliceStartIndex;
+        const std::string_view directive{sliceStartPtr, length};
+        Token::NicheType nt = Token::NicheType::UNASSIGNED;
+        if (directive == "include") {
+          nt = Token::NicheType::DIRECTIVE_INCLUDE;
+        } else if (directive == "define") {
+          nt = Token::NicheType::DIRECTIVE_DEFINE;
+        } else if (directive == "entry") {
+          nt = Token::NicheType::DIRECTIVE_ENTRY;
+        }
+        output.m_tokens.emplace_back(
+          directive, 
+          Token::Type::DIRECTIVE, 
+          sliceStartLocation,
+          nt
+        );
         continue;
         break;
       }
@@ -238,6 +254,7 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
       }
       case '-':
       {
+
         consume();
         output.m_tokens.emplace_back(
           std::string_view{sliceStartPtr,1}, 
@@ -291,7 +308,51 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
         continue;
         break;
       }
-      
+      default: {
+        int number = 0;
+        if (isdigit(peek()) || match('-')) {
+          //number
+          //zero prefixed number
+          Token::NicheType nt = Token::NicheType::UNASSIGNED;
+          if (peek() == '0') {
+            consume();
+            if (match('x')) {
+              nt = Token::NicheType::NUMBER_HEX;
+              consume();
+              setSliceStart;
+              number = consumeNumber(16, sliceStartIndex);
+            } else if (match('b')) {
+              nt = Token::NicheType::NUMBER_BIN;
+              consume();
+              setSliceStart;
+              number = consumeNumber(2, sliceStartIndex);
+            } else if (isdigit(peek()) || !isAtWordBoundary()) {
+              nt = Token::NicheType::NUMBER_DEC;
+              //continue with normal consumption, number just starts with zero
+              number = consumeNumber(10, sliceStartIndex);
+            } else {
+
+              //error
+            }
+          } else {
+            number = consumeNumber(10, sliceStartIndex);
+          }
+        }
+        if (peek)
+        consume();
+        setSliceStart;
+        while (!match('"') && notAtEnd()) {
+          consume();
+        }
+        consume();
+        const size_t length = p_index - sliceStartIndex;
+        output.m_tokens.emplace_back(
+          std::string_view{sliceStartPtr, length}, 
+          Token::Type::STRING, 
+          sliceStartLocation
+        );
+
+      }
     }
 
   }
@@ -338,6 +399,17 @@ bool SpasmLexer::isAtWordBoundary() {
   
 }
 
+int SpasmLexer::consumeNumber(int base, size_t startIndex) {
+  while (isdigit(peek()) && notAtEnd()) {consume();}
+  return std::stoi(p_source.substr(startIndex, p_index - startIndex), nullptr, base);
+}
 
+Token::NicheType SpasmLexer::getNicheTypeAndSetSliceOverNumber() {
+  Token::NicheType type = Token::NicheType::UNASSIGNED;
+  ?????????????????????
+  if (match('-'))
+
+  return type;
+}
 
 }
