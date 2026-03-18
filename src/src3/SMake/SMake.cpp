@@ -719,4 +719,14 @@ void printProject(const Project& project)
 
     cout << "===== END PROJECT =====" << endl;
 }
+
+std::filesystem::path Target::searchForPathInIncludes(const std::filesystem::path& path) {
+  for (const auto& ipath : m_includeDirectories) {
+    const auto concatedPath = ipath / path;
+    if (std::filesystem::is_regular_file(concatedPath)) {
+      return std::filesystem::canonical(concatedPath);
+    }
+  }
+  return {};
+}
 }

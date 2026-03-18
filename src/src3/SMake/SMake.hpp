@@ -45,6 +45,8 @@ struct Target {
 
   std::unordered_set<Target*> m_dependantTargets;
 
+  std::filesystem::path searchForPathInIncludes(const std::filesystem::path& path);
+
   constexpr const char* formatToString() const {
     switch (m_outputFormat)
     {

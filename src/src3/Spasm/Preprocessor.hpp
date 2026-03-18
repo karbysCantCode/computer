@@ -1,18 +1,15 @@
 #pragma once
 
+#include "Helpers/Debug.hpp"
 #include "Spasm/Spasm.hpp"
 #include "Spasm/Lexer.hpp"
-#include "Helpers/Debug.hpp"
-#include "Arch/Arch.hpp"
+#include "SMake/SMake.hpp"
 
 namespace Spasm {
-
-
-
-class Parser {
+class Preprocessor {
   public:
 
-  Spasm::Program ParseTokens(TokenHolder&, Debug::FullLogger* logger = nullptr);
+  TokenHolder run(TokenHolder&, SMake::Target&);
   private:
   Debug::FullLogger* p_logger;
 
@@ -20,9 +17,8 @@ class Parser {
   inline void logWarning(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(errToken.location.toString() + message);}}
   inline void logDebug(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(errToken.location.toString() + message);}}
 
-  void parseIdentifier(TokenHolder&);
-  void parseInstruction(TokenHolder&, Arch::Architecture::InstructionDefinition&);
-  void parseLabel(TokenHolder&);
+  void processDefine(TokenHolder&, TokenHolder&);
+  void processInclude(TokenHolder&, SMake::Target&);
+  void processEntry(TokenHolder&, SMake::Target&);
 };
-
 }

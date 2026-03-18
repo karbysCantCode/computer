@@ -1,5 +1,7 @@
 #include "Spasm/Lexer.hpp"
 
+#include <cassert>
+
 namespace Spasm {
 
 
@@ -409,6 +411,8 @@ Token::NicheType SpasmLexer::getNicheTypeAndSetSliceOverNumber() {
       consumeUntilNotNumber();
     } else {
       //err
+      assert(false);
+
     }
   } else if (isdigit(peek())) {
     type = Token::NicheType::NUMBER_DEC;
