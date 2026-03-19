@@ -35,6 +35,7 @@ void Preprocessor::processInclude(TokenHolder& tokenHolder, SMake::Target& targe
     return;
   }
 
+  const auto& includeStr = tokenHolder.consume();
   
 }
 void Preprocessor::processEntry(TokenHolder& tokenHolder, SMake::Target& target) {

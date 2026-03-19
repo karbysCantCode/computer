@@ -9,7 +9,7 @@ namespace Spasm {
   class Program {
     public:
     std::filesystem::path m_sourcePath;
-
+    std::vector<std::filesystem::path> 
     void parseTokens();
 
     private:
