@@ -86,14 +86,25 @@ void Architecture::consumeRegister(TokenHolder& sourceHolder) {
     size_t offset = 0;
     while (currentIndex <= info.highValue) {
       RegisterDefinition reg(info.prefix + std::to_string(currentIndex), minimumMachineOperandValue+offset, bitwidth);
-      m_registerSet.emplace(reg.m_registerName, std::move(reg));
+      if (m_keywordByTypeMap.find(reg.m_registerName) != m_keywordByTypeMap.end()) {
+        logError(identifierToken, std::format("Register \"{}\" already defined.", reg.m_registerName));
+      } else {
+        m_registerSet.emplace(reg.m_registerName, std::move(reg));
+        m_keywordByTypeMap.emplace(reg.m_registerName, KeywordType::REGISTER);
+      }
+      
       offset++;
       currentIndex++;
     }
   } else {
     //insert one
     RegisterDefinition reg(std::string(identifierToken.value), minimumMachineOperandValue, bitwidth);
+    if (m_keywordByTypeMap.find(reg.m_registerName) != m_keywordByTypeMap.end()) {
+      logError(identifierToken, std::format("Register \"{}\" already defined.", reg.m_registerName));
+      return;
+    }
     m_registerSet.emplace(reg.m_registerName, std::move(reg));
+    m_keywordByTypeMap.emplace(reg.m_registerName, KeywordType::REGISTER);
   }
 
   sourceHolder.skip(3);
@@ -115,8 +126,12 @@ void Architecture::consumeFormat(TokenHolder& sourceHolder) {
     format.insertOperandSize(std::stoi(std::string(sourceHolder.consume().value)));
   }
 
+  if (m_keywordByTypeMap.find(format.m_formatName) != m_keywordByTypeMap.end()) {
+    logError(identifierToken, std::format("Format \"{}\" already defined.", format.m_formatName));
+    return;
+  }
   m_formatSet.emplace(format.m_formatName, std::move(format));
-
+  m_keywordByTypeMap.emplace(format.m_formatName, KeywordType::FORMAT);
 }
 
 void Architecture::consumeBitwidth(TokenHolder& sourceHolder) {
@@ -145,8 +160,12 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
                                     std::stoi(std::string(byteLengthToken.value)),
                                     it->second);
 
+  if (m_keywordByTypeMap.find(instruction.m_name) != m_keywordByTypeMap.end()) {
+    logError(identifierToken, std::format("Instruction \"{}\" already defined.", instruction.m_name));
+    return;
+  }
   m_instructionSet.emplace(instruction.m_name, std::move(instruction));
-
+  m_keywordByTypeMap.emplace(instruction.m_name, KeywordType::INSTRUCTION);
 
   //get arguments
   while (sourceHolder.match(Token::Type::ARGUMENTTYPE)) {
@@ -293,6 +312,15 @@ Architecture architecturePipeline(std::filesystem::path& archPath, Debug::FullLo
   auto tokens = lexer.run(src, archPath);
   Architecture arch(tokens, logger);
   return arch;
+}
+
+Architecture::KeywordType Architecture::getKeywordTypeOfWord(std::string_view& word) {
+  const auto& it = m_keywordByTypeMap.find(std::string(word));
+  if (it == m_keywordByTypeMap.end()) {
+    return KeywordType::NONE;
+  } else {
+    return it->second;
+  }
 }
 
 }

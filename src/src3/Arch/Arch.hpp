@@ -90,6 +90,17 @@ class Architecture {
   std::unordered_map<std::string, ControlSignalDefinition> m_controlSignalSet;
   std::unordered_map<std::string, FormatDefinition> m_formatSet;
 
+  enum class KeywordType {
+    INSTRUCTION,
+    REGISTER,
+    FORMAT,
+    NONE
+  };
+
+  std::unordered_map<std::string, KeywordType> m_keywordByTypeMap;
+
+  KeywordType getKeywordTypeOfWord(std::string_view& word);
+
   size_t m_bitwidth;
   
   private:

@@ -12,7 +12,7 @@ namespace Spasm {
 class Parser {
   public:
 
-  Spasm::Program ParseTokens(TokenHolder&, Debug::FullLogger* logger = nullptr);
+  Spasm::Program ParseTokens(TokenHolder&, Arch::Architecture& arch, Debug::FullLogger* logger = nullptr);
   private:
   Debug::FullLogger* p_logger;
 
@@ -20,7 +20,7 @@ class Parser {
   inline void logWarning(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(errToken.location.toString() + message);}}
   inline void logDebug(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(errToken.location.toString() + message);}}
 
-  void parseIdentifier(TokenHolder&);
+  void parseIdentifier(TokenHolder&, Arch::Architecture& arch);
   void parseInstruction(TokenHolder&, Arch::Architecture::InstructionDefinition&);
   void parseLabel(TokenHolder&);
 };

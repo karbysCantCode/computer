@@ -1,7 +1,7 @@
 #include "Spasm/Parser.hpp"
 
 namespace Spasm {
-Program Parser::ParseTokens(TokenHolder& tokenHolder, Debug::FullLogger* logger) {
+Program Parser::ParseTokens(TokenHolder& tokenHolder, Arch::Architecture& arch, Debug::FullLogger* logger) {
   //implementation list
   /*
   [X] Directives
@@ -28,6 +28,7 @@ Program Parser::ParseTokens(TokenHolder& tokenHolder, Debug::FullLogger* logger)
   */
 
   p_logger = logger;
+  Program program;
 
   while (tokenHolder.notAtEnd()) {
     switch (tokenHolder.peek().type) {
@@ -47,6 +48,28 @@ Program Parser::ParseTokens(TokenHolder& tokenHolder, Debug::FullLogger* logger)
         break;
       }
     }
+  }
+
+  return program;
+}
+
+void Parser::parseIdentifier(TokenHolder& tokenHolder, Arch::Architecture& arch) {
+  // probably doesnt actually need to differ register and format,
+  //   and could probably actually use datatypes instead...
+  switch (arch.getKeywordTypeOfWord(tokenHolder.peek().value))
+  {
+  case Arch::Architecture::KeywordType::INSTRUCTION:
+    /* code */
+    break;
+  case Arch::Architecture::KeywordType::REGISTER:
+    /* code */
+    break;
+  case Arch::Architecture::KeywordType::FORMAT:
+    /* code */
+    break;
+  case Arch::Architecture::KeywordType::NONE:
+    /* code */
+    break;
   }
 }
 }

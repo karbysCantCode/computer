@@ -7,6 +7,8 @@ TokenHolder Preprocessor::run(TokenHolder& tokenHolder, SMake::Target& target, S
   p_logger = logger;
   TokenHolder newTokenHolder;
 
+  
+
   while (tokenHolder.notAtEnd()) {
     if (!tokenHolder.match(Token::Type::DIRECTIVE)) {
       const auto& token = tokenHolder.consume();
