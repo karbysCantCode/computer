@@ -314,7 +314,7 @@ Architecture architecturePipeline(std::filesystem::path& archPath, Debug::FullLo
   return arch;
 }
 
-Architecture::KeywordType Architecture::getKeywordTypeOfWord(std::string_view& word) {
+Architecture::KeywordType Architecture::getKeywordTypeOfWord(const std::string_view& word) {
   const auto& it = m_keywordByTypeMap.find(std::string(word));
   if (it == m_keywordByTypeMap.end()) {
     return KeywordType::NONE;

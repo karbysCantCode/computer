@@ -7,7 +7,7 @@
 
 namespace Spasm {
 
-  void spasmPipeline(SMake::Project& project) {
+  void spasmPipeline(SMake::Project& project, Arch::Architecture& arch) {
     for (auto& target : project.m_targets) {
 
       Debug::FullLogger logger;
@@ -21,7 +21,7 @@ namespace Spasm {
         Preprocessor preproc;
         auto processedTokens = preproc.run(preprocessedTokens, target.second, program, &logger);
         Parser parser;
-        parser.ParseTokens(processedTokens, &logger);
+        parser.ParseTokens(processedTokens, arch, &logger);
         
       }
     }

@@ -50,7 +50,7 @@ class Architecture {
   struct RegisterOperand {
     std::string alias;
     std::unordered_set<std::string> acceptedRegisterNames;
-
+    
     RegisterOperand(const std::string& alia) : alias(alia) {}
   };
   struct ImmediateOperand {
@@ -94,12 +94,17 @@ class Architecture {
     INSTRUCTION,
     REGISTER,
     FORMAT,
+    DATATYPE,
     NONE
   };
 
-  std::unordered_map<std::string, KeywordType> m_keywordByTypeMap;
+  std::unordered_map<std::string, KeywordType> m_keywordByTypeMap = 
+  {
+    {"TEXT", KeywordType::DATATYPE},
+    {"ARRAY", KeywordType::DATATYPE}
+  };
 
-  KeywordType getKeywordTypeOfWord(std::string_view& word);
+  KeywordType getKeywordTypeOfWord(const std::string_view& word);
 
   size_t m_bitwidth;
   
