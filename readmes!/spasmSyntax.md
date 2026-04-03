@@ -87,18 +87,18 @@
   ```
   TEXT byteArray, 64, 0                  ; sets all 64 bytes to 0
   TEXT byteArray, 16, "Hello World!!!!!" ; parsed as ascii
-  ARRAY  numbers, 8, 2, {52,385,209,295}
+  ARRAY  numbers, 4, 2, {52,385,209,295}
   ```
 
   Where the arguments for TEXT are:  
-  >TEXT variableName, byteLength, initialisingValue/characterArray (if quoted)
+  >TEXT variableName, elementCount, initialisingValue/characterArray (if quoted)
 
   The arguments for ARRAY are:
-  >ARRAY variableName, byteLength, bytesPerElement, {Element0, Element1, ..., ElementN}  
+  >ARRAY variableName, elementCount, bytesPerElement, {Element0, Element1, ..., ElementN}  
 
-  *for a maximum of byteLength/bytesPerElement elements.*
+  *for a maximum of elementCount elements.*
 
-  "byteLength" can be replaced with the keyword AUTO where the compiler will determine the length in bytes of the string or array.  
+  "elementCount" can be replaced with the keyword AUTO where the compiler will determine the length in bytes of the string or array.  
   *(the compiler will throw an error for TEXT with initialising value instead of string)*
 
   ```

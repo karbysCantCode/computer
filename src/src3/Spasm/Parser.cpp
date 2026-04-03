@@ -416,10 +416,188 @@ bool Parser::getOrCreateLabel(TokenHolder& tokenHolder, Program& program, Progra
   return true;
 }
 
-void Parser::parseDataTypeDeclaration(TokenHolder&, Program&) {
+void Parser::parseDataTypeDeclaration(TokenHolder& tokenHolder, Program& program) {
+  if (tokenHolder.peek().value == "BYTE") {
+    parseNonArrayDataType(tokenHolder,program,1);
+  } else if (tokenHolder.peek().value == "WORD") {
+    parseNonArrayDataType(tokenHolder,program,2);
+  } else if (tokenHolder.peek().value == "DWORD") {
+    parseNonArrayDataType(tokenHolder,program,4);
+  } else if (tokenHolder.peek().value == "TEXT") {
+    parseArrayDataType(tokenHolder,program, false);
+  } else if (tokenHolder.peek().value == "ARRAY") {
+    parseArrayDataType(tokenHolder,program, true);
+  } else {
+    logError(tokenHolder.peek(), "Invalid or unimplemented datatype.");
+  }
+}
+
+void Parser::parseNonArrayDataType(TokenHolder& tokenHolder, Program& program, size_t byteSize) {
+  tokenHolder.skip();
+  if (!tokenHolder.match(Token::Type::IDENTIFIER)) {
+    logError(tokenHolder.peek(), std::format("Expected identifier, got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+  const auto identifierToken = tokenHolder.consume();
+
+  const auto it = program.m_identifierMap.find((std::string)identifierToken.value);
+  if (it != program.m_identifierMap.end()) {
+    logError(identifierToken, std::format("\"{}\" redeclared as datatype.", identifierToken.value));
+    return;
+  }
+
+  auto dataObject = std::make_unique<Program::DataObject>(identifierToken.value, nullptr, byteSize, 1);
+  auto dataPtr = dataObject.get();
+  auto dataStatement = std::make_unique<Program::DefinitionSymbol>(identifierToken.location);
+  dataPtr->symbolObject = dataStatement.get();
+
+  program.m_statementVector.push_back(std::move(dataStatement));
+  program.m_identifierMap.emplace(identifierToken.value, std::move(dataObject));
+
+  if (!tokenHolder.match(Token::Type::COMMA)) {
+    logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+  tokenHolder.skip();
+
+  bool isSquare = false;
+  if (tokenHolder.match(Token::Type::OPENSQUARE)) {
+    isSquare = true;
+    tokenHolder.skip();
+  }
+  const auto expr = parseSquareExpression(tokenHolder);
+  if (isSquare) {
+    if (tokenHolder.match(Token::Type::CLOSESQUARE)) {
+      tokenHolder.skip();
+    } else {
+      logError(tokenHolder.peek(), std::format("Expected ']', got \"{}\"", tokenHolder.peek()));
+      return;
+    }
+  }
+  program.m_unresolvedExpressions.push(expr.get());
+  dataPtr->exprData.push_back(std::move(expr));
+}
+//if not array, is text
+void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program& program, bool isArray) {
+  tokenHolder.skip();
+  if (!tokenHolder.match(Token::Type::IDENTIFIER)) {
+    logError(tokenHolder.peek(), std::format("Expected identifier, got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+  const auto identifierToken = tokenHolder.consume();
+
+  const auto it = program.m_identifierMap.find((std::string)identifierToken.value);
+  if (it != program.m_identifierMap.end()) {
+    logError(identifierToken, std::format("\"{}\" redeclared as datatype.", identifierToken.value));
+    return;
+  }
+
+  auto dataObject = std::make_unique<Program::DataObject>(identifierToken.value, nullptr, 0, 1);
+  auto dataPtr = dataObject.get();
+  auto dataStatement = std::make_unique<Program::DefinitionSymbol>(identifierToken.location);
+  dataPtr->symbolObject = dataStatement.get();
+
+  program.m_statementVector.push_back(std::move(dataStatement));
+  program.m_identifierMap.emplace(identifierToken.value, std::move(dataObject));
+
+  if (!tokenHolder.match(Token::Type::COMMA)) {
+    logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+  tokenHolder.skip();
+
+  //element count section
+  bool isAuto = false;
+  if (tokenHolder.match(Token::Type::NUMBER)) {
+    dataPtr->elementCount = parseNumberString(tokenHolder.consume());
+  } else if (tokenHolder.peek().value == "AUTO") {
+    isAuto = true;
+  } else {
+    logError(tokenHolder.peek(), std::format("Expected identifier, got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+
+  if (!tokenHolder.match(Token::Type::COMMA)) {
+    logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+  tokenHolder.skip();
+
+  if (isArray) {
+    //consume element size
+    if (tokenHolder.match(Token::Type::NUMBER)) {
+    dataPtr->elementSize = parseNumberString(tokenHolder.consume());
+    } else {
+      logError(tokenHolder.peek(), std::format("Expected identifier, got \"{}\"", tokenHolder.peek().value));
+      return;
+    }
+
+    if (!tokenHolder.match(Token::Type::COMMA)) {
+    logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
+    return;
+    }
+    tokenHolder.skip();
+
+    parseElementsOfArray(tokenHolder, program, dataPtr);
+  } else {
+    parseTextData(tokenHolder, program, dataPtr);
+
+  }
 
 }
 
+void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program& program, Program::DataObject* dataPtr) {
+  assert(dataPtr!=nullptr);
 
+  if (!tokenHolder.match(Token::Type::OPENBLOCK)) {
+  logError(tokenHolder.peek(), std::format("Expected '{', got \"{}\"", tokenHolder.peek().value));
+  return;
+  }
+  tokenHolder.skip();
+  
+  while (true) {
+    auto expr = parseSquareExpression(tokenHolder);
+    program.m_unresolvedExpressions.push(expr.get());
+    dataPtr->exprData.push_back(std::move(expr));
+
+    if (!tokenHolder.match(Token::Type::COMMA))
+      break;
+
+    tokenHolder.skip();
+  }
+
+  if (!tokenHolder.match(Token::Type::CLOSEBLOCK)) {
+    logError(tokenHolder.peek(), std::format("Expected '}', got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+}
+void Parser::parseTextData(TokenHolder& tokenHolder, Program& program, Program::DataObject* dataPtr) {
+  assert(dataPtr!=nullptr);
+
+  const auto valueToken = tokenHolder.peek();
+  switch (valueToken.type) {
+    case Token::Type::NUMBER: {
+      tokenHolder.skip();
+
+
+
+      break;
+    }
+    case Token::Type::STRING: {
+      tokenHolder.skip();
+
+      size_t pos = 0;
+      while (pos < valueToken.value.size()) {
+        dataPtr->data.push_back(valueToken.value[pos]);
+        pos++;
+      }
+
+      break;
+    }
+    default: {
+      logError(valueToken, std::format("Expected a number or string, got \"{}\"", valueToken.value));
+    }
+  }
+}
 
 }

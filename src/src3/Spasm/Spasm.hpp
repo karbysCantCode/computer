@@ -34,32 +34,9 @@ namespace Spasm {
 
     };
     struct DefinitionSymbol : StatementSymbol {
-      enum class DataType {
-        BYTE,
-        WORD,
-        DWORD,
-        ARRAY
-      };
-
       std::string_view name;
-      DataType dataType;
-      int elementSize;
-
-      std::vector<uint8_t> data;
 
       void generate() override {}
-
-      DefinitionSymbol(
-        const SourceLocation& loc, 
-        const DataType dt, 
-        const int eS, 
-        const std::string_view& nm,
-        std::vector<uint8_t> initData) 
-        : StatementSymbol(loc), 
-          dataType(dt), 
-          elementSize(eS),
-          name(nm),
-          data(std::move(initData)) {}
 
       DefinitionSymbol(const SourceLocation& loc) : StatementSymbol(loc) {}
     };
@@ -97,10 +74,22 @@ namespace Spasm {
       size_t elementCount; // in elements
       size_t elementSize; // in bytes
       std::vector<unsigned char> data;
+      std::vector<std::unique_ptr<Expr>> exprData;
       DefinitionSymbol* symbolObject;
 
       virtual bool isLabel() const override {return false;}
       virtual bool isIdentifier() const override {return true;}
+
+      DataObject(const std::string_view nm) : IdentifierObject(nm) {}
+      DataObject(
+        const std::string_view nm,
+        DefinitionSymbol* symbolObj,
+        const size_t elemSize,
+        const size_t elemCount = 0)
+        : IdentifierObject(nm),
+          elementCount(elemCount),
+          elementSize(elemSize),
+          symbolObject(symbolObj) {}
     };
 
     std::filesystem::path m_sourcePath;
@@ -108,7 +97,7 @@ namespace Spasm {
     std::vector<std::unique_ptr<StatementSymbol>> m_statementVector;
 
     std::unordered_map<std::string_view, std::unique_ptr<IdentifierObject>> m_identifierMap;
-    std::stack<std::unique_ptr<Expr>*> m_unresolvedExpressions;
+    std::stack<Expr*> m_unresolvedExpressions;
 
 
     void parseTokens();
