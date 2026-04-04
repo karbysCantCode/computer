@@ -45,11 +45,11 @@ class Parser {
   void parseLabelDefinition(TokenHolder&, Program&);
   bool getOrCreateLabel(TokenHolder&, Program&, Program::LabelObject*&, bool, Program::LabelSymbol*); //returns success
   std::unique_ptr<Program::Expr> parseIdentifierToExpression(TokenHolder&);
+  
   void parseDataTypeDeclaration(TokenHolder&, Program&);
   void parseNonArrayDataType(TokenHolder&, Program&, size_t);
   void parseArrayDataType(TokenHolder&, Program&, bool);
-
   void parseElementsOfArray(TokenHolder&, Program&, Program::DataObject*);
-  void parseTextData(TokenHolder&, Program&, Program::DataObject*);
+  void parseTextData(TokenHolder&, Program&, Program::DataObject*, bool);
 };
 }

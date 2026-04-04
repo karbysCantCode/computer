@@ -16,12 +16,12 @@
 
 add r1, r2, r3
 sub r1, r2, r3
-adi r2, [20389 * 2 + 65 - 25 - 2 * 252 + main]
+adi r2, r2, [20389 * 2 + 65 - 25 - 2 * 252 + main]
 
 main:
-movi r2, 0
+moi r2, 0
 mul32 r1, r2, r3, r4, r5, r6
 nop
 nop
 nop
-add 14, r2, r4
+add r4, r2, r4

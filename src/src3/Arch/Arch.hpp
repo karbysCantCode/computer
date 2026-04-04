@@ -80,7 +80,7 @@ class Architecture {
 
     const FormatDefinition& m_format;
 
-    InstructionDefinition(const std::string& name, int opcode, int byteLength, const FormatDefinition& format) : m_name(name), m_opcode(opcode), m_byteLength(byteLength), m_format(format) {}
+    InstructionDefinition(const std::string name, int opcode, int byteLength, const FormatDefinition& format) : m_name(name), m_opcode(opcode), m_byteLength(byteLength), m_format(format) {}
   };
 
   Architecture(TokenHolder& sourceHolder, Debug::FullLogger* logger);
@@ -108,6 +108,7 @@ class Architecture {
 
   size_t m_bitwidth;
   
+  void debugPrint() const;
   private:
   Debug::FullLogger* p_logger;
 

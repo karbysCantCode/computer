@@ -5,6 +5,7 @@
 #include <cassert>
 #include <Arch/Arch.hpp>
 #include <Spasm/Lexer.hpp>
+#include "Helpers/CLIOptions.hpp"
 
 #include "SMake/SMake.hpp"
 // each target needs to be one program
@@ -42,6 +43,13 @@ namespace Spasm {
     };
 
     struct Expr {
+      int value = 0;
+      bool evaluated = false;
+
+      void setValue(const int val) {value = val;}
+      int  getValue() {return value;}
+      bool isEvaluated() const {return evaluated;}
+      void setEvaluated() {evaluated = true;}
       virtual ~Expr() = default;
     };
 
@@ -178,5 +186,5 @@ namespace Spasm {
     
   };
 
-  void spasmPipeline(SMake::Project&, Arch::Architecture&);
+  void spasmPipeline(SMake::Project&, Arch::Architecture&, CLIOptions&);
 }

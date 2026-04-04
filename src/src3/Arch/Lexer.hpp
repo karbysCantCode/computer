@@ -38,6 +38,16 @@ ArchLexer(const std::string& source) : LexerBase(source) {}
 private:
 
 bool isAtWordBoundary();
+inline bool isWhitespace() const {
+  switch (peek()) {
+    case ' ':
+    case '\t':
+    case '\0':
+    return true;
+    default:
+    return false;
+  }
+}
 };
 
 }

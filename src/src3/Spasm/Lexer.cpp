@@ -10,6 +10,8 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
   //  matched for the keyword detection, and linking to an
   //  architecture object.
 
+  p_source = source;
+
   TokenHolder output;
 
   size_t sliceStartIndex = p_index;
@@ -28,6 +30,20 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
     const char c = peek();
 
     switch (c) {
+      case ';':
+      //comments
+      {
+        if (peek(1) == '*') {
+          consume();
+          consume();
+          while (notAtEnd() && !(match('*') && match(';', 1))) consume();
+          consume();
+          consume();
+        } else {
+          while (notAtEnd() && !match('\n')) {consume();}
+        }
+        break;
+      }
       case '\n':
       {
         consume();
@@ -69,13 +85,13 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
         while (!match('"') && notAtEnd()) {
           consume();
         }
-        consume();
         const size_t length = p_index - sliceStartIndex;
         output.m_tokens.emplace_back(
           std::string_view{sliceStartPtr, length}, 
           Token::Type::STRING, 
           sliceStartLocation
         );
+        consume();
 
         continue;
         break;
@@ -357,6 +373,7 @@ bool SpasmLexer::isWhitespace() {
   switch(peek()) {
     case ' ':
     case '\t':
+    case '\0':
     return true;
     default:
     return false;

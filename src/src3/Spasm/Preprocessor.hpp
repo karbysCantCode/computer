@@ -42,6 +42,6 @@ class Preprocessor {
 
   FunctionMacro parseFunctionMacroDefinition(TokenHolder&, TokenHolder&);
   ReplacementMacro parseReplacementMacroDefinition(TokenHolder&, TokenHolder&);
-  void processMacroInvocation(std::variant<FunctionMacro, ReplacementMacro>&, TokenHolder&, TokenHolder&);
+  TokenHolder processMacroInvocation(std::variant<FunctionMacro, ReplacementMacro>&, TokenHolder&);
 };
 }

@@ -3,6 +3,7 @@
 #include "Helpers/CLIOptions.hpp"
 #include "Arch/Arch.hpp"
 #include "SMake/SMake.hpp"
+#include "Spasm/Spasm.hpp"
 
 #define cachedArchFileName "__CACHED__ARCH__FILE__"
 
@@ -25,6 +26,10 @@ int main(int argc, char* argv[]) {
     }
   }
   
+  architecture.debugPrint();
+
+  
+  
   Debug::FullLogger smakeLogger;
   SMake::Project project = SMake::smakePipeline(options.smakePath, &smakeLogger);
   if (!options.silent) {
@@ -44,9 +49,7 @@ int main(int argc, char* argv[]) {
   }
   SMake::printProject(project);
 
-  for (auto& target : project.m_targets) {
-    
-  }
+  Spasm::spasmPipeline(project, architecture, options);
   
   return 0;
 }

@@ -12,6 +12,7 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
   #define sliceStartPtr p_source.data() + sliceStartIndex
 
   while (notAtEnd()) {
+    while (isWhitespace()) {consume();}
     sliceStartIndex = p_index;
     sliceStartLocation.line = p_line;
     sliceStartLocation.column = p_column;
@@ -20,7 +21,9 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
     switch (c) {
       case ';': {
       if (match('*', 1)) {
-        while (notAtEnd() && !match('*') && !match(';', 1)) {
+        consume();
+        consume();
+        while (notAtEnd() && !(match('*') && match(';', 1))) {
           if (match('\n')) {
             output.m_tokens.emplace_back(
               std::string_view{p_source.data() + p_index, 1},
@@ -33,6 +36,7 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
         consume(); // eat *
         consume(); // eat ;
       } else {
+        consume();
         while (notAtEnd() && !match('\n')) {
           consume();
         }
@@ -50,7 +54,7 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
 
       const size_t length = p_index - sliceStartIndex;
       output.m_tokens.emplace_back(
-        std::string_view{sliceStartPtr + 1, length}, //+1 exclude dot.
+        std::string_view{sliceStartPtr + 1, length-1}, //+1 exclude dot.
         sliceType, 
         sliceStartLocation
       );
@@ -63,7 +67,7 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
       consume();
       const size_t length = p_index - sliceStartIndex;
       output.m_tokens.emplace_back(
-        std::string_view{sliceStartPtr + 1, length}, //+1 exclude dot.
+        std::string_view{sliceStartPtr, length}, 
         sliceType, 
         sliceStartLocation
       );
@@ -71,7 +75,6 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
       break;
       default:
       sliceType = Token::Type::IDENTIFIER;
-      consume();
       while (notAtEnd() && !isAtWordBoundary()) {
         consume();
       }
@@ -80,7 +83,8 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
       const std::string_view currentSlice(sliceStartPtr, length);
       if (currentSlice == "REG"
         ||currentSlice == "NON"
-        ||currentSlice == "IMM") 
+        ||currentSlice == "IMM"
+        ||currentSlice == "CONST") 
       {
         sliceType = Token::Type::ARGUMENTTYPE;
       }

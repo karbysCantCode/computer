@@ -1,6 +1,7 @@
 #include "Spasm/Parser.hpp"
 
 #include <utility>
+#include "Helpers/SafeStoi.hpp"
 
 namespace Spasm {
 Program Parser::ParseTokens(TokenHolder& tokenHolder, Arch::Architecture& arch, Debug::FullLogger* logger) {
@@ -44,6 +45,10 @@ Program Parser::ParseTokens(TokenHolder& tokenHolder, Arch::Architecture& arch, 
         parseIdentifier(tokenHolder, arch, program);
         break;
       }
+      case TY::NEWLINE: {
+        tokenHolder.skip();
+        break;
+      }
       default: {
         logError(tokenHolder.peek(), "Unexpected token type.");
         tokenHolder.skip();
@@ -76,7 +81,7 @@ void Parser::parseIdentifier(TokenHolder& tokenHolder, Arch::Architecture& arch,
     if (tokenHolder.match(Token::Type::IDENTIFIER)) {
       parseLabelDefinition(tokenHolder, program);
     } else {
-      logError(tokenHolder.consume(), "Unexpected keyword type (expected instruction or datatype)");
+      logError(tokenHolder.peek(), std::format("Unexpected keyword type (expected instruction or datatype), \"{}\"", tokenHolder.consume().value));
     }
     break;
   }
@@ -108,7 +113,7 @@ void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken,
         if (!regptr) {
           programOperand = makeErrorOperand(identifierToken, "Unknown register");
         }
-        else if (op.acceptedRegisterNames.count(regptr->m_registerName)){
+        else if (op.acceptedRegisterNames.count(regptr->m_registerName) < 1){
           programOperand = makeErrorOperand(identifierToken, "Register out of range for this field.");
         }
         else {
@@ -194,14 +199,26 @@ int Parser::parseNumberString(const Token& token) {
 
   switch (token.nicheType)
   {
-  case Token::NicheType::NUMBER_DEC:
-    return std::stoi((std::string)token.value, nullptr, 10);
+  case Token::NicheType::NUMBER_DEC:{
+    auto [num, errm] = std::safe_stoi((std::string)token.value, 10);
+    if (!errm.empty()) {
+      logError(token, errm);
+    }
+    return num;}
     break;
-  case Token::NicheType::NUMBER_HEX:
-    return std::stoi((std::string)token.value, nullptr, 16);
+  case Token::NicheType::NUMBER_HEX:{
+    auto [num, errm] = std::safe_stoi((std::string)token.value, 16);
+    if (!errm.empty()) {
+      logError(token, errm);
+    }
+    return num;}
     break;
-  case Token::NicheType::NUMBER_BIN:
-    return std::stoi((std::string)token.value, nullptr, 2);
+  case Token::NicheType::NUMBER_BIN:{
+    auto [num, errm] = std::safe_stoi((std::string)token.value, 2);
+    if (!errm.empty()) {
+      logError(token, errm);
+    }
+    return num;}
     break;
   
   default:
@@ -367,6 +384,7 @@ std::unique_ptr<Program::Expr> Parser::parseIdentifierToExpression(TokenHolder& 
     expr->identifierPath.push_back(tokenHolder.consume().value);
     tokenHolder.skip();
   }
+  expr->identifierPath.push_back(tokenHolder.consume().value);
   return expr;
 }
 
@@ -465,12 +483,12 @@ void Parser::parseNonArrayDataType(TokenHolder& tokenHolder, Program& program, s
     isSquare = true;
     tokenHolder.skip();
   }
-  const auto expr = parseSquareExpression(tokenHolder);
+  auto expr = parseSquareExpression(tokenHolder);
   if (isSquare) {
     if (tokenHolder.match(Token::Type::CLOSESQUARE)) {
       tokenHolder.skip();
     } else {
-      logError(tokenHolder.peek(), std::format("Expected ']', got \"{}\"", tokenHolder.peek()));
+      logError(tokenHolder.peek(), std::format("Expected ']', got \"{}\"", tokenHolder.peek().value));
       return;
     }
   }
@@ -540,7 +558,7 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program& program, bool
 
     parseElementsOfArray(tokenHolder, program, dataPtr);
   } else {
-    parseTextData(tokenHolder, program, dataPtr);
+    parseTextData(tokenHolder, program, dataPtr, isAuto);
 
   }
 
@@ -550,7 +568,7 @@ void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program& program, Pr
   assert(dataPtr!=nullptr);
 
   if (!tokenHolder.match(Token::Type::OPENBLOCK)) {
-  logError(tokenHolder.peek(), std::format("Expected '{', got \"{}\"", tokenHolder.peek().value));
+  logError(tokenHolder.peek(), std::format("Expected '{{', got \"{}\"", tokenHolder.peek().value));
   return;
   }
   tokenHolder.skip();
@@ -567,11 +585,11 @@ void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program& program, Pr
   }
 
   if (!tokenHolder.match(Token::Type::CLOSEBLOCK)) {
-    logError(tokenHolder.peek(), std::format("Expected '}', got \"{}\"", tokenHolder.peek().value));
+    logError(tokenHolder.peek(), std::format("Expected '}}', got \"{}\"", tokenHolder.peek().value));
     return;
   }
 }
-void Parser::parseTextData(TokenHolder& tokenHolder, Program& program, Program::DataObject* dataPtr) {
+void Parser::parseTextData(TokenHolder& tokenHolder, Program& program, Program::DataObject* dataPtr, bool isAuto) {
   assert(dataPtr!=nullptr);
 
   const auto valueToken = tokenHolder.peek();
@@ -579,7 +597,21 @@ void Parser::parseTextData(TokenHolder& tokenHolder, Program& program, Program::
     case Token::Type::NUMBER: {
       tokenHolder.skip();
 
+      if (isAuto) {
+        logError(valueToken, "Auto length cannot be used on a TEXT object with an initialising value.");
+        return;
+      }
 
+      const auto number = parseNumberString(valueToken);
+      dataPtr->data.resize(dataPtr->elementCount * dataPtr->elementSize);
+      
+      for (int i = 0; i < dataPtr->elementCount; i++) {
+        std::memcpy(
+          &dataPtr->data[i * dataPtr->elementSize],
+          &number,
+          std::min(sizeof(number), dataPtr->elementSize)
+        );
+      }
 
       break;
     }
@@ -588,14 +620,14 @@ void Parser::parseTextData(TokenHolder& tokenHolder, Program& program, Program::
 
       size_t pos = 0;
       while (pos < valueToken.value.size()) {
-        dataPtr->data.push_back(valueToken.value[pos]);
-        pos++;
+        dataPtr->data.push_back(valueToken.value[pos++]);
       }
 
       break;
     }
     default: {
       logError(valueToken, std::format("Expected a number or string, got \"{}\"", valueToken.value));
+      break;
     }
   }
 }

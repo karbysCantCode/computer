@@ -58,7 +58,7 @@ namespace Spasm {
 
   struct TokenHolder : TokenBaseHolder<Token> {
     inline bool match(Token::Type type, size_t distance = 0) const {return peek(distance).type == type;}
-    inline void skipUntilAfterType(Token::Type type) {while (!match(type)) {skip();}}
+    inline void skipUntilAfterType(Token::Type type) {while (!match(type)) {skip();} skip();}
   };
 
   class SpasmLexer : LexerBase {

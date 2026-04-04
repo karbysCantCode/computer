@@ -7,64 +7,96 @@ TokenHolder Preprocessor::run(TokenHolder& tokenHolder, SMake::Target& target, S
   p_logger = logger;
   TokenHolder newTokenHolder;
 
-  
+  std::stack<TokenHolder> processStack;
+  processStack.push(tokenHolder);
 
-  while (tokenHolder.notAtEnd()) {
-    if (!tokenHolder.match(Token::Type::DIRECTIVE)) {
-      const auto& token = tokenHolder.consume();
-      const auto it = p_macroMap.find(token.value);
-      if (it != p_macroMap.end()) {
-        processMacroInvocation(it->second, newTokenHolder, tokenHolder);
-      } else {
-        newTokenHolder.m_tokens.push_back(token);
+  std::unordered_set<std::string_view> invokedMacros;
+  std::stack<std::string_view> invokedMacroStack;
+
+  while (!processStack.empty()) {
+    auto& currentHolder = processStack.top();
+
+    while (currentHolder.notAtEnd()) {
+      if (!currentHolder.match(Token::Type::DIRECTIVE)) {
+        const auto token = currentHolder.consume();
+        const auto it = p_macroMap.find(token.value);
+        if (it != p_macroMap.end()) {
+          if (invokedMacros.find(token.value) != invokedMacros.end()) {
+            logError(token, "Recursive macro use.");
+            continue;
+          }
+          processStack.push(processMacroInvocation(it->second, currentHolder));
+          invokedMacros.insert(token.value);
+          invokedMacroStack.push(token.value);
+          break;
+        } else {
+          newTokenHolder.m_tokens.push_back(token);
+        }
+
+        continue;
+      }
+
+      switch (currentHolder.peek().nicheType) {
+        using NT = Token::NicheType;
+        case NT::DIRECTIVE_DEFINE: 
+          processDefine(currentHolder, newTokenHolder);
+        break;
+        case NT::DIRECTIVE_ENTRY:
+          processEntry(currentHolder, target);
+        break;
+        case NT::DIRECTIVE_INCLUDE:
+          processInclude(currentHolder, target, targetProgram);
+        break;
+        default:
+        logError(currentHolder.consume(), "Unknown directive.");
+        break;
       }
     }
 
-    switch (tokenHolder.peek().nicheType) {
-      using NT = Token::NicheType;
-      case NT::DIRECTIVE_DEFINE: 
-        processDefine(tokenHolder, newTokenHolder);
-      break;
-      case NT::DIRECTIVE_ENTRY:
-        processEntry(tokenHolder, target);
-      break;
-      case NT::DIRECTIVE_INCLUDE:
-        processInclude(tokenHolder, target, targetProgram);
-      break;
-      default:
-      logError(tokenHolder.peek(), "Unknown directive.");
-      break;
+    if (currentHolder.isAtEnd()) {
+      processStack.pop();
+
+      if (!invokedMacroStack.empty()) {
+        invokedMacros.erase(invokedMacroStack.top());
+        invokedMacroStack.pop();
+      }
     }
   }
 
   return newTokenHolder;
 }
 
-void Preprocessor::processMacroInvocation(std::variant<FunctionMacro, ReplacementMacro>& macro, TokenHolder& newTokenHolder, TokenHolder& tokenHolder) {
+TokenHolder Preprocessor::processMacroInvocation(std::variant<FunctionMacro, ReplacementMacro>& macro, TokenHolder& tokenHolder) {
+  TokenHolder newTokenHolder;
   std::visit([&](auto& m) {
-          using T = std::decay_t<decltype(m)>;
+    using T = std::decay_t<decltype(m)>;
 
-          if constexpr (std::is_same_v<T, FunctionMacro>) {
-            // handle function macro
-            std::vector<std::vector<Token>> arguments;
-            std::vector<Token> currentArgument;
-            while (tokenHolder.notAtEnd() && !tokenHolder.match(Token::Type::NEWLINE)) {
-              while (tokenHolder.notAtEnd() && !tokenHolder.match(Token::Type::NEWLINE) && !tokenHolder.match(Token::Type::COMMA)) {
-                currentArgument.push_back(tokenHolder.consume());
-              }
-              arguments.push_back(currentArgument);
-            }
+    if constexpr (std::is_same_v<T, FunctionMacro>) {
+      // handle function macro
+      std::vector<std::vector<Token>> arguments;
+      while (tokenHolder.notAtEnd() && !tokenHolder.match(Token::Type::NEWLINE)) {
+        std::vector<Token> currentArgument;
+        while (tokenHolder.notAtEnd() && !tokenHolder.match(Token::Type::NEWLINE) && !tokenHolder.match(Token::Type::COMMA)) {
+          currentArgument.push_back(tokenHolder.consume());
+        }
+        if (tokenHolder.match(Token::Type::COMMA)) {
+          tokenHolder.skip();
+        }
+        arguments.push_back(currentArgument);
+      }
 
-            m.fillWithReplacedContents(newTokenHolder,arguments);
-          } else if constexpr (std::is_same_v<T, ReplacementMacro>) {
-            // handle replacement macro
-            newTokenHolder.m_tokens.insert(
-              newTokenHolder.m_tokens.end(),
-              m.contents.begin(),
-              m.contents.end()
-            );
-          }
-        }, macro);
+      m.fillWithReplacedContents(newTokenHolder,arguments);
+    } else if constexpr (std::is_same_v<T, ReplacementMacro>) {
+      // handle replacement macro
+      newTokenHolder.m_tokens.insert(
+        newTokenHolder.m_tokens.end(),
+        m.contents.begin(),
+        m.contents.end()
+      );
+    }
+  }, macro);
+
+  return newTokenHolder;
 }
 
 void Preprocessor::processDefine(TokenHolder& tokenHolder, TokenHolder& newTokenHolder) {
@@ -158,14 +190,14 @@ bool Preprocessor::FunctionMacro::fillWithReplacedContents(TokenHolder& tokenHol
 
 void Preprocessor::processInclude(TokenHolder& tokenHolder, SMake::Target& target, Spasm::Program& targetProgram) {
   tokenHolder.skip();
-  if (!tokenHolder.match(Token::Type::IDENTIFIER)) {
-    logError(tokenHolder.peek(), "Expected identifier for @include.");
+  if (!tokenHolder.match(Token::Type::STRING)) {
+    logError(tokenHolder.peek(), "Expected string for @include.");
     return;
   }
 
   
 
-  const auto& includeStr = tokenHolder.consume();
+  const auto includeStr = tokenHolder.consume();
   const auto path = target.searchForPathInIncludes(includeStr.value);
   if (path.empty()) {
     logError(includeStr, std::format("Preprocessor: path not found \"{}\"", includeStr.value));
