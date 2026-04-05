@@ -2,6 +2,7 @@
 
 #include "Spasm/Lexer.hpp"
 #include "Spasm/Parser.hpp"
+#include "Spasm/Linker.hpp"
 #include "Spasm/Preprocessor.hpp"
 #include "Helpers/FileHelper.hpp"
 
@@ -16,17 +17,12 @@ namespace Spasm {
 
       Program program;
 
-      //order built after the address+expression resolvation of dependant order
-      std::queue<Program::TranslationUnit*> programTranslationUnitOrder;
+      Linker linker;
 
       for (const auto& sourcePath : target.second.m_sourceFilepaths) {
         program.m_filePathsToCreateTranslationUnitsOf.push(sourcePath);
       }
 
-      std::unordered_map<std::string_view, Program::IdentifierObject*> programGlobalIdentifiersByFullName;
-
-      std::stack<Program::TranslationUnit*> dependencylessTranslationUnits;
-      std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>> dependantTranslationUnitMap;
       //parse trabskaton units
       while (!program.m_filePathsToCreateTranslationUnitsOf.empty()) {
         auto transUnit = std::make_unique<Program::TranslationUnit>();
@@ -47,30 +43,17 @@ namespace Spasm {
         
         
         Preprocessor preproc;
-        auto processedTokens = preproc.run(preprocessedTokens, target.second, *transUnitPtr, program, dependantTranslationUnitMap, &logger);
+        auto processedTokens = preproc.run(preprocessedTokens, target.second, *transUnitPtr, program, linker.m_dependantTranslationUnitMap, &logger);
         
         Parser parser;
         parser.ParseTokens(processedTokens, arch, *transUnitPtr, program, &logger);
         
         if (transUnitPtr->m_includedFiles.size() == 0) {
-          dependencylessTranslationUnits.push(transUnitPtr);
+          linker.addIndependentTranslationUnits(transUnitPtr);
         }
       }
       
-      //resolve addresses and then expressions
-      while (!dependencylessTranslationUnits.empty()) {
-        auto& translationUnit = *dependencylessTranslationUnits.top();
-
-        resolveAddressesAndExpressionsOfTranslationUnit(translationUnit, programTranslationUnitOrder, );
-
-        dependencylessTranslationUnits.pop();
-        for (auto dependantUnit : dependantTranslationUnitMap[translationUnit.m_sourcePath]) {
-          dependantUnit->m_dependenciesResolved++;
-          if (dependantUnit->m_dependenciesResolved == dependantUnit->m_includedFiles.size()) {
-            dependencylessTranslationUnits.push(dependantUnit);
-          }
-        }
-      }
+      linker.run();
 
       if (!options.silent) {
         while (!logger.Errors.isEmpty()) {
@@ -92,6 +75,111 @@ namespace Spasm {
       program.debugPrint();
     }
   }
+using EvaluatePairType = std::pair<int, std::string>;
+EvaluatePairType Program::IdentifierExpr::evaluate(NonOwningIdentifierMapType& identifierMap) {
+  std::string constructedName;
+  Program::IdentifierObject* lastIdentifierObject;
+  const auto it = identifierMap.find(identifierPath.front());
+  constructedName.append(identifierPath.front());
+  identifierPath.pop();
+  if (it == identifierMap.end()) {
+    return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName)};
+  }
+
+  lastIdentifierObject = it->second;
+
+  while (!identifierPath.empty()) {
+    const auto it = lastIdentifierObject->children.find(identifierPath.front());
+    constructedName.append(identifierPath.front());
+    identifierPath.pop();
+    if (it == lastIdentifierObject->children.end()) {
+      return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName)};
+    }
+  }
+
+  if (!lastIdentifierObject->addressResolved) {
+    return {0, std::format("Identifier \"{}\" is not resolved before it is referenced here. (potentially partial identifier path)", constructedName)};
+  }
+
+  value = lastIdentifierObject->address;
+  setEvaluated();
+  return {value, ""};
+}
+
+EvaluatePairType Program::UnaryExpr::evaluate(NonOwningIdentifierMapType& idenMap) {
+  if (!right) {
+    return {0, "Expression argument doesn't exist."};
+  }
+
+  const auto eval = right->evaluate(idenMap);
+  switch (op) {
+    case Token::Type::SUBTRACT:
+      return {-eval.first, eval.second};
+      break;
+    case Token::Type::BITWISENOT:
+      return {~eval.first, eval.second};
+      break;
+    default: break;
+
+  }
+  return {0, "Unknown unary operator type."};
+}
+
+EvaluatePairType Program::BinaryExpr::evaluate(NonOwningIdentifierMapType& idenMap) {
+  if (!right) {
+    return {0, "Expression right argument doesn't exist."};
+  }
+  if (!left) {
+    return {0, "Expression left argument doesn't exist."};
+  }
+
+  const auto evalLeft = left->evaluate(idenMap);
+  const auto evalRight = right->evaluate(idenMap);
+
+  if (!evalLeft.second.empty()) {
+    return {0, evalLeft.second};
+  }
+  if (!evalRight.second.empty()) {
+    return {0, evalRight.second};
+  }
+
+  switch (op) {
+    using TY = Token::Type;
+    case TY::BITWISEOR:
+      return {evalLeft.first | evalRight.first, ""};
+      break;
+    case TY::BITWISEXOR:
+      return {evalLeft.first ^ evalRight.first, ""};
+      break;
+    case TY::BITWISEAND:
+      return {evalLeft.first & evalRight.first, ""};
+      break;
+    case TY::LEFTSHIFT:
+      return {evalLeft.first << evalRight.first, ""};
+      break;
+    case TY::RIGHTSHIFT:
+      return {evalLeft.first >> evalRight.first, ""};
+      break;
+    case TY::SUBTRACT:
+      return {evalLeft.first - evalRight.first, ""};
+      break;
+    case TY::ADD:
+      return {evalLeft.first + evalRight.first, ""};
+      break;
+    case TY::MULTIPLY:
+      return {evalLeft.first * evalRight.first, ""};
+      break;
+    case TY::DIVIDE:
+      return {evalLeft.first / evalRight.first, ""};
+      break;
+    case TY::MOD:
+      return {evalLeft.first % evalRight.first, ""};
+      break;
+    default:break;
+  }
+
+  return {0, "Unforseen error in binary expression evaluation!"};
+}
 
 void Spasm::Program::debugPrint() const {
   std::cout << "\n=========== PROGRAM DEBUG DUMP ===========\n";
@@ -113,17 +201,17 @@ void Spasm::Program::debugPrint() const {
       debugPrintIdentifier(obj.get(), 3);
     }
 
-    std::cout << "\n";
+    std::cout << "\nUnresolved Expressions Stack:\n";
+    auto stackCopy = tu.m_unresolvedExpressions;
+    while (!stackCopy.empty()) {
+      indent(1);
+      std::cout << "Unresolved Expr:\n";
+      debugPrintExpr(stackCopy.front(), 2);
+      stackCopy.pop();
+    }
   }
 
-  std::cout << "\n-- Unresolved Expressions Stack --\n";
-  auto stackCopy = m_unresolvedExpressions;
-  while (!stackCopy.empty()) {
-    indent(1);
-    std::cout << "Unresolved Expr:\n";
-    debugPrintExpr(stackCopy.top(), 2);
-    stackCopy.pop();
-  }
+
 
   std::cout << "\n==========================================\n";
 }
@@ -201,8 +289,13 @@ void Spasm::Program::debugPrintExpr(const Expr* expr, int indentLevel) const {
   }
   else if (auto id = dynamic_cast<const IdentifierExpr*>(expr)) {
     std::cout << "IdentifierExpr: ";
-    for (const auto& part : id->identifierPath) {
-      std::cout << part;
+    auto qCopy = std::queue(id->identifierPath);
+    while (!qCopy.empty()) {
+      std::cout << qCopy.front();
+      qCopy.pop();
+      if (!qCopy.empty()) {
+        std::cout << '.';
+      }
     }
     std::cout << "\n";
   }

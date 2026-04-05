@@ -17,42 +17,64 @@ namespace Spasm {
 
   class Program {
     public:
-
+    struct IdentifierObject;
+    struct DataObject;
+    struct LabelObject;
+    
 
     struct StatementSymbol {
       const SourceLocation location;
 
+      enum class Kind {
+        LABEL,
+        DEFINITION,
+        INSTRUCTION
+      };
+
       StatementSymbol(const SourceLocation loc) : location(loc) {}
       virtual ~StatementSymbol() = default;
+      virtual Kind getKind() const {assert(false);}
 
       virtual void generate() = 0;
     };
     struct LabelSymbol : StatementSymbol {
       std::string_view name;
+      LabelObject* labelObject;
 
       void generate() override {}
+      Kind getKind() const override {return Kind::LABEL;}
 
-      LabelSymbol(const SourceLocation loc, const std::string_view lblName) : name(lblName), StatementSymbol(loc) {}
-      LabelSymbol(const SourceLocation loc) : StatementSymbol(loc) {}
+      LabelSymbol(const SourceLocation loc, const std::string_view lblName, LabelObject* object) : name(lblName), StatementSymbol(loc), labelObject(object) {}
+      LabelSymbol(const SourceLocation loc, LabelObject* object) : StatementSymbol(loc), labelObject(object) {}
 
     };
     struct DefinitionSymbol : StatementSymbol {
       std::string_view name;
+      DataObject* dataObject;
 
       void generate() override {}
-
+      Kind getKind() const override {return Kind::DEFINITION;}
       DefinitionSymbol(const SourceLocation& loc) : StatementSymbol(loc) {}
+      DefinitionSymbol(const SourceLocation& loc, std::string_view nm, DataObject* object) : StatementSymbol(loc), name(nm), dataObject(object) {}
+    
     };
 
+    using IdentifierMapType = std::unordered_map<std::string_view, std::shared_ptr<IdentifierObject>>;
+    using NonOwningIdentifierMapType = std::unordered_map<std::string_view, IdentifierObject*>;
+    using EvaluatePairType = std::pair<int, std::string>;
     struct Expr {
       int value = 0;
       bool evaluated = false;
+
+      SourceLocation location;
 
       void setValue(const int val) {value = val;}
       int  getValue() {return value;}
       bool isEvaluated() const {return evaluated;}
       void setEvaluated() {evaluated = true;}
+      virtual EvaluatePairType evaluate(NonOwningIdentifierMapType&) {assert(false); return {0, "ASSERTED FALSE"};}
       virtual ~Expr() = default;
+      Expr(const SourceLocation& sLoc) : location(sLoc) {}
     };
 
     struct IdentifierObject {
@@ -64,13 +86,13 @@ namespace Spasm {
       size_t address = 0;
       bool addressResolved = false;
       IdentifierObject* parent;
-      std::unordered_map<std::string_view, std::unique_ptr<IdentifierObject>> children;
+      IdentifierMapType children;
       
       virtual bool isLabel() const {return false;}
       virtual bool isIdentifier() const {return false;}
       virtual ~IdentifierObject() = default;
       
-      IdentifierObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath) : sourcePath(srcPath), name(nm) fullName(fullnm) {}
+      IdentifierObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, IdentifierObject* parnt) : sourcePath(srcPath), name(nm), fullName(fullnm), parent(parnt) {}
     };
     struct LabelObject : IdentifierObject {
       LabelSymbol* symbolObject;
@@ -78,10 +100,10 @@ namespace Spasm {
       virtual bool isLabel() const override {return true;}
       virtual bool isIdentifier() const override {return false;}
 
-      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath) : IdentifierObject(nm, fullnm, srcPath) {}
-      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, LabelObject* parnt) : IdentifierObject(nm, fullnm, srcPath), parent(parnt) {}
-      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, LabelSymbol* symbol) : IdentifierObject(nm, fullnm, srcPath), symbolObject(symbol) {}
-      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, LabelObject* parnt, LabelSymbol* symbol) : IdentifierObject(nm, fullnm, srcPath), parent(parnt), symbolObject(symbol) {}
+      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath) : IdentifierObject(nm, fullnm, srcPath, nullptr) {}
+      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, LabelObject* parnt) : IdentifierObject(nm, fullnm, srcPath, parnt) {}
+      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, StatementSymbol* symbol) : IdentifierObject(nm, fullnm, srcPath, nullptr), symbolObject(dynamic_cast<LabelSymbol*>(symbol)) {}
+      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, LabelObject* parnt, StatementSymbol* symbol) : IdentifierObject(nm, fullnm, srcPath, parnt), symbolObject(dynamic_cast<LabelSymbol*>(symbol)) {}
     };
     struct DataObject : IdentifierObject {
       size_t elementCount; // in elements
@@ -93,18 +115,19 @@ namespace Spasm {
       virtual bool isLabel() const override {return false;}
       virtual bool isIdentifier() const override {return true;}
       
-      DataObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath) : IdentifierObject(nm, fullnm, srcPath) {}
+      DataObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, IdentifierObject* parnt) : IdentifierObject(nm, fullnm, srcPath, parnt) {}
       DataObject(
         const std::string_view nm, 
         const std::string_view fullnm,
         const std::filesystem::path& srcPath,
-        DefinitionSymbol* symbolObj,
+        IdentifierObject* parnt,
+        StatementSymbol* symbolObj,
         const size_t elemSize,
         const size_t elemCount = 0)
-        : IdentifierObject(nm, fullnm, srcPath),
+        : IdentifierObject(nm, fullnm, srcPath, parnt),
         elementCount(elemCount),
         elementSize(elemSize),
-        symbolObject(symbolObj) {}
+        symbolObject(dynamic_cast<DefinitionSymbol*>(symbolObj)) {}
     };
     
     class TranslationUnit {
@@ -113,14 +136,14 @@ namespace Spasm {
       std::filesystem::path m_sourcePath;
       std::vector<std::unique_ptr<StatementSymbol>> m_statementVector;
       std::unordered_set<std::filesystem::path> m_includedFiles;
-      std::unordered_map<std::string_view, std::unique_ptr<IdentifierObject>> m_identifierMap;
+      IdentifierMapType m_identifierMap;
       size_t m_dependenciesResolved = 0;
+      std::queue<Expr*> m_unresolvedExpressions;
     };
     
     
     std::stack<std::filesystem::path> m_filePathsToCreateTranslationUnitsOf;
     std::unordered_map<std::filesystem::path, std::unique_ptr<TranslationUnit>> m_translationUnits;
-    std::stack<Expr*> m_unresolvedExpressions;
     
 
     void debugPrint() const;
@@ -129,24 +152,31 @@ namespace Spasm {
 
     struct NumberExpr : Expr {
       int value;
-      NumberExpr(int val) : value(val) {}
+      NumberExpr(const SourceLocation& sLoc, int val) : Expr(sLoc), value(val) {}
+
+      virtual EvaluatePairType evaluate(NonOwningIdentifierMapType&) override {setEvaluated(); return {value, ""};}
     };
 
     struct IdentifierExpr : Expr {
-      std::vector<std::string_view> identifierPath;
-      IdentifierExpr(const std::string_view iden) {
-        identifierPath.push_back(iden);
+      std::queue<std::string_view> identifierPath;
+      IdentifierExpr(const SourceLocation& sLoc, const std::string_view iden) : Expr(sLoc) {
+        identifierPath.push(iden);
       }
-      IdentifierExpr() {}
+      IdentifierExpr(const SourceLocation& sLoc) : Expr(sLoc) {}
+
+      virtual EvaluatePairType evaluate(NonOwningIdentifierMapType&) override;
     };
 
     struct UnaryExpr : Expr {
       Token::Type op;
       std::unique_ptr<Expr> right;
 
-      UnaryExpr(Token::Type o,
-                std::unique_ptr<Expr> rhs)
-        : op(o), right(std::move(rhs)) {}
+      UnaryExpr(const SourceLocation& sLoc,
+        Token::Type o,
+        std::unique_ptr<Expr> rhs)
+        : Expr(sLoc), op(o), right(std::move(rhs)) {}
+
+      virtual EvaluatePairType evaluate(NonOwningIdentifierMapType&) override;
     };
 
     struct BinaryExpr : Expr {
@@ -154,10 +184,13 @@ namespace Spasm {
       std::unique_ptr<Expr> left;
       std::unique_ptr<Expr> right;
 
-      BinaryExpr(Token::Type o,
-                std::unique_ptr<Expr> lhs,
-                std::unique_ptr<Expr> rhs)
-        : op(o), left(std::move(lhs)),right(std::move(rhs)) {}
+      BinaryExpr(const SourceLocation& sLoc,
+        Token::Type o,
+        std::unique_ptr<Expr> lhs,
+        std::unique_ptr<Expr> rhs)
+        : Expr(sLoc), op(o), left(std::move(lhs)),right(std::move(rhs)) {}
+
+      virtual EvaluatePairType evaluate(NonOwningIdentifierMapType&) override;
     };
 
     struct Operand {
@@ -192,6 +225,7 @@ namespace Spasm {
       std::vector<std::unique_ptr<Operand>> operands;
       const Arch::Architecture::InstructionDefinition& instruction;
       void generate() override {}
+      Kind getKind() const override {return Kind::INSTRUCTION;}
 
       InstructionSymbol(const SourceLocation loc, const Arch::Architecture::InstructionDefinition& instr, std::vector<std::unique_ptr<Operand>>& initOperands) : operands(std::move(initOperands)), StatementSymbol(loc), instruction(instr) {}
       InstructionSymbol(const SourceLocation loc, const Arch::Architecture::InstructionDefinition& instr) : StatementSymbol(loc), instruction(instr) {}

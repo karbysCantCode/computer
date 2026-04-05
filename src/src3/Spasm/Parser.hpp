@@ -42,12 +42,11 @@ class Parser {
   std::unique_ptr<Program::Expr> parseUnary(TokenHolder&);
   std::unique_ptr<Program::Expr> parsePrimary(TokenHolder&);
 
-  //void parseLabelDefinition(TokenHolder&, Program::TranslationUnit&, Program&);
+  void parseLabelDefinition(TokenHolder&, Program::TranslationUnit&, Program&);
   //bool getOrCreateIdentiferObject(TokenHolder&, Program::TranslationUnit&, Program&, Program::LabelObject*&, bool, Program::LabelSymbol*, std::string_view&); //returns success
-  bool Parser::getOrCreatePartialIdentifier(
+  bool getOrCreatePartialIdentifier(
     TokenHolder&, 
     Program::TranslationUnit&, 
-    Program&, 
     Program::LabelObject*&, 
     bool, 
     Program::StatementSymbol*, 
@@ -55,12 +54,12 @@ class Parser {
     bool
   );
   std::unique_ptr<Program::Expr> parseIdentifierToExpression(TokenHolder&);
-  void parseIdentifierNameDefiniton(TokenHolder&, Program::TranslationUnit&, Program&, bool);
+  std::unique_ptr<Program::StatementSymbol> parseIdentifierNameDefiniton(TokenHolder&, Program::TranslationUnit&, Program&, bool);
 
-  //void parseDataTypeDeclaration(TokenHolder&, Program::TranslationUnit&, Program&);
+  void parseDataTypeDeclaration(TokenHolder&, Program::TranslationUnit&, Program&);
   void parseNonArrayDataType(TokenHolder&, Program::TranslationUnit&, Program&, size_t);
   void parseArrayDataType(TokenHolder&, Program::TranslationUnit&, Program&, bool);
-  void parseElementsOfArray(TokenHolder&, Program&, Program::DataObject*);
+  void parseElementsOfArray(TokenHolder&, Program::TranslationUnit&, Program::DataObject*);
   void parseTextData(TokenHolder&, Program&, Program::DataObject*, bool);
 };
 }

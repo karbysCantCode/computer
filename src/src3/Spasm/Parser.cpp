@@ -127,13 +127,13 @@ void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken,
       else if constexpr (std::is_same_v<T, Arch::Architecture::ImmediateOperand>) {
         auto programOperand = parseExpectImmediate(tokenHolder);
         //get a ptr to the expression of program operand to give it to the unresolved list
-        program.m_unresolvedExpressions.push(static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get());
+        translationUnit.m_unresolvedExpressions.push(static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get());
         instructionSymbol->operands.push_back(std::move(programOperand));
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::ExternalImmediateOperand>) {
         auto programOperand = parseExpectImmediate(tokenHolder);
         //get a ptr to the expression of program operand to give it to the unresolved list
-        program.m_unresolvedExpressions.push(static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get());
+        translationUnit.m_unresolvedExpressions.push(static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get());
         instructionSymbol->operands.push_back(std::move(programOperand));
       }
     }, operand);
@@ -169,11 +169,11 @@ std::unique_ptr<Program::Operand> Parser::parseExpectImmediate(TokenHolder& toke
       break;
     }
     case Token::Type::IDENTIFIER: {
-      auto expr = std::make_unique<Program::IdentifierExpr>(tokenHolder.peek().value);
+      auto expr = std::make_unique<Program::IdentifierExpr>(tokenHolder.peek().location, tokenHolder.peek().value);
       return std::make_unique<Program::ExpressionOperand>(tokenHolder.consume().location, std::move(expr));
     }
     case Token::Type::NUMBER: {
-      auto expr = std::make_unique<Program::NumberExpr>(parseNumberString(tokenHolder.peek()));
+      auto expr = std::make_unique<Program::NumberExpr>(tokenHolder.peek().location,parseNumberString(tokenHolder.peek()));
       return std::make_unique<Program::ExpressionOperand>(tokenHolder.consume().location, std::move(expr));
     }
     case Token::Type::SUBTRACT: {
@@ -241,10 +241,11 @@ std::unique_ptr<Program::Expr> Parser::parseOr(TokenHolder& tokenHolder) {
   auto lhs = parseXor(tokenHolder);
 
   while (tokenHolder.match(Token::Type::BITWISEOR) && tokenHolder.notAtEnd()) {
-    tokenHolder.skip();
+    const auto locTok = tokenHolder.consume();
     auto rhs = parseXor(tokenHolder);
 
     lhs = std::make_unique<Program::BinaryExpr>(
+      locTok.location,
       Token::Type::BITWISEOR,
       std::move(lhs), std::move(rhs)
     );
@@ -255,10 +256,11 @@ std::unique_ptr<Program::Expr> Parser::parseXor(TokenHolder& tokenHolder) {
   auto lhs = parseAnd(tokenHolder);
 
   while (tokenHolder.match(Token::Type::BITWISEXOR) && tokenHolder.notAtEnd()) {
-    tokenHolder.skip();
+    const auto locTok = tokenHolder.consume();
     auto rhs = parseAnd(tokenHolder);
 
     lhs = std::make_unique<Program::BinaryExpr>(
+      locTok.location,
       Token::Type::BITWISEXOR,
       std::move(lhs), std::move(rhs)
     );
@@ -270,10 +272,11 @@ std::unique_ptr<Program::Expr> Parser::parseAnd(TokenHolder& tokenHolder) {
   auto lhs = parseShift(tokenHolder);
 
   while (tokenHolder.match(Token::Type::BITWISEAND) && tokenHolder.notAtEnd()) {
-    tokenHolder.skip();
+    const auto locTok = tokenHolder.consume();
     auto rhs = parseShift(tokenHolder);
 
     lhs = std::make_unique<Program::BinaryExpr>(
+      locTok.location,
       Token::Type::BITWISEAND,
       std::move(lhs), std::move(rhs)
     );
@@ -286,11 +289,12 @@ std::unique_ptr<Program::Expr> Parser::parseShift(TokenHolder& tokenHolder) {
   while ((tokenHolder.match(Token::Type::LEFTSHIFT) 
        || tokenHolder.match(Token::Type::RIGHTSHIFT)) 
       && tokenHolder.notAtEnd()) {
-    auto op = tokenHolder.consume().type;
+    auto opTok = tokenHolder.consume();
     auto rhs = parseAdditive(tokenHolder);
 
     lhs = std::make_unique<Program::BinaryExpr>(
-      op,
+      opTok.location,
+      opTok.type,
       std::move(lhs), std::move(rhs)
     );
   }
@@ -302,11 +306,12 @@ std::unique_ptr<Program::Expr> Parser::parseAdditive(TokenHolder& tokenHolder) {
   while ((tokenHolder.match(Token::Type::ADD) 
        || tokenHolder.match(Token::Type::SUBTRACT)) 
       && tokenHolder.notAtEnd()) {
-    auto op = tokenHolder.consume().type;
+    auto opTok = tokenHolder.consume();
     auto rhs = parseMultiplicative(tokenHolder);
 
     lhs = std::make_unique<Program::BinaryExpr>(
-      op,
+      opTok.location,
+      opTok.type,
       std::move(lhs), std::move(rhs)
     );
   }
@@ -319,11 +324,12 @@ std::unique_ptr<Program::Expr> Parser::parseMultiplicative(TokenHolder& tokenHol
        || tokenHolder.match(Token::Type::DIVIDE)
        || tokenHolder.match(Token::Type::MOD)) 
       && tokenHolder.notAtEnd()) {
-    auto op = tokenHolder.consume().type;
+    auto opTok = tokenHolder.consume();
     auto rhs = parseUnary(tokenHolder);
 
     lhs = std::make_unique<Program::BinaryExpr>(
-      op,
+      opTok.location,
+      opTok.type,
       std::move(lhs), std::move(rhs)
     );
   }
@@ -344,7 +350,19 @@ std::unique_ptr<Program::Expr> Parser::parsePrimary(TokenHolder& tokenHolder) {
       return parseIdentifierToExpression(tokenHolder);
     }
     case Token::Type::NUMBER: {
-      return std::make_unique<Program::NumberExpr>(parseNumberString(tokenHolder.consume()));
+      return std::make_unique<Program::NumberExpr>(tokenHolder.peek().location, parseNumberString(tokenHolder.consume()));
+    }
+    case Token::Type::OPENPAREN: {
+      tokenHolder.skip();
+
+      auto expr = parseOr(tokenHolder);
+
+      if (!tokenHolder.match(Token::Type::CLOSEPAREN)) {
+        logError(tokenHolder.peek(), std::format("Expected '(', got \"{}\"", tokenHolder.peek().value));
+        return std::make_unique<Program::NumberExpr>(tokenHolder.peek().location, 0);
+      }
+
+      return expr;
     }
     default:
     return makeErrorExpression(tokenHolder.peek(), std::format("Expected number or identifier token, got \"{}\"", tokenHolder.consume().value));
@@ -353,53 +371,18 @@ std::unique_ptr<Program::Expr> Parser::parsePrimary(TokenHolder& tokenHolder) {
 
 std::unique_ptr<Program::Expr> Parser::makeErrorExpression(const Token& errToken, const std::string& message) {
   logError(errToken, message);
-  return std::make_unique<Program::NumberExpr>(0);
+  return std::make_unique<Program::NumberExpr>(errToken.location, 0);
 }
 
 void Parser::parseLabelDefinition(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program) {
-  
-  auto symbolObject = std::make_unique<Program::LabelSymbol>(tokenHolder.peek().location);
-  auto symbol = symbolObject.get();
-  
-  Program::LabelObject* parentLabel = nullptr;
-  std::string_view fullName;
-  
-  while (tokenHolder.match(Token::Type::PERIOD, 1) && tokenHolder.notAtEnd()) {
-    if (getOrCreateIdentiferObject(tokenHolder, translationUnit, program, parentLabel, false, symbol, fullName)) {
-      tokenHolder.skip(); //skip '.'
-    } else {
-      tokenHolder.skipUntilAfterType(Token::Type::COLON);
-      return;
-    }
-    
-  }
-  
-  if (!tokenHolder.match(Token::Type::COLON, 1)) {
-    logError(tokenHolder.peek(1), std::format("Expected ':', got \"{}\"", tokenHolder.peek(1).value));
-    tokenHolder.skip();
-    return;
-  }
-  const auto identifierToken = tokenHolder.peek();
-  
-  symbol->name = identifierToken.value;
-
-  //dont need????? already done in getOrCreateLabel()????
-  // auto label = std::make_unique<Program::LabelObject>(identifierToken.value, translationUnit.m_sourcePath);
-  // label->symbolObject = symbol;
-  // translationUnit.m_identifierMap.emplace(label->name, std::move(label));
-
-  if (getOrCreateIdentiferObject(tokenHolder, translationUnit, program, parentLabel, true, symbol, fullName)) {
-    tokenHolder.skip(2); // skip idenitifer and ':'
-  } else {
-    tokenHolder.skip(); // error consumes, skip ':'
-  }
+  auto symbolObject = parseIdentifierNameDefiniton(tokenHolder, translationUnit, program, true);
   translationUnit.m_statementVector.push_back(std::move(symbolObject));
 }
 
 //if not isLabel, is definition
-void Parser::parseIdentifierNameDefiniton(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program, bool isLabel) {
+std::unique_ptr<Program::StatementSymbol> Parser::parseIdentifierNameDefiniton(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program, bool isLabel) {
   Program::LabelObject* parentLabel = nullptr;
-  std::string_view fullName;
+  std::string_view fullName = tokenHolder.peek().value;
 
   auto shouldContinue = [&]() {
     return isLabel ?
@@ -410,14 +393,65 @@ void Parser::parseIdentifierNameDefiniton(TokenHolder& tokenHolder, Program::Tra
   //
 
   while (shouldContinue()) {
+    if (!getOrCreatePartialIdentifier(
+      tokenHolder,
+      translationUnit,
+      parentLabel,
+      false,
+      nullptr,
+      fullName,
+      isLabel
+    )) {
+      // error, skip until name "should" be passed
+      if (isLabel) {
+        tokenHolder.skipUntilAfterType(Token::Type::COLON);
+      } else {
+        while (tokenHolder.match(Token::Type::PERIOD, 1)) {
+          tokenHolder.skip(2);
+        }
+        tokenHolder.skip();
+      }
+      return nullptr;
+    }
 
+    if (tokenHolder.match(Token::Type::PERIOD, 1)) {
+      tokenHolder.skip();
+    }
   }
+
+  std::unique_ptr<Program::StatementSymbol> symbol;
+  if (isLabel) {
+    symbol = std::make_unique<Program::LabelSymbol>(
+      tokenHolder.peek().location,
+      tokenHolder.peek().value,
+      nullptr
+    );
+  } else {
+    symbol = std::make_unique<Program::DefinitionSymbol>(
+      tokenHolder.peek().location,
+      tokenHolder.peek().value,
+      nullptr
+    );
+  }
+  
+  getOrCreatePartialIdentifier(
+    tokenHolder,
+    translationUnit,
+    parentLabel,
+    true,
+    symbol.get(),
+    fullName,
+    isLabel
+  );
+
+  tokenHolder.skip(isLabel ? 2 : 1); 
+
+  return symbol;
 }
 
 bool Parser::getOrCreatePartialIdentifier(
   TokenHolder& tokenHolder, 
   Program::TranslationUnit& translationUnit, 
-  Program& program, 
   Program::LabelObject*& parentLabel, 
   bool creating, 
   Program::StatementSymbol* symbol, 
@@ -439,7 +473,17 @@ bool Parser::getOrCreatePartialIdentifier(
     if (creating) {
       logError(identifierToken, std::format("Identifier \"{}\" already exists.", identifierToken.value));
       return false;
-    }    
+    }  
+
+    parentLabel = dynamic_cast<Program::LabelObject*>(it->second.get());
+    if (parentLabel == nullptr) {
+      logError(identifierToken, std::format("Identifier \"{}\" is a data object, and cannot have children.", identifierToken.value));
+      return false;
+    }
+
+    return true;
+    
+    
   } else {
     // doesnt exist
     if (creating) {
@@ -447,17 +491,26 @@ bool Parser::getOrCreatePartialIdentifier(
       if (isLabel) {
         reference = std::make_unique<Program::LabelObject>(
           name,
-          translationUnit.m_sourcePath,
           fullName,
+          translationUnit.m_sourcePath,
           symbol
         );
+        if (auto labSym = dynamic_cast<Program::LabelSymbol*>(symbol)) {
+          labSym->labelObject = static_cast<Program::LabelObject*>(reference.get());
+        }
       } else {
         reference = std::make_unique<Program::DataObject>(
           name,
-          translationUnit.m_sourcePath,
           fullName,
-          symbol
+          translationUnit.m_sourcePath,
+          parentLabel,
+          symbol,
+          0
         );
+        
+        if (auto defSym = dynamic_cast<Program::DefinitionSymbol*>(symbol)) {
+          defSym->dataObject = static_cast<Program::DataObject*>(reference.get());
+        }
       }
       pool->emplace(name, std::move(reference));
       return true;
@@ -473,154 +526,22 @@ bool Parser::getOrCreatePartialIdentifier(
   
   auto reference = std::make_unique<Program::LabelObject>(
     name,
-    translationUnit.m_sourcePath,
-    fullName
+    fullName,
+    translationUnit.m_sourcePath
   );
   pool->emplace(name, std::move(reference));
 
   return true;
-  
-  // if (parentLabel == nullptr) {
-  //   const auto it = translationUnit.m_identifierMap.find(identifierToken.value);
-  //   // if is not in the global pool 
-  //   if (it == translationUnit.m_identifierMap.end()) {
-  //     //create with no symbol
-  //     auto reference = std::make_unique<Program::LabelObject>(
-  //       identifierToken.value,
-  //       translationUnit.m_sourcePath
-  //     );
-
-  //     parentLabel = reference.get();
-
-  //     translationUnit.m_identifierMap.emplace(
-  //       identifierToken.value, 
-  //       std::move(reference)
-  //     );
-  //   } else {
-  //     // if is in the global pool
-  //     if (creating) {
-  //       // already exists in global pool
-  //       logError(identifierToken, std::format("Identifier \"{}\" already exists.", identifierToken.value));
-  //       return false;
-  //     } else {
-  //       // already exists in global pool, but just set to parent
-  //       parentLabel = dynamic_cast<Program::LabelObject*>(it->second.get());
-  //       if (parentLabel == nullptr) {
-  //         logError(identifierToken, std::format("Identifier \"{}\" is a data object, and cannot have children.", identifierToken.value));
-  //         return false;
-  //       }
-  //     }
-  //   }
-  // } else {
-  //   // parent
-  //   const auto it = parentLabel->children.find(identifierToken.value);
-  //   if (it == parentLabel->children.end()) {
-  //     //doesnt exist
-  //     if (creating) {
-  //       std::unique_ptr<Program::IdentifierObject> reference = isLabel ?
-  //         std::make_unique<Program::LabelObject>(
-  //           identifierToken.value,
-  //           translationUnit.m_sourcePath,
-  //           symbol
-  //         )
-  //       : std::make_unique<Program::DataObject>(
-  //           identifierToken.value,
-  //           translationUnit.m_sourcePath,
-  //           symbol
-  //       );
-
-  //       parentLabel->children.emplace(
-  //         identifierToken.value, 
-  //         std::move(reference)
-  //       );
-  //     } else {
-  //       auto reference =
-  //         std::make_unique<Program::LabelObject>(
-  //           identifierToken.value,
-  //           translationUnit.m_sourcePath
-  //       );
-        
-  //       parentLabel->children.emplace(
-  //         identifierToken.value, 
-  //         std::move(reference)
-  //       );
-  //     }
-  //   } else {
-  //     //does exist
-  //     if (creating) {
-  //       logError(identifierToken, std::format("Identifier \"{}\" already exists.", identifierToken.value));
-  //     } else {
-  //       // already exists in parent pool, but just set to parent
-  //       parentLabel = dynamic_cast<Program::LabelObject*>(it->second.get());
-  //       if (parentLabel == nullptr) {
-  //         logError(identifierToken, std::format("Identifier \"{}\" is a data object, and cannot have children.", identifierToken.value));
-  //         return false;
-  //       }
-  //     }
-  //   }
-  // }
-
-  // return true;
 }
 
 std::unique_ptr<Program::Expr> Parser::parseIdentifierToExpression(TokenHolder& tokenHolder) {
-  auto expr = std::make_unique<Program::IdentifierExpr>();
+  auto expr = std::make_unique<Program::IdentifierExpr>(tokenHolder.peek().location);
   while (tokenHolder.match(Token::Type::PERIOD, 1) && tokenHolder.notAtEnd()) {
-    expr->identifierPath.push_back(tokenHolder.consume().value);
+    expr->identifierPath.push(tokenHolder.consume().value);
     tokenHolder.skip();
   }
-  expr->identifierPath.push_back(tokenHolder.consume().value);
+  expr->identifierPath.push(tokenHolder.consume().value);
   return expr;
-}
-
-bool Parser::getOrCreateLabel(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program, Program::LabelObject*& parentLabel, bool createLabel, Program::LabelSymbol* symbol, std::string_view& fullName) {
-  const auto currentSegmentToken = tokenHolder.peek();
-  //extend the full name to the end of the current segment
-  fullName = std::string_view(fullName.data(), currentSegmentToken.value.data() - fullName.data() + currentSegmentToken.value.size());
-  if (parentLabel == nullptr) {
-    const auto it = translationUnit.m_identifierMap.find(currentSegmentToken.value);
-    if (it == translationUnit.m_identifierMap.end()) {
-      //create the reference object, without a symbol
-      auto reference = createLabel 
-        ? std::make_unique<Program::LabelObject>(currentSegmentToken.value, translationUnit.m_sourcePath, symbol) 
-        : std::make_unique<Program::LabelObject>(currentSegmentToken.value, translationUnit.m_sourcePath);
-
-      reference->fullName = fullName;
-      translationUnit.m_identifierMap.emplace(currentSegmentToken.value, std::move(reference));
-
-
-    } else if (it->second->isIdentifier()) {
-      logError(tokenHolder.consume(), std::format("Identifier \"{}\" is referenced as a label, but is defined a data object.", currentSegmentToken.value));
-      return false;
-    } else if (it->second->isLabel()) {
-      if (createLabel) {
-        //refdefined
-        logError(tokenHolder.consume(), std::format("Identifier \"{}\" is redefined as a label.", currentSegmentToken.value));
-        return false;
-      } else {
-        parentLabel = static_cast<Program::LabelObject*>(it->second.get());
-      }
-    }
-  } else {
-    const auto it = parentLabel->children.find(currentSegmentToken.value);
-    if (it == parentLabel->children.end()) {
-      //create the reference object, without a symbol
-      auto reference = createLabel
-        ? std::make_unique<Program::LabelObject>(currentSegmentToken.value, parentLabel, symbol)
-        : std::make_unique<Program::LabelObject>(currentSegmentToken.value, parentLabel);
-      reference->fullName = fullName;
-      translationUnit.m_identifierMap.emplace(currentSegmentToken.value, std::move(reference));
-    } else {
-      if (createLabel) {
-        logError(tokenHolder.consume(), std::format("Identifier \"{}\" is redefined as a label.", currentSegmentToken.value));
-        return false;
-      } else {
-        parentLabel = it->second.get();
-      }
-    }
-  }
-
-  return true;
 }
 
 void Parser::parseDataTypeDeclaration(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program) {
@@ -646,30 +567,21 @@ void Parser::parseNonArrayDataType(TokenHolder& tokenHolder, Program::Translatio
     return;
   }
   
-  const auto identifierToken = tokenHolder.consume();
+  auto dataStatement = parseIdentifierNameDefiniton(tokenHolder, translationUnit, program, false);
+  if (!dataStatement) return;
 
-  const auto it = translationUnit.m_identifierMap.find(identifierToken.value);
-  if (it != translationUnit.m_identifierMap.end()) {
-    logError(identifierToken, std::format("\"{}\" redeclared as datatype.", identifierToken.value));
-    return;
-  }
+  auto dataPtr = dynamic_cast<Program::DefinitionSymbol*>(dataStatement.get());
+  if (!dataPtr) return;
 
-  auto dataObject = std::make_unique<Program::DataObject>(identifierToken.value, nullptr, byteSize, 1);
-  auto dataPtr = dataObject.get();
-  auto dataStatement = std::make_unique<Program::DefinitionSymbol>(identifierToken.location);
-  dataPtr->symbolObject = dataStatement.get();
-  dataStatement->name = identifierToken.value;
+  dataPtr->dataObject->elementCount = 1;
+  dataPtr->dataObject->elementSize = byteSize;
   
-
-  translationUnit.m_statementVector.push_back(std::move(dataStatement));
-  translationUnit.m_identifierMap.emplace(identifierToken.value, std::move(dataObject));
-
   if (!tokenHolder.match(Token::Type::COMMA)) {
     logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
     return;
   }
   tokenHolder.skip();
-
+  
   bool isSquare = false;
   if (tokenHolder.match(Token::Type::OPENSQUARE)) {
     isSquare = true;
@@ -684,8 +596,9 @@ void Parser::parseNonArrayDataType(TokenHolder& tokenHolder, Program::Translatio
       return;
     }
   }
-  program.m_unresolvedExpressions.push(expr.get());
-  dataPtr->exprData.push_back(std::move(expr));
+  translationUnit.m_unresolvedExpressions.push(expr.get());
+  dataPtr->dataObject->exprData.push_back(std::move(expr));
+  translationUnit.m_statementVector.push_back(std::move(dataStatement));
 }
 //if not array, is text
 void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program, bool isArray) {
@@ -702,13 +615,12 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
     return;
   }
 
-  auto dataObject = std::make_unique<Program::DataObject>(identifierToken.value, nullptr, 0, 1);
-  auto dataPtr = dataObject.get();
-  auto dataStatement = std::make_unique<Program::DefinitionSymbol>(identifierToken.location);
-  dataPtr->symbolObject = dataStatement.get();
+  auto dataStatement = parseIdentifierNameDefiniton(tokenHolder,translationUnit,program,false);
+  if (!dataStatement) return;
+  auto dataStatPtr = dynamic_cast<Program::DefinitionSymbol*>(dataStatement.get());
+  auto dataPtr = dataStatPtr->dataObject;
 
   translationUnit.m_statementVector.push_back(std::move(dataStatement));
-  translationUnit.m_identifierMap.emplace(identifierToken.value, std::move(dataObject));
 
   if (!tokenHolder.match(Token::Type::COMMA)) {
     logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
@@ -748,7 +660,7 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
     }
     tokenHolder.skip();
 
-    parseElementsOfArray(tokenHolder, program, dataPtr);
+    parseElementsOfArray(tokenHolder, translationUnit, dataPtr);
   } else {
     parseTextData(tokenHolder, program, dataPtr, isAuto);
 
@@ -756,7 +668,7 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
 
 }
 
-void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program& program, Program::DataObject* dataPtr) {
+void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program::DataObject* dataPtr) {
   assert(dataPtr!=nullptr);
 
   if (!tokenHolder.match(Token::Type::OPENBLOCK)) {
@@ -767,7 +679,7 @@ void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program& program, Pr
   
   while (true) {
     auto expr = parseSquareExpression(tokenHolder);
-    program.m_unresolvedExpressions.push(expr.get());
+    translationUnit.m_unresolvedExpressions.push(expr.get());
     dataPtr->exprData.push_back(std::move(expr));
 
     if (!tokenHolder.match(Token::Type::COMMA))
