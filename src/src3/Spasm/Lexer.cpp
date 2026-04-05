@@ -401,6 +401,7 @@ bool SpasmLexer::isAtWordBoundary() {
     case '!':
     case '>':
     case '<':
+    case ':':
     return true;
     default: 
     return false;

@@ -12,7 +12,7 @@ namespace Spasm {
 class Parser {
   public:
 
-  Program ParseTokens(TokenHolder&, Arch::Architecture& arch, Debug::FullLogger* logger = nullptr);
+  void ParseTokens(TokenHolder&, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program, Debug::FullLogger* logger = nullptr);
   private:
   Debug::FullLogger* p_logger;
 
@@ -20,8 +20,8 @@ class Parser {
   inline void logWarning(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(errToken.location.toString() + message);}}
   inline void logDebug(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(errToken.location.toString() + message);}}
 
-  void parseIdentifier(TokenHolder&, Arch::Architecture& arch, Program& program);
-  void parseInstruction(TokenHolder&, const Token&, const Arch::Architecture&, const Arch::Architecture::InstructionDefinition&, Program& program);
+  void parseIdentifier(TokenHolder&, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program);
+  void parseInstruction(TokenHolder&, const Token&, const Arch::Architecture&, const Arch::Architecture::InstructionDefinition&, Program::TranslationUnit& translationUnit, Program& program);
   void parseLabel(TokenHolder&);
 
   std::pair<const Arch::Architecture::RegisterDefinition*, Token> parseExpectRegister(TokenHolder&, const Arch::Architecture&);
@@ -42,13 +42,24 @@ class Parser {
   std::unique_ptr<Program::Expr> parseUnary(TokenHolder&);
   std::unique_ptr<Program::Expr> parsePrimary(TokenHolder&);
 
-  void parseLabelDefinition(TokenHolder&, Program&);
-  bool getOrCreateLabel(TokenHolder&, Program&, Program::LabelObject*&, bool, Program::LabelSymbol*); //returns success
+  //void parseLabelDefinition(TokenHolder&, Program::TranslationUnit&, Program&);
+  //bool getOrCreateIdentiferObject(TokenHolder&, Program::TranslationUnit&, Program&, Program::LabelObject*&, bool, Program::LabelSymbol*, std::string_view&); //returns success
+  bool Parser::getOrCreatePartialIdentifier(
+    TokenHolder&, 
+    Program::TranslationUnit&, 
+    Program&, 
+    Program::LabelObject*&, 
+    bool, 
+    Program::StatementSymbol*, 
+    std::string_view&,
+    bool
+  );
   std::unique_ptr<Program::Expr> parseIdentifierToExpression(TokenHolder&);
-  
-  void parseDataTypeDeclaration(TokenHolder&, Program&);
-  void parseNonArrayDataType(TokenHolder&, Program&, size_t);
-  void parseArrayDataType(TokenHolder&, Program&, bool);
+  void parseIdentifierNameDefiniton(TokenHolder&, Program::TranslationUnit&, Program&, bool);
+
+  //void parseDataTypeDeclaration(TokenHolder&, Program::TranslationUnit&, Program&);
+  void parseNonArrayDataType(TokenHolder&, Program::TranslationUnit&, Program&, size_t);
+  void parseArrayDataType(TokenHolder&, Program::TranslationUnit&, Program&, bool);
   void parseElementsOfArray(TokenHolder&, Program&, Program::DataObject*);
   void parseTextData(TokenHolder&, Program&, Program::DataObject*, bool);
 };

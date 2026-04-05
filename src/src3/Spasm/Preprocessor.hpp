@@ -12,7 +12,7 @@ namespace Spasm {
 class Preprocessor {
   public:
 
-  TokenHolder run(TokenHolder&, SMake::Target&, Spasm::Program&, Debug::FullLogger* logger = nullptr);
+  TokenHolder run(TokenHolder&, SMake::Target&, Spasm::Program::TranslationUnit&, Spasm::Program&, std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>>&, Debug::FullLogger* logger = nullptr);
   private:
   Debug::FullLogger* p_logger;
 
@@ -22,7 +22,7 @@ class Preprocessor {
     std::string_view name;
 
     bool fillWithReplacedContents(TokenHolder& tokenHolder, std::vector<std::vector<Token>> replacementArgs);
-    void addArgument(const std::string_view& arg) {arguments.emplace(arg, arguments.size());}
+    void addArgument(const std::string_view arg) {arguments.emplace(arg, arguments.size());}
   };
 
   struct ReplacementMacro {
@@ -37,7 +37,7 @@ class Preprocessor {
   inline void logDebug(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(errToken.location.toString() + message);}}
 
   void processDefine(TokenHolder&, TokenHolder&);
-  void processInclude(TokenHolder&, SMake::Target&, Spasm::Program&);
+  void processInclude(TokenHolder&, SMake::Target&, Spasm::Program::TranslationUnit&, Spasm::Program&, std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>>&);
   void processEntry(TokenHolder&, SMake::Target&);
 
   FunctionMacro parseFunctionMacroDefinition(TokenHolder&, TokenHolder&);

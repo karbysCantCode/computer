@@ -188,6 +188,7 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
     logError(opcodeToken, errm);
   }
   auto [byteLengthNumber, errmb] = std::safe_stoi((std::string)byteLengthToken.value);
+  int remainingFreeBytesInInstruction = byteLengthNumber - 2;
   if (!errmb.empty()) {
     logError(byteLengthToken, errmb);
   }
@@ -249,40 +250,8 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
       const auto& aliasToken = sourceHolder.consume();
       const auto& immediateToken = sourceHolder.consume();
       
-      size_t indx = 0;
-      bool hasHalfed = false;
-      size_t min = 0;
-      size_t max = 0;
-      std::string currentSlice;
-      while (indx < immediateToken.value.size()) {
-        const char c = immediateToken.value[indx];
-        
-        if (c == ':') {
-          if (hasHalfed) {
-            logError(immediateToken,"Immediate range has multiple colons.");
-            return;
-          }
-          hasHalfed = true;
-          auto [minNum, errm] = std::safe_stoi(currentSlice);
-          if (!errm.empty()) {
-            logError(immediateToken, errm);
-          }
-          min = minNum;
-          currentSlice.clear();
-        } else {
-          currentSlice.push_back(c);
-        }
-        indx++;
-      }
-      auto [maxNum, errm] = std::safe_stoi(currentSlice);
-      if (!errm.empty()) {
-        logError(immediateToken, errm);
-      }
-      max = maxNum;
-      if (!hasHalfed) {
-        logError(immediateToken, "Immediate does not have valid range, did you forget an alias?");
-        return;
-      }
+      const auto [min,max] = parseImmediateRange(immediateToken);
+      
       ImmediateOperand operand(std::string(aliasToken.value), min, max);
       
       instruction.m_operands.push_back(std::move(operand));
@@ -311,6 +280,30 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
       
       instruction.m_operands.push_back(std::move(operand));
       
+   
+    } else if (sourceHolder.peek().value == "IMMX") {
+      sourceHolder.skip();
+
+      const auto& immxByteLengthToken = sourceHolder.consume();
+
+      auto [immxByteLength, errm] = std::safe_stoi((std::string)immxByteLengthToken.value);
+      if (!errm.empty()) {
+        logError(opcodeToken, errm);
+      }
+
+      if (remainingFreeBytesInInstruction - immxByteLength < 0) {
+        logError(immxByteLengthToken, "Insufficient bytes in instruction length to fit this immediate.");
+        return;
+      }
+      remainingFreeBytesInInstruction -= immxByteLength;
+
+      const auto& aliasToken = sourceHolder.consume();
+      const auto& immediateToken = sourceHolder.consume();
+
+      auto [min,max] = parseImmediateRange(immediateToken);
+
+      ExternalImmediateOperand operand((std::string)aliasToken.value, min,max, immxByteLength);
+      instruction.m_operands.push_back(std::move(operand));
     } else {
       logError(sourceHolder.consume(), "Unknown argument type.");
       return;
@@ -368,12 +361,51 @@ Architecture architecturePipeline(std::filesystem::path& archPath, Debug::FullLo
 }
 
 Architecture::KeywordType Architecture::getKeywordTypeOfWord(const std::string_view& word) {
-  const auto& it = m_keywordByTypeMap.find(std::string(word));
+  const auto it = m_keywordByTypeMap.find(std::string(word));
   if (it == m_keywordByTypeMap.end()) {
     return KeywordType::NONE;
   } else {
     return it->second;
   }
+}
+
+std::pair<int,int> Arch::Architecture::parseImmediateRange(const Token& immediateToken) {
+  size_t indx = 0;
+  bool hasHalfed = false;
+  size_t min = 0;
+  size_t max = 0;
+  std::string currentSlice;
+  while (indx < immediateToken.value.size()) {
+    const char c = immediateToken.value[indx];
+    
+    if (c == ':') {
+      if (hasHalfed) {
+        logError(immediateToken,"Immediate range has multiple colons.");
+        return {0,0};
+      }
+      hasHalfed = true;
+      auto [minNum, errm] = std::safe_stoi(currentSlice);
+      if (!errm.empty()) {
+        logError(immediateToken, errm);
+      }
+      min = minNum;
+      currentSlice.clear();
+    } else {
+      currentSlice.push_back(c);
+    }
+    indx++;
+  }
+  auto [maxNum, errm] = std::safe_stoi(currentSlice);
+  if (!errm.empty()) {
+    logError(immediateToken, errm);
+  }
+  max = maxNum;
+  if (!hasHalfed) {
+    logError(immediateToken, "Immediate does not have valid range, did you forget an alias?");
+    return {0,0};
+  }
+
+  return {min,max};
 }
 
 
@@ -436,6 +468,11 @@ void Architecture::debugPrint() const {
           std::cout << "    ImmediateOperand: alias=" << op.alias
                     << " | min=" << op.min
                     << " | max=" << op.max << "\n";
+        } else if constexpr (std::is_same_v<T, ExternalImmediateOperand>) {
+          std::cout << "    ImmediateOperand: alias=" << op.alias
+                    << " | min=" << op.min
+                    << " | max=" << op.max 
+                    << " | bytelength=" << op.byteLength << "\n";
         } else if constexpr (std::is_same_v<T, ConstantIntOperand>) {
           std::cout << "    ConstantIntOperand: value=" << op.constant << "\n";
         } else if constexpr (std::is_same_v<T, ConstantStringOperand>) {

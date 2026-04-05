@@ -84,8 +84,9 @@ Arch::TokenHolder Arch::ArchLexer::run(const std::string& source, const std::fil
       if (currentSlice == "REG"
         ||currentSlice == "NON"
         ||currentSlice == "IMM"
-        ||currentSlice == "CONST") 
-      {
+        ||currentSlice == "CONST"
+        ||currentSlice == "IMMX") 
+        {
         sliceType = Token::Type::ARGUMENTTYPE;
       }
       output.m_tokens.emplace_back(

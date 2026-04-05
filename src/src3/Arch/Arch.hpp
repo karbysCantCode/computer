@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <string>
 #include <variant>
+#include <utility>
 
 #include "Arch/Lexer.hpp"
 #include "Helpers/Debug.hpp"
@@ -60,6 +61,16 @@ class Architecture {
 
     ImmediateOperand(const std::string& alia, int in, int ax) : alias(alia), min(in), max(ax) {}
   };
+
+  struct ExternalImmediateOperand {
+    std::string alias;
+    int min;
+    int max;
+    size_t byteLength;
+
+    ExternalImmediateOperand(const std::string& alia, int in, int ax, size_t byteLngth) : alias(alia), min(in), max(ax), byteLength(byteLngth) {}
+  };
+
   struct ConstantIntOperand {
     int constant;
 
@@ -74,7 +85,7 @@ class Architecture {
   struct InstructionDefinition {  
     public:
     std::string m_name;
-    std::vector<std::variant<RegisterOperand, ImmediateOperand, ConstantIntOperand, ConstantStringOperand>> m_operands;
+    std::vector<std::variant<RegisterOperand, ExternalImmediateOperand, ImmediateOperand, ConstantIntOperand, ConstantStringOperand>> m_operands;
     int m_opcode = -1;
     int m_byteLength = 2;
 
@@ -101,7 +112,10 @@ class Architecture {
   std::unordered_map<std::string, KeywordType> m_keywordByTypeMap = 
   {
     {"TEXT", KeywordType::DATATYPE},
-    {"ARRAY", KeywordType::DATATYPE}
+    {"ARRAY", KeywordType::DATATYPE},
+    {"BYTE", KeywordType::DATATYPE},
+    {"WORD", KeywordType::DATATYPE},
+    {"DWORD", KeywordType::DATATYPE}
   };
 
   KeywordType getKeywordTypeOfWord(const std::string_view& word);
@@ -126,6 +140,7 @@ class Architecture {
   void consumeFormat(TokenHolder&);
   void consumeBitwidth(TokenHolder&);
   void consumeInstruction(TokenHolder&);
+  std::pair<int,int> parseImmediateRange(const Token&);
 
   struct RegisterRangeInfo {
     bool hasDash = false;

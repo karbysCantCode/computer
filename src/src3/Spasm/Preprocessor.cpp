@@ -3,7 +3,7 @@
 #include <format>
 
 namespace Spasm {
-TokenHolder Preprocessor::run(TokenHolder& tokenHolder, SMake::Target& target, Spasm::Program& targetProgram, Debug::FullLogger* logger) {
+TokenHolder Preprocessor::run(TokenHolder& tokenHolder, SMake::Target& target, Spasm::Program::TranslationUnit& translationUnit, Spasm::Program& targetProgram, std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>>&  dependantTranslationUnitMap, Debug::FullLogger* logger) {
   p_logger = logger;
   TokenHolder newTokenHolder;
 
@@ -45,7 +45,7 @@ TokenHolder Preprocessor::run(TokenHolder& tokenHolder, SMake::Target& target, S
           processEntry(currentHolder, target);
         break;
         case NT::DIRECTIVE_INCLUDE:
-          processInclude(currentHolder, target, targetProgram);
+          processInclude(currentHolder, target, translationUnit, targetProgram, dependantTranslationUnitMap);
         break;
         default:
         logError(currentHolder.consume(), "Unknown directive.");
@@ -188,7 +188,7 @@ bool Preprocessor::FunctionMacro::fillWithReplacedContents(TokenHolder& tokenHol
   return true;
 }
 
-void Preprocessor::processInclude(TokenHolder& tokenHolder, SMake::Target& target, Spasm::Program& targetProgram) {
+void Preprocessor::processInclude(TokenHolder& tokenHolder, SMake::Target& target, Spasm::Program::TranslationUnit& translationUnit, Spasm::Program& targetProgram, std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>>& dependantTranslationUnitMap) {
   tokenHolder.skip();
   if (!tokenHolder.match(Token::Type::STRING)) {
     logError(tokenHolder.peek(), "Expected string for @include.");
@@ -204,7 +204,15 @@ void Preprocessor::processInclude(TokenHolder& tokenHolder, SMake::Target& targe
     return;
   }
 
-  targetProgram.m_includedFilesByPath.insert(path);
+  if (targetProgram.m_translationUnits.find(path) == targetProgram.m_translationUnits.end()) {
+    targetProgram.m_filePathsToCreateTranslationUnitsOf.push(path);
+  }
+  translationUnit.m_includedFiles.insert(path);
+
+  if (dependantTranslationUnitMap.find(path) == dependantTranslationUnitMap.end()) {
+    dependantTranslationUnitMap.emplace(path, std::vector<Program::TranslationUnit*>()); 
+  }
+  dependantTranslationUnitMap[path].push_back(&translationUnit);
   
 }
 void Preprocessor::processEntry(TokenHolder& tokenHolder, SMake::Target& target) {

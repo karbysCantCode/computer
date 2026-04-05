@@ -13,6 +13,8 @@
 
 
 namespace Spasm {
+  
+
   class Program {
     public:
 
@@ -30,7 +32,7 @@ namespace Spasm {
 
       void generate() override {}
 
-      LabelSymbol(const SourceLocation loc, const std::string_view& lblName) : name(lblName), StatementSymbol(loc) {}
+      LabelSymbol(const SourceLocation loc, const std::string_view lblName) : name(lblName), StatementSymbol(loc) {}
       LabelSymbol(const SourceLocation loc) : StatementSymbol(loc) {}
 
     };
@@ -55,28 +57,31 @@ namespace Spasm {
 
     struct IdentifierObject {
       std::string_view name;
+
+      // handle when assembling parent child etc
+      std::string_view fullName;
+      const std::filesystem::path& sourcePath;
       size_t address = 0;
       bool addressResolved = false;
-
+      IdentifierObject* parent;
+      std::unordered_map<std::string_view, std::unique_ptr<IdentifierObject>> children;
+      
       virtual bool isLabel() const {return false;}
       virtual bool isIdentifier() const {return false;}
       virtual ~IdentifierObject() = default;
-
-      IdentifierObject() {}
-      IdentifierObject(const std::string_view& nm) : name(nm) {}
+      
+      IdentifierObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath) : sourcePath(srcPath), name(nm) fullName(fullnm) {}
     };
     struct LabelObject : IdentifierObject {
-      LabelObject* parent;
-      std::unordered_map<std::string_view, std::unique_ptr<LabelObject>> children;
       LabelSymbol* symbolObject;
-
+      
       virtual bool isLabel() const override {return true;}
       virtual bool isIdentifier() const override {return false;}
-      LabelObject() {}
-      LabelObject(const std::string_view& nm) : IdentifierObject(nm) {}
-      LabelObject(const std::string_view& nm, LabelObject* parnt) : IdentifierObject(nm), parent(parnt) {}
-      LabelObject(const std::string_view& nm, LabelSymbol* symbol) : IdentifierObject(nm), symbolObject(symbol) {}
-      LabelObject(const std::string_view& nm, LabelObject* parnt, LabelSymbol* symbol) : IdentifierObject(nm), parent(parnt), symbolObject(symbol) {}
+
+      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath) : IdentifierObject(nm, fullnm, srcPath) {}
+      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, LabelObject* parnt) : IdentifierObject(nm, fullnm, srcPath), parent(parnt) {}
+      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, LabelSymbol* symbol) : IdentifierObject(nm, fullnm, srcPath), symbolObject(symbol) {}
+      LabelObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath, LabelObject* parnt, LabelSymbol* symbol) : IdentifierObject(nm, fullnm, srcPath), parent(parnt), symbolObject(symbol) {}
     };
     struct DataObject : IdentifierObject {
       size_t elementCount; // in elements
@@ -84,31 +89,41 @@ namespace Spasm {
       std::vector<unsigned char> data;
       std::vector<std::unique_ptr<Expr>> exprData;
       DefinitionSymbol* symbolObject;
-
+      
       virtual bool isLabel() const override {return false;}
       virtual bool isIdentifier() const override {return true;}
-
-      DataObject(const std::string_view nm) : IdentifierObject(nm) {}
+      
+      DataObject(const std::string_view nm, const std::string_view fullnm, const std::filesystem::path& srcPath) : IdentifierObject(nm, fullnm, srcPath) {}
       DataObject(
-        const std::string_view nm,
+        const std::string_view nm, 
+        const std::string_view fullnm,
+        const std::filesystem::path& srcPath,
         DefinitionSymbol* symbolObj,
         const size_t elemSize,
         const size_t elemCount = 0)
-        : IdentifierObject(nm),
-          elementCount(elemCount),
-          elementSize(elemSize),
-          symbolObject(symbolObj) {}
+        : IdentifierObject(nm, fullnm, srcPath),
+        elementCount(elemCount),
+        elementSize(elemSize),
+        symbolObject(symbolObj) {}
     };
-
-    std::filesystem::path m_sourcePath;
-    std::unordered_set<std::filesystem::path> m_includedFilesByPath; // absolute path
-    std::vector<std::unique_ptr<StatementSymbol>> m_statementVector;
-
-    std::unordered_map<std::string_view, std::unique_ptr<IdentifierObject>> m_identifierMap;
+    
+    class TranslationUnit {
+      public:
+      std::unique_ptr<std::string> m_source;
+      std::filesystem::path m_sourcePath;
+      std::vector<std::unique_ptr<StatementSymbol>> m_statementVector;
+      std::unordered_set<std::filesystem::path> m_includedFiles;
+      std::unordered_map<std::string_view, std::unique_ptr<IdentifierObject>> m_identifierMap;
+      size_t m_dependenciesResolved = 0;
+    };
+    
+    
+    std::stack<std::filesystem::path> m_filePathsToCreateTranslationUnitsOf;
+    std::unordered_map<std::filesystem::path, std::unique_ptr<TranslationUnit>> m_translationUnits;
     std::stack<Expr*> m_unresolvedExpressions;
+    
 
-
-    void parseTokens();
+    void debugPrint() const;
 
 
 
@@ -119,7 +134,7 @@ namespace Spasm {
 
     struct IdentifierExpr : Expr {
       std::vector<std::string_view> identifierPath;
-      IdentifierExpr(const std::string_view& iden) {
+      IdentifierExpr(const std::string_view iden) {
         identifierPath.push_back(iden);
       }
       IdentifierExpr() {}
@@ -183,6 +198,13 @@ namespace Spasm {
       
     };
     private:
+
+    void debugPrintStatement(const StatementSymbol* stmt, int indent) const;
+    void debugPrintIdentifier(const IdentifierObject* obj, int indent) const;
+    void debugPrintExpr(const Expr* expr, int indent) const;
+    void debugPrintOperand(const Operand* op, int indent) const;
+
+    static void indent(int count);
     
   };
 

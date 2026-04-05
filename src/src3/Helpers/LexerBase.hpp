@@ -7,7 +7,7 @@ LexerBase(const std::string& source) : p_source(source) {}
 LexerBase() {}
 
 protected:
-std::string p_source;
+std::string_view p_source;
 size_t p_index = 0;
 size_t p_column = 1;
 size_t p_line = 1;

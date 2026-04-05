@@ -65,7 +65,7 @@ clz  2 24 two   REG rd r0-r15 REG ra r0-r15
 ; #######
 
 mov  2 26 two    REG rd r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm REG rs r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm
-movi 4 27 normal REG rd r0-r15 CONST 0 CONST 0
+movi 4 27 normal REG rd r0-r15 CONST 0 CONST 0 IMMX 2 immediate 0:65535
 cmov 2 36 normal IMM condition 0:15 REG rd r0-r7 REG rs r0-r7 ;maybe expand into seperate instr
 swap 2 37 two    REG ra r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm REG rb r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm
 
@@ -80,11 +80,11 @@ lodlr2 2 47 memtwo  CONST 1 REG rd r0-r15 REG rs r0-r15<mo<sp<fp<ip ; load abs
 
 
 stea    2 31 memnarg REG rs r0-r15 CONST 0 IMM immediate 0:31                  ; stea intra imm
-steal   4 32 memtwo  CONST 0 REG rs r0-r15 NON IMM immediate 0:65535           ; stea long imm
+steal   4 32 memtwo  CONST 0 REG rs r0-r15 NON IMMX 2 immediate 0:65535           ; stea long imm
 stear   2 33 memtwo  CONST 0 REG rs r0-r15 REG rAddr r0-r15             ; stea register
 stolr   2 48 memtwo  CONST 0 REG rs r0-r15 REG rAddr r0-r15<mo<sp<fp<ip ; store abs
 stea2   2 31 memnarg REG rs r0-r15 CONST 1 IMM immediate 0:31                  ; stea intra imm
-steal2  4 32 memtwo  CONST 1 REG rs r0-r15 NON IMM immediate 0:65535           ; stea long imm
+steal2  4 32 memtwo  CONST 1 REG rs r0-r15 NON IMMX immediate 0:65535           ; stea long imm
 stear2  2 33 memtwo  CONST 1 REG rs r0-r15 REG rAddr r0-r15             ; stea register
 stolr2  2 48 memtwo  CONST 1 REG rs r0-r15 REG rAddr r0-r15<mo<sp<fp<ip ; store abs
 
