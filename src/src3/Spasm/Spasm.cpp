@@ -3,6 +3,7 @@
 #include "Spasm/Lexer.hpp"
 #include "Spasm/Parser.hpp"
 #include "Spasm/Linker.hpp"
+#include "Spasm/OutputGenerator.hpp"
 #include "Spasm/Preprocessor.hpp"
 #include "Helpers/FileHelper.hpp"
 
@@ -12,7 +13,6 @@ namespace Spasm {
 
   void spasmPipeline(SMake::Project& project, Arch::Architecture& arch, CLIOptions& options) {
     for (auto& target : project.m_targets) {
-
       Debug::FullLogger logger;
 
       Program program;
@@ -53,7 +53,17 @@ namespace Spasm {
         }
       }
       
-      linker.run();
+      Linker::LinkedResult linkedResult = linker.run(&logger);
+
+      OutputGenerator generator;
+
+      generator.run(target.second, linker, linkedResult, &logger);
+
+      if (!logger.Errors.isEmpty()) {
+        logger.Errors.logMessage("Compilation aborted after linking due to error(s) in compilation pipeline. (not exclusively linker)");
+      } else {
+
+      }
 
       if (!options.silent) {
         while (!logger.Errors.isEmpty()) {
@@ -181,6 +191,34 @@ EvaluatePairType Program::BinaryExpr::evaluate(NonOwningIdentifierMapType& idenM
   return {0, "Unforseen error in binary expression evaluation!"};
 }
 
+std::string_view Program::IdentifierObject::fullName() const {
+  const auto* start = nameSegments[0].data();
+  const auto& backRef = nameSegments.back();
+  const auto* end = backRef.data() + backRef.size();
+  return std::string_view(start, end - start);
+}
+
+//depth 1 and 0 both return the global identifier
+//depth N > 1 returns N segments 
+std::string_view Program::IdentifierObject::getNDepthName(size_t depth) const {
+  depth = depth == 0 ? 0 : depth-1;
+  depth = depth > nameSegments.size() ? nameSegments.size() : depth;
+  const auto* start = nameSegments[0].data();
+  const auto& backRef = nameSegments[depth];
+  const auto* end = backRef.data() + backRef.size();
+  return std::string_view(start, end - start);
+}
+
+std::vector<std::string_view> Program::IdentifierObject::getNDepthNameVector(size_t depth) const {
+  depth = depth == 0 ? 1 : depth;
+  depth = depth > nameSegments.size() ? nameSegments.size() : depth;
+  return std::vector<std::string_view>(nameSegments.begin(), nameSegments.begin() + depth);
+}
+
+std::string_view Program::IdentifierObject::name() const {
+  return nameSegments.back();
+}
+
 void Spasm::Program::debugPrint() const {
   std::cout << "\n=========== PROGRAM DEBUG DUMP ===========\n";
 
@@ -240,7 +278,7 @@ void Spasm::Program::debugPrintStatement(const StatementSymbol* stmt, int indent
 
 void Spasm::Program::debugPrintIdentifier(const IdentifierObject* obj, int indentLevel) const {
   indent(indentLevel);
-  std::cout << "Name: " << obj->name
+  std::cout << "Name: " << obj->name()
             << " Address: " << obj->address
             << " Resolved: " << obj->addressResolved
             << "\n";

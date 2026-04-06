@@ -19,6 +19,9 @@ class Parser {
   inline void logError(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Errors.logMessage(errToken.location.toString() + message);}}
   inline void logWarning(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(errToken.location.toString() + message);}}
   inline void logDebug(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(errToken.location.toString() + message);}}
+  inline void logError(const SourceLocation& sourceLocation, const std::string& message) const{if (p_logger != nullptr) {p_logger->Errors.logMessage(sourceLocation.toString() + message);}}
+  inline void logWarning(const SourceLocation& sourceLocation, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(sourceLocation.toString() + message);}}
+  inline void logDebug(const SourceLocation& sourceLocation, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(sourceLocation.toString() + message);}}
 
   void parseIdentifier(TokenHolder&, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program);
   void parseInstruction(TokenHolder&, const Token&, const Arch::Architecture&, const Arch::Architecture::InstructionDefinition&, Program::TranslationUnit& translationUnit, Program& program);
@@ -50,8 +53,8 @@ class Parser {
     Program::LabelObject*&, 
     bool, 
     Program::StatementSymbol*, 
-    std::string_view&,
-    bool
+    bool,
+    std::vector<std::string_view>&
   );
   std::unique_ptr<Program::Expr> parseIdentifierToExpression(TokenHolder&);
   std::unique_ptr<Program::StatementSymbol> parseIdentifierNameDefiniton(TokenHolder&, Program::TranslationUnit&, Program&, bool);
@@ -59,7 +62,7 @@ class Parser {
   void parseDataTypeDeclaration(TokenHolder&, Program::TranslationUnit&, Program&);
   void parseNonArrayDataType(TokenHolder&, Program::TranslationUnit&, Program&, size_t);
   void parseArrayDataType(TokenHolder&, Program::TranslationUnit&, Program&, bool);
-  void parseElementsOfArray(TokenHolder&, Program::TranslationUnit&, Program::DataObject*);
-  void parseTextData(TokenHolder&, Program&, Program::DataObject*, bool);
+  void parseElementsOfArray(TokenHolder&, Program::TranslationUnit&, Program::DataObject*, bool);
+  void parseTextData(TokenHolder&, Program::DataObject*, bool);
 };
 }

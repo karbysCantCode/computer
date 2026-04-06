@@ -26,3 +26,7 @@ nop
 nop
 add r4, r2, r4
 BYTE hello, 10
+
+helper:
+helper.main:
+TEXT helper.main.text, AUTO, "Hello World!"

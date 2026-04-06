@@ -7,13 +7,17 @@
 namespace Spasm {
 class Linker {
 public:
-  std::queue<Program::TranslationUnit*> run(
-    
+struct LinkedResult {
+  std::queue<Program::TranslationUnit*> translationUnitQueue;
+  size_t maxAddress = 0;
+};
+  LinkedResult run(
+    Debug::FullLogger* logger
   );
 
   void linkTU(
     Program::TranslationUnit&, 
-    std::queue<Program::TranslationUnit*>&
+    LinkedResult&
   );
 
   inline void addIndependentTranslationUnits(Program::TranslationUnit* tuptr) {m_independentTranslationUnits.push(tuptr);}
@@ -23,6 +27,8 @@ public:
   std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>> m_dependantTranslationUnitMap;
   std::unordered_map<std::string_view, Program::IdentifierObject*> m_fullNameCollatedIdentifierMap;
   std::unordered_map<std::string_view, Program::IdentifierObject*> m_globalIdentifierMap;
+  std::unordered_map<std::string_view, std::unique_ptr<Program::LabelObject>> m_temporaryIdentifierOwner;
+  bool m_hadError;
 
 private:
   Debug::FullLogger* p_logger;
@@ -34,7 +40,14 @@ private:
   inline void logDebug(const SourceLocation& sLoc, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(sLoc.toString() + message);}}
 
   bool iteratorAlreadyInFullNameMap(Spasm::Program::NonOwningIdentifierMapType::iterator iterator) const {return iterator != m_fullNameCollatedIdentifierMap.end();}
-  bool nameAlreadyInGlobalMap(std::string_view& fullname) const {return m_globalIdentifierMap.find(fullname) != m_globalIdentifierMap.end();}
+  bool nameAlreadyInGlobalMap(const std::string_view& fullname) const {return m_globalIdentifierMap.find(fullname) != m_globalIdentifierMap.end();}
+
+  void placeDefinitionSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit);
+
+  void placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit);
+  void checkForUndefinedIdentifiers();
+  void resolveExpressions(Program::TranslationUnit& translationUnit);
+  void createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::IdentifierObject* identifierObject);
 };
 
 }

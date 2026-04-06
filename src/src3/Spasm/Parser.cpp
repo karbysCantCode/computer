@@ -89,6 +89,7 @@ void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken,
   auto instructionSymbol = std::make_unique<Program::InstructionSymbol>(instrToken.location, instruction);
   instructionSymbol->operands.reserve(instruction.m_operands.size()); // reserve to prevent resizing overhead
   
+  size_t instructionIndex = 0;
   for (const auto& operand : instruction.m_operands) {
     bool skipComma = true;
 
@@ -98,12 +99,12 @@ void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken,
       if constexpr (std::is_same_v<T, Arch::Architecture::ConstantIntOperand>) {
         skipComma = false;
         auto programOperand = std::make_unique<Program::ConstantOperand>(instrToken.location, op.constant);
-        instructionSymbol->operands.push_back(std::move(programOperand));
+        instructionSymbol->operands[instructionIndex] = std::move(programOperand);
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::ConstantStringOperand>) {
         //this is kind of innecifiaent, because per instruction, the constant str will be converted
         skipComma = false;
-        instructionSymbol->operands.push_back(std::move(convertConstantStringToOperand(arch, op)));
+        instructionSymbol->operands[instructionIndex] = std::move(convertConstantStringToOperand(arch, op));
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::RegisterOperand>) {
         
@@ -121,26 +122,27 @@ void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken,
           programOperand = std::make_unique<Program::RegisterOperand>(identifierToken.location, *regptr);
         }
 
-        instructionSymbol->operands.push_back(std::move(programOperand));
+        instructionSymbol->operands[instructionIndex] = std::move(programOperand);
 
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::ImmediateOperand>) {
         auto programOperand = parseExpectImmediate(tokenHolder);
         //get a ptr to the expression of program operand to give it to the unresolved list
         translationUnit.m_unresolvedExpressions.push(static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get());
-        instructionSymbol->operands.push_back(std::move(programOperand));
+        instructionSymbol->operands[instructionIndex] = std::move(programOperand);
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::ExternalImmediateOperand>) {
         auto programOperand = parseExpectImmediate(tokenHolder);
         //get a ptr to the expression of program operand to give it to the unresolved list
         translationUnit.m_unresolvedExpressions.push(static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get());
-        instructionSymbol->operands.push_back(std::move(programOperand));
+        instructionSymbol->operands[instructionIndex] = std::move(programOperand);
       }
     }, operand);
 
     if (tokenHolder.match(Token::Type::COMMA) && skipComma) {
       tokenHolder.skip();
     }
+    instructionIndex++;
   }
 
   translationUnit.m_statementVector.push_back(std::move(instructionSymbol));
@@ -375,14 +377,15 @@ std::unique_ptr<Program::Expr> Parser::makeErrorExpression(const Token& errToken
 }
 
 void Parser::parseLabelDefinition(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program) {
-  auto symbolObject = parseIdentifierNameDefiniton(tokenHolder, translationUnit, program, true);
-  translationUnit.m_statementVector.push_back(std::move(symbolObject));
+  auto statementSymbol = parseIdentifierNameDefiniton(tokenHolder, translationUnit, program, true);
+  if (!statementSymbol) return;
+  translationUnit.m_statementVector.push_back(std::move(statementSymbol));
 }
 
 //if not isLabel, is definition
 std::unique_ptr<Program::StatementSymbol> Parser::parseIdentifierNameDefiniton(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program, bool isLabel) {
   Program::LabelObject* parentLabel = nullptr;
-  std::string_view fullName = tokenHolder.peek().value;
+  std::vector<std::string_view> nameSegments;
 
   auto shouldContinue = [&]() {
     return isLabel ?
@@ -399,8 +402,8 @@ std::unique_ptr<Program::StatementSymbol> Parser::parseIdentifierNameDefiniton(T
       parentLabel,
       false,
       nullptr,
-      fullName,
-      isLabel
+      isLabel,
+      nameSegments
     )) {
       // error, skip until name "should" be passed
       if (isLabel) {
@@ -415,7 +418,7 @@ std::unique_ptr<Program::StatementSymbol> Parser::parseIdentifierNameDefiniton(T
     }
 
     if (tokenHolder.match(Token::Type::PERIOD, 1)) {
-      tokenHolder.skip();
+      tokenHolder.skip(2);
     }
   }
 
@@ -440,8 +443,8 @@ std::unique_ptr<Program::StatementSymbol> Parser::parseIdentifierNameDefiniton(T
     parentLabel,
     true,
     symbol.get(),
-    fullName,
-    isLabel
+    isLabel,
+    nameSegments
   );
 
   tokenHolder.skip(isLabel ? 2 : 1); 
@@ -455,13 +458,13 @@ bool Parser::getOrCreatePartialIdentifier(
   Program::LabelObject*& parentLabel, 
   bool creating, 
   Program::StatementSymbol* symbol, 
-  std::string_view& fullName,
-  bool isLabel
+  bool isLabel,
+  std::vector<std::string_view>& nameSegments
 ) {
   const auto identifierToken = tokenHolder.peek();
   const auto& name = identifierToken.value;
-  //extend the full name to the end of the current segment
-  fullName = std::string_view(fullName.data(), name.data() - fullName.data() + name.size());
+  nameSegments.push_back(name);
+
 
   auto* pool = parentLabel == nullptr ?
      &translationUnit.m_identifierMap
@@ -477,7 +480,7 @@ bool Parser::getOrCreatePartialIdentifier(
 
     parentLabel = dynamic_cast<Program::LabelObject*>(it->second.get());
     if (parentLabel == nullptr) {
-      logError(identifierToken, std::format("Identifier \"{}\" is a data object, and cannot have children.", identifierToken.value));
+      logError(identifierToken, std::format("Identifier \"{}\" is a data object, and cannot have children. (DB1)", identifierToken.value));
       return false;
     }
 
@@ -490,23 +493,22 @@ bool Parser::getOrCreatePartialIdentifier(
       std::unique_ptr<Program::IdentifierObject> reference;
       if (isLabel) {
         reference = std::make_unique<Program::LabelObject>(
-          name,
-          fullName,
           translationUnit.m_sourcePath,
           symbol
         );
+        reference->nameSegments = std::move(nameSegments);
         if (auto labSym = dynamic_cast<Program::LabelSymbol*>(symbol)) {
           labSym->labelObject = static_cast<Program::LabelObject*>(reference.get());
         }
       } else {
         reference = std::make_unique<Program::DataObject>(
-          name,
-          fullName,
           translationUnit.m_sourcePath,
           parentLabel,
           symbol,
           0
         );
+
+        reference->nameSegments = std::move(nameSegments);
         
         if (auto defSym = dynamic_cast<Program::DefinitionSymbol*>(symbol)) {
           defSym->dataObject = static_cast<Program::DataObject*>(reference.get());
@@ -518,17 +520,19 @@ bool Parser::getOrCreatePartialIdentifier(
   }
 
   //add symbol-less to pool
-  parentLabel = dynamic_cast<Program::LabelObject*>(it->second.get());
-  if (parentLabel == nullptr) {
-    logError(identifierToken, std::format("Identifier \"{}\" is a data object, and cannot have children.", identifierToken.value));
+  const auto originalParentLabel = parentLabel;
+  parentLabel = dynamic_cast<Program::LabelObject*>(parentLabel);
+  if (!parentLabel && originalParentLabel) {
+    logError(identifierToken, std::format("Identifier \"{}\" is a data object, and cannot have children. (DB2)", identifierToken.value));
     return false;
   }
   
   auto reference = std::make_unique<Program::LabelObject>(
-    name,
-    fullName,
     translationUnit.m_sourcePath
   );
+
+  parentLabel = reference.get();
+  reference->nameSegments = nameSegments; //copy
   pool->emplace(name, std::move(reference));
 
   return true;
@@ -598,7 +602,7 @@ void Parser::parseNonArrayDataType(TokenHolder& tokenHolder, Program::Translatio
   }
   translationUnit.m_unresolvedExpressions.push(expr.get());
   dataPtr->dataObject->exprData.push_back(std::move(expr));
-  translationUnit.m_statementVector.push_back(std::move(dataStatement));
+  translationUnit.m_definitionVector.emplace_back(dynamic_cast<Program::DefinitionSymbol*>(dataStatement.release()));
 }
 //if not array, is text
 void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program, bool isArray) {
@@ -607,20 +611,20 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
     logError(tokenHolder.peek(), std::format("Expected identifier, got \"{}\"", tokenHolder.peek().value));
     return;
   }
-  const auto identifierToken = tokenHolder.consume();
+  // const auto identifierToken = tokenHolder.consume();
 
-  const auto it = translationUnit.m_identifierMap.find(identifierToken.value);
-  if (it != translationUnit.m_identifierMap.end()) {
-    logError(identifierToken, std::format("\"{}\" redeclared as datatype.", identifierToken.value));
-    return;
-  }
+  // const auto it = translationUnit.m_identifierMap.find(identifierToken.value);
+  // if (it != translationUnit.m_identifierMap.end()) {
+  //   logError(identifierToken, std::format("\"{}\" redeclared as datatype.", identifierToken.value));
+  //   return;
+  // }
 
   auto dataStatement = parseIdentifierNameDefiniton(tokenHolder,translationUnit,program,false);
   if (!dataStatement) return;
   auto dataStatPtr = dynamic_cast<Program::DefinitionSymbol*>(dataStatement.get());
   auto dataPtr = dataStatPtr->dataObject;
 
-  translationUnit.m_statementVector.push_back(std::move(dataStatement));
+  translationUnit.m_definitionVector.emplace_back(dynamic_cast<Program::DefinitionSymbol*>(dataStatement.release()));
 
   if (!tokenHolder.match(Token::Type::COMMA)) {
     logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
@@ -639,11 +643,11 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
     return;
   }
 
-  if (!tokenHolder.match(Token::Type::COMMA)) {
+  if (!tokenHolder.match(Token::Type::COMMA, 1)) {
     logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
     return;
   }
-  tokenHolder.skip();
+  tokenHolder.skip(2);
 
   if (isArray) {
     //consume element size
@@ -660,15 +664,15 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
     }
     tokenHolder.skip();
 
-    parseElementsOfArray(tokenHolder, translationUnit, dataPtr);
+    parseElementsOfArray(tokenHolder, translationUnit, dataPtr, isAuto);
   } else {
-    parseTextData(tokenHolder, program, dataPtr, isAuto);
+    parseTextData(tokenHolder, dataPtr, isAuto);
 
   }
 
 }
 
-void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program::DataObject* dataPtr) {
+void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program::DataObject* dataPtr, bool isAuto) {
   assert(dataPtr!=nullptr);
 
   if (!tokenHolder.match(Token::Type::OPENBLOCK)) {
@@ -677,6 +681,7 @@ void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program::Translation
   }
   tokenHolder.skip();
   
+  //doesnt need a check bc the comma check -> break will exit if is at end! (bc returns \0)
   while (true) {
     auto expr = parseSquareExpression(tokenHolder);
     translationUnit.m_unresolvedExpressions.push(expr.get());
@@ -692,9 +697,15 @@ void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program::Translation
     logError(tokenHolder.peek(), std::format("Expected '}}', got \"{}\"", tokenHolder.peek().value));
     return;
   }
+  if (isAuto) {
+    dataPtr->elementCount = dataPtr->exprData.size();
+  } else if (dataPtr->exprData.size() != dataPtr->elementCount) { // not auto & cond
+    logError(dataPtr->symbolObject->location, std::format("{} elements expected, {} given.", dataPtr->elementCount, dataPtr->exprData.size()));
+  }
 }
-void Parser::parseTextData(TokenHolder& tokenHolder, Program& program, Program::DataObject* dataPtr, bool isAuto) {
+void Parser::parseTextData(TokenHolder& tokenHolder, Program::DataObject* dataPtr, bool isAuto) {
   assert(dataPtr!=nullptr);
+  dataPtr->elementSize = 1;
 
   const auto valueToken = tokenHolder.peek();
   switch (valueToken.type) {
@@ -727,6 +738,10 @@ void Parser::parseTextData(TokenHolder& tokenHolder, Program& program, Program::
         dataPtr->data.push_back(valueToken.value[pos++]);
       }
 
+      if (isAuto) {
+        dataPtr->elementCount = pos;
+      }
+
       break;
     }
     default: {
@@ -734,6 +749,8 @@ void Parser::parseTextData(TokenHolder& tokenHolder, Program& program, Program::
       break;
     }
   }
+
+  dataPtr->rawDataValid = true;
 }
 
 }
