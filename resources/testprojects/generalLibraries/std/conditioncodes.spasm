@@ -1,0 +1,18 @@
+@define c_eq 0     ; equal
+@define c_ne 1     ; not equal
+@define c_gt 2     ; signed greater than
+@define c_lt 3     ; signed less than
+@define c_ge 4     ; signed greater than or equal
+@define c_le 5     ; signed less than or equal
+@define c_hs 6     ; unsigned higher or same
+@define c_cs 6     ; carry set 
+@define c_lo 7     ; unsigned lower 
+@define c_cc 7     ; carry clear 
+@define c_mi 8     ; negative (or minus)
+@define c_pl 9     ; positive (or plus)
+@define c_al 10    ; always execute
+@define c_nv 11    ; never execute
+@define c_vs 12    ; signed overflow
+@define c_vc 13    ; no signed overflow
+@define c_hi 14    ; unsigned higher
+@define c_ls 15    ; unsigned lower or same

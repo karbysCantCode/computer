@@ -1,18 +1,40 @@
 #include "Spasm/OutputGenerator.hpp"
 
+#include "Helpers/FileHelper.hpp"
 
 namespace Spasm {
 void OutputGenerator::run(
   SMake::Target& target,
   Linker& linker,
   Linker::LinkedResult& linkedResult,
+  size_t entrySymbolJumpByteLength,
   Debug::FullLogger* logger
 ) {
   p_logger = logger;
 
-  std::vector<uint8_t> binaryData;
-  binaryData.resize(linkedResult.maxAddress-1);
+  if (linkedResult.maxAddress == 0) {
+    return;
+  }
 
+  std::vector<uint8_t> binaryData;
+  binaryData.resize(linkedResult.maxAddress);
+
+  // jump to entry symbol bytes
+  auto it = linker.m_fullNameCollatedIdentifierMap.find(target.m_entrySymbol);
+  if (it != linker.m_fullNameCollatedIdentifierMap.end()) {
+    const uint8_t header[] = { 
+      0x40, 0x6C, 
+        static_cast<uint8_t>( it->second->address        & 0xff ),
+        static_cast<uint8_t>((it->second->address >> 8 ) & 0xff ),
+      0x80, 0x6C, 
+        static_cast<uint8_t>((it->second->address >> 16) & 0xff ),
+        static_cast<uint8_t>((it->second->address >> 24) & 0xff ),
+      0x01, 0x6B,
+      0x82, 0x6B,
+      0x10, 0xA8
+    };
+    std::memcpy(binaryData.data(), header, entrySymbolJumpByteLength);
+  }
 
 
   while (!linkedResult.translationUnitQueue.empty()) {
@@ -67,7 +89,7 @@ void OutputGenerator::run(
                 value = static_cast<uint32_t>(value) & mask;
               }
             }
-            else if constexpr (std::is_same_v<T, Arch::Architecture::ExternalImmediateOperand>) {
+            else if constexpr (std::is_same_v<T, Arch::Architecture::ExternalImmediateOperand>) { 
               unsigned long long sValue = operandPtr->getValue();
               if (sValue < opDef.min || sValue > opDef.max) {
                 logError(instructionStatement.location, std::format("Evaluated expression out of field bounds, evaluated: {}, expected {} < value < {}", value, opDef.min, opDef.max));
@@ -80,8 +102,9 @@ void OutputGenerator::run(
                 sValue &= mask;
               }
 
-              extraData.resize(extraData.size() + opDef.byteLength);
-              std::memcpy(extraData.data() + extraData.size() - opDef.byteLength, &value, std::min(sizeof(unsigned long long),opDef.byteLength));
+              const size_t extraDataOgSize = extraData.size();
+              extraData.resize(extraDataOgSize + opDef.byteLength);
+              std::memcpy(extraData.data() + extraDataOgSize, &sValue, std::min(sizeof(unsigned long long),opDef.byteLength));
             }
           }, instructionDefinition.m_operands[operandIndex]);
           
@@ -90,6 +113,18 @@ void OutputGenerator::run(
             mainInstructionBits |= value << fieldShiftAmount;
           }
         }
+
+
+        std::string extraString = " ";
+        extraString.reserve(extraData.size() * 2);
+        if (extraData.size() == 0)
+          extraString += "    ";
+        for (uint8_t byte : extraData)
+          extraString += std::format("{:02x}", byte);
+        std::string debugString = std::format("{:07x}: {:04x}{}   ; {}", instructionStatement.address, mainInstructionBits, extraString, instructionStatement.source);
+        std::cout << debugString;
+
+
         
         std::memcpy(binaryData.data() + instructionStatement.address, &mainInstructionBits, 2);
         if (!extraData.empty()) {
@@ -101,7 +136,7 @@ void OutputGenerator::run(
     }
   }
 
-  std::cout << "Hex Dump:";
+  std::cout << "\nHex Dump:";
   for (size_t byteIndex = 0; byteIndex < binaryData.size(); byteIndex++) {
 
     if (! (byteIndex % 8) ) {
@@ -113,7 +148,16 @@ void OutputGenerator::run(
               << static_cast<int>(binaryData[byteIndex]);
   }
 
-  std::cout << std::dec;
+  std::cout << "\nRaw Hex Dump:\n";
+  for (const auto& byte : binaryData) {
+    std::cout << std::hex << std::uppercase
+              << std::setw(2) << std::setfill('0')
+              << static_cast<int>(byte);
+  }
+ 
+  std::cout << std::dec << std::endl;
+  
+  FileHelper::writeBytesToFile(binaryData, std::filesystem::weakly_canonical(std::filesystem::path(target.m_outputDirectory) / std::filesystem::path(target.m_outputName)), p_logger);
 }
 
 void OutputGenerator::fillBytesFromDataDeclarations(const Program::TranslationUnit& translationUnit, std::vector<uint8_t>& binaryData) {

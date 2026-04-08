@@ -1,0 +1,8 @@
+.target basic
+.flist main_files
+.search_add(main_files, all, ".spasm", "src/")
+.include_directory(basic, "../lib")
+.add_target(basic, main_files)
+.output(basic, ".", "basic.bin")
+.format(basic, "bin")
+.entry(basic, "__start")

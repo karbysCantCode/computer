@@ -72,6 +72,7 @@ namespace Spasm {
     bool isWhitespace();
     bool isAtWordBoundary();
     void consumeUntilNotNumber();
+    void consumeUntilNotHex();
     Token::NicheType getNicheTypeAndSetSliceOverNumber();
   };
 }

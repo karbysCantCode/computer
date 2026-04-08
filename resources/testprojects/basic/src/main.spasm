@@ -1,0 +1,13 @@
+@include "std/std.spasm"
+__start:
+TEXT helloWorldString, AUTO, "Hello World!"
+movi r1, 1
+movi r2, 2
+mov mol, r1
+mov moh, r2
+jmpr mo
+
+; 32l -> 16  Y
+; 32h -> 16  Y
+; 16  -> 32l
+; 16  -> 32h

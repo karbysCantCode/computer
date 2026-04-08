@@ -545,7 +545,7 @@ def build_alu_control_pla():
     return pla
 
 def build_read_control_pla():
-    pla = PLA(input_width=6, output_width=22)
+    pla = PLA(input_width=6, output_width=23)
 
     pla.register_bit("mute EXE forwarding", 0)
     pla.register_bit("mute MEM forwarding", 1)
@@ -584,14 +584,15 @@ def build_read_control_pla():
         "two field 1" : 3
     })
     pla.register_bit("force assert memory or instruction 32 reg to 32 path via top half A (A path still accesible for r0-r15)",21)
+    pla.register_bit("make above force assert ONLY IF path A is selecting read from r0-r15",22)
     pla.register_bit("instruction register instead of memory offset", 15)
-    pla.register_bit("Allow instruction immediate to A path (if A path isnt allowing data)", 19)
+    pla.register_bit("Allow instruction immediate to A path (if A path is selecting from a FULL 32 bit register)", 19)
     pla.register_bit("Use two field 2 for 32 and spec reg write selecting (auto doesn't work with this.)", 20)
     return pla
 
 
 def build_execute_control_pla():
-    pla = PLA(input_width=6, output_width=23)
+    pla = PLA(input_width=6, output_width=24)
 
     pla.register_onehot("32 bit Memory addrews Path assert", {
         "32_BIT_AGU_ASSERT_MEMORY_PATH" : 0,
@@ -636,6 +637,7 @@ def build_execute_control_pla():
     pla.register_bit("make write enable dependant on condition eval (write enable fetch unit must be active for this to work)", 20)
     pla.register_bit("make write to register signals dependant on condition eval", 21)
     pla.register_bit("path B to AGU instead of path A", 22)
+    pla.register_bit("Shift 16 bit AGU input up by 1 (*2) to make an offset \"per instruction\"", 23)
 
 
     return pla

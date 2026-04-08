@@ -152,7 +152,7 @@ void Project::parseSearch(TokenHolder& tokenHolder, bool clear)  {
       tokenHolder.skip(2);
       continue;
     }
-    searchHandler(flistIterator->second, fileTypes, m_makefilePath/std::filesystem::path(tokenHolder.peek(1).value), searchType, searchDepth, tokenHolder);
+    searchHandler(flistIterator->second, fileTypes, m_makefilePath.parent_path() / std::filesystem::path(tokenHolder.peek(1).value), searchType, searchDepth, tokenHolder);
     tokenHolder.skip(2);
   }
   tokenHolder.skip();
@@ -419,13 +419,13 @@ void Project::parseKeywordOutput(TokenHolder& tokenHolder) {
     return;
   }
 
-  if (targetIterator->second.m_outputDirectory.length() != 0) {
-    logWarning(tokenHolder.peek(3), "Output directory \"" + targetIterator->second.m_outputDirectory + "\" is being replaced by \"" + static_cast<std::string>(tokenHolder.peek(3).value) + '"');
+  if (targetIterator->second.m_outputDirectory.string().size() != 0) {
+    logWarning(tokenHolder.peek(3), "Output directory \"" + targetIterator->second.m_outputDirectory.string() + "\" is being replaced by \"" + static_cast<std::string>(tokenHolder.peek(3).value) + '"');
   }
 
-  auto path = parsePath(tokenHolder.peek(3).value, tokenHolder);
+  auto path = std::filesystem::path(tokenHolder.peek(3).value);//parsePath(tokenHolder.peek(3).value, tokenHolder);
   if (!path.empty()) {
-    targetIterator->second.m_outputDirectory = path.string();
+    targetIterator->second.m_outputDirectory = m_makefilePath.parent_path() / path;
   }
   tokenHolder.skip(4);
   if (tokenHolder.isAtEnd()) {return;}
@@ -720,11 +720,29 @@ void printProject(const Project& project)
     cout << "===== END PROJECT =====" << endl;
 }
 
-std::filesystem::path Target::searchForPathInIncludes(const std::filesystem::path& path) {
+bool checkIfPathExists(std::filesystem::path* resultPath, const std::filesystem::path& pathToCheck) {
+  std::error_code ec;
+  if (std::filesystem::is_regular_file(pathToCheck, ec)) {
+    *resultPath = pathToCheck;
+    return true;
+  }
+
+  if (ec) {
+    std::cerr << "Filesystem error: " << ec.message() << "\n";
+  }
+
+  return false;
+}
+
+std::filesystem::path Target::searchForPathInIncludes(const std::filesystem::path& selfpath, const std::filesystem::path& path) {
+  std::filesystem::path resultPath;
+  if (checkIfPathExists(&resultPath, selfpath.parent_path() / path)) {
+    return resultPath;
+  }
   for (const auto& ipath : m_includeDirectories) {
     const auto concatedPath = ipath / path;
-    if (std::filesystem::is_regular_file(concatedPath)) {
-      return std::filesystem::canonical(concatedPath);
+    if (checkIfPathExists(&resultPath, concatedPath)) {
+      return resultPath;
     }
   }
   return {};

@@ -36,7 +36,7 @@ struct Target {
 
   std::string m_entrySymbol;
   Format m_outputFormat;
-  std::string m_outputDirectory;
+  std::filesystem::path m_outputDirectory;
   std::string m_outputName;
   // std::unordered_map<
   //       std::filesystem::path, 
@@ -45,7 +45,7 @@ struct Target {
 
   std::unordered_set<Target*> m_dependantTargets;
 
-  std::filesystem::path searchForPathInIncludes(const std::filesystem::path& path);
+  std::filesystem::path searchForPathInIncludes(const std::filesystem::path&, const std::filesystem::path&);
 
   constexpr const char* formatToString() const {
     switch (m_outputFormat)

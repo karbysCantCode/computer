@@ -1,11 +1,8 @@
-.label re
-.target test
+.target basic
 .flist main_files
-.ifdef re {
-    .search_add(main_files, all, ".spasm","../test.spasm")
-}
-.include_directory(test, "..")
-.add_target(test, main_files, "../test.spasm")
-.entry(test, "main")
-.output(test, "/build", "testexe.bin")
-.format(test, "bin")
+.search_add(main_files, all, ".spasm", "..")
+.include_directory(basic, "..")
+.add_target(basic, main_files)
+.output(basic, "../", "basic.bin")
+.format(basic, "bin")
+.entry(basic, "main")

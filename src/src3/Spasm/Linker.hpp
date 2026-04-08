@@ -10,9 +10,16 @@ public:
 struct LinkedResult {
   std::queue<Program::TranslationUnit*> translationUnitQueue;
   size_t maxAddress = 0;
+  size_t programDataStartAddress = 0;
 };
   LinkedResult run(
+    size_t entrySymbolSetupByteLength,
     Debug::FullLogger* logger
+  );
+
+  void linkDefinitionSymbols(
+    Program::TranslationUnit&, 
+    LinkedResult&
   );
 
   void linkTU(

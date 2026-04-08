@@ -1,4 +1,4 @@
-@include "include.spasm" 
+; @include "include.spasm" 
 @define rF r15
 @define rF r13
 @define mul32(rA,rB,rC,rD,rdA,rdB) {
@@ -9,11 +9,11 @@
   mull rF, rB, rD
   add  rdB, rF, rdB
   pop rF
-  mul32
 }
 
 ; syntax test file
-
+movi r2, 56
+movi r3, 84
 add r1, r2, r3
 sub r1, r2, r3
 adi r2, r2, [20389 * 2 + 65 - 25 - 2 * 252 + main]
@@ -25,8 +25,8 @@ nop
 nop
 nop
 add r4, r2, r4
-BYTE hello, 10
+; BYTE hello, 10
 
 helper:
 helper.main:
-TEXT helper.main.text, AUTO, "Hello World!"
+; TEXT helper.main.text, AUTO, "Hello World!"

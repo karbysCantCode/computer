@@ -16,26 +16,29 @@ namespace Spasm {
       Debug::FullLogger logger;
 
       Program program;
-
+      
       Linker linker;
-
+      
       for (const auto& sourcePath : target.second.m_sourceFilepaths) {
-        program.m_filePathsToCreateTranslationUnitsOf.push(sourcePath);
+        program.m_filePathsToCreateTranslationUnitsOfAndPreprocess.push(sourcePath);
       }
+      
+      // auto [it, inserted] = program.m_translationUnits.emplace("", std::make_unique<Program::TranslationUnit>());
+      // it->second->m_statementVector.();
+      // linker.addIndependentTranslationUnits(it->second.get());
 
       //parse trabskaton units
-      while (!program.m_filePathsToCreateTranslationUnitsOf.empty()) {
+      while (!program.m_filePathsToCreateTranslationUnitsOfAndPreprocess.empty()) {
         auto transUnit = std::make_unique<Program::TranslationUnit>();
         auto transUnitPtr = transUnit.get();
-        transUnitPtr->m_sourcePath = program.m_filePathsToCreateTranslationUnitsOf.top();
+        transUnitPtr->m_sourcePath = program.m_filePathsToCreateTranslationUnitsOfAndPreprocess.top();
         if (program.m_translationUnits.find(transUnit->m_sourcePath) == program.m_translationUnits.end()) {
           program.m_translationUnits.emplace(transUnit->m_sourcePath, std::move(transUnit));
         } else {
           program.m_translationUnits[transUnit->m_sourcePath] = std::move(transUnit);
         }
-
         
-        program.m_filePathsToCreateTranslationUnitsOf.pop();
+        program.m_filePathsToCreateTranslationUnitsOfAndPreprocess.pop();
         transUnitPtr->m_source = std::make_unique<std::string>(FileHelper::openFileToString(transUnitPtr->m_sourcePath));
         
         SpasmLexer lexer;
@@ -43,21 +46,31 @@ namespace Spasm {
         
         
         Preprocessor preproc;
-        auto processedTokens = preproc.run(preprocessedTokens, target.second, *transUnitPtr, program, linker.m_dependantTranslationUnitMap, &logger);
+        transUnitPtr->processedTokens = preproc.run(preprocessedTokens, target.second, *transUnitPtr, program, linker.m_dependantTranslationUnitMap, &logger);
         
-        Parser parser;
-        parser.ParseTokens(processedTokens, arch, *transUnitPtr, program, &logger);
-        
-        if (transUnitPtr->m_includedFiles.size() == 0) {
-          linker.addIndependentTranslationUnits(transUnitPtr);
-        }
+        program.m_translationUnitsToParseAndLink.push(transUnitPtr);
       }
       
-      Linker::LinkedResult linkedResult = linker.run(&logger);
+      while (!program.m_translationUnitsToParseAndLink.empty()) {
+        Program::TranslationUnit& translationUnit = *program.m_translationUnitsToParseAndLink.top();
+        program.m_translationUnitsToParseAndLink.pop();
+        
+        Parser parser;
+        parser.ParseTokens(translationUnit.processedTokens, arch, translationUnit, program, &logger);
+        
+        if (translationUnit.m_includedFiles.size() == 0) {
+          linker.addIndependentTranslationUnits(&translationUnit);
+        }
+      }
 
+      // update here and generator.run
+      const size_t entrySymbolJumpByteLength = target.second.m_entrySymbol.empty() ? 0 : 14;
+      
+      Linker::LinkedResult linkedResult = linker.run(entrySymbolJumpByteLength, &logger);
+      
       OutputGenerator generator;
 
-      generator.run(target.second, linker, linkedResult, &logger);
+      generator.run(target.second, linker, linkedResult, entrySymbolJumpByteLength, &logger);
 
       if (!logger.Errors.isEmpty()) {
         logger.Errors.logMessage("Compilation aborted after linking due to error(s) in compilation pipeline. (not exclusively linker)");
@@ -85,6 +98,7 @@ namespace Spasm {
       program.debugPrint();
     }
   }
+
 using EvaluatePairType = std::pair<int, std::string>;
 EvaluatePairType Program::IdentifierExpr::evaluate(NonOwningIdentifierMapType& identifierMap) {
   std::string constructedName;
@@ -264,7 +278,7 @@ void Spasm::Program::debugPrintStatement(const StatementSymbol* stmt, int indent
     std::cout << "DefinitionSymbol: " << def->name << "\n";
   }
   else if (auto instr = dynamic_cast<const InstructionSymbol*>(stmt)) {
-    std::cout << "InstructionSymbol: opcode=" << instr->opcode
+    std::cout << "InstructionSymbol: opcode=" << instr->instruction.m_opcode
               << " name=" << instr->instruction.m_name << "\n";
 
     for (const auto& op : instr->operands) {

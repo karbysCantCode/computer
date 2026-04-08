@@ -2,9 +2,17 @@
 
 .reg r0-r15 16 0
 .reg mo     32 16
+.reg mol    16 24
+.reg moh    16 28
 .reg fp     32 17
+.reg fpl    16 25
+.reg fph    16 29
 .reg sp     32 18 
+.reg spl    16 26 
+.reg sph    16 30
 .reg ip     32 19 
+.reg ipl    16 27 
+.reg iph    16 31
 .reg ctx    8  20 
 .reg prv    2  21
 .reg mmio   8  22
@@ -25,12 +33,15 @@
 add  2 1  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
 adc  2 2  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
 adi  2 11 normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:7
-adli 4 12 normal REG rd r0-r15 REG ra r0-r7 NON           ; immediate
+adli 4 12 normal REG rd r0-r15 REG ra r0-r7 NON IMMX 2 immediate 0:65535          ; immediate
 
-sub  2 3  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
-sbc  2 4  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
-sbi  2 13 normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:7
-sbli 4 14 normal REG rd r0-r15 REG ra r0-r7 NON           ; immediate
+sub   2 3  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
+cmp   2 3  normal CONST 0       REG ra r0-r7 REG rb r0-r7
+sbc   2 4  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
+sbi   2 13 normal REG rd r0-r15 REG ra r0-r7 IMM immediate 0:7
+cmpi  2 13 normal CONST 0       REG ra r0-r7 IMM immediate 0:7
+sbli  4 14 normal REG rd r0-r15 REG ra r0-r7 NON IMMX 2 immediate 0:65535          ; immediate
+cmpi  2 14 normal CONST 0       REG ra r0-r7 NON IMMX 2 immediate 0:65535          ; immediate
 
 mull 2 5  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
 mulh 2 6  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
@@ -47,13 +58,13 @@ ror  2 10 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
 rori 2 23 normal IMM immediate 0:15 REG rd r0-r7 REG ra r0-r7
 
 and  2 18 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
-andi 4 15 normal REG rd r0-r15 REG ra r0-r7 NON
+andi 4 15 normal REG rd r0-r15 REG ra r0-r7 NON IMMX 2 immediate 0:65535
 
 or   2 19 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
-ori  4 16 normal REG rd r0-r15 REG ra r0-r7 NON
+ori  4 16 normal REG rd r0-r15 REG ra r0-r7 NON IMMX 2 immediate 0:65535
 
 xor  2 20 normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
-xori 4 17 normal REG rd r0-r15 REG ra r0-r7 NON
+xori 4 17 normal REG rd r0-r15 REG ra r0-r7 NON IMMX 2 immediate 0:65535
 
 not  2 44 two   REG rd r0-r15 REG rs r0-r15 
 
@@ -64,11 +75,12 @@ clz  2 24 two   REG rd r0-r15 REG ra r0-r15
 ; data flow
 ; #######
 
-mov  2 26 two    REG rd r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm REG rs r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm
+mov  2 26 two    REG rd r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm<mol<spl<fpl<ipl<moh<sph<fph<iph REG rs r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm<mol<spl<fpl<ipl<moh<sph<fph<iph
 movi 4 27 normal REG rd r0-r15 CONST 0 CONST 0 IMMX 2 immediate 0:65535
 cmov 2 36 normal IMM condition 0:15 REG rd r0-r7 REG rs r0-r7 ;maybe expand into seperate instr
 swap 2 37 two    REG ra r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm REG rb r0-r15<mo<sp<fp<ip<ctx<prv<mmio<vm
 
+; non '2' memory ops just put 1 byte
 lea    2 28 memnarg REG rd r0-r15 CONST 0 IMM immediate 0:31                  ; lea intra imm
 leal   4 29 memtwo  CONST 0 REG rd r0-r15 NON IMM immediate 0:65535           ; lea long imm
 lear   2 30 memtwo  CONST 0 REG rd r0-r15 REG rs r0-r15             ; lea register
@@ -84,10 +96,11 @@ steal   4 32 memtwo  CONST 0 REG rs r0-r15 NON IMMX 2 immediate 0:65535         
 stear   2 33 memtwo  CONST 0 REG rs r0-r15 REG rAddr r0-r15             ; stea register
 stolr   2 48 memtwo  CONST 0 REG rs r0-r15 REG rAddr r0-r15<mo<sp<fp<ip ; store abs
 stea2   2 31 memnarg REG rs r0-r15 CONST 1 IMM immediate 0:31                  ; stea intra imm
-steal2  4 32 memtwo  CONST 1 REG rs r0-r15 NON IMMX immediate 0:65535           ; stea long imm
+steal2  4 32 memtwo  CONST 1 REG rs r0-r15 NON IMMX 2 immediate 0:65535           ; stea long imm
 stear2  2 33 memtwo  CONST 1 REG rs r0-r15 REG rAddr r0-r15             ; stea register
 stolr2  2 48 memtwo  CONST 1 REG rs r0-r15 REG rAddr r0-r15<mo<sp<fp<ip ; store abs
 
+; these are two bytes.
 push    2 34 normaug REG rs r0-r15 CONST 18 ;18 = 0b10010, so that i can use two field 2 to write (stack pointer) and then 3lsb immediate to dec/inc
 pop     2 35 normaug REG rd r0-r15 CONST 18
 
@@ -104,11 +117,11 @@ halt 2 63 normal NON
 ;NOTE immediate jumps should probaby just be full immediates since they twist the pipeline funny, also 10 bits in instr + 16 bit word can be absolute too?
 jmpis 2 38 immfull IMM distance 0:1023
 jmpia 2 39 immfull IMM distance 0:1023
-jmpr  2 42 two  REG rs r0-r15<mo<sp<fp<ip NON
+jmpr  2 42 two     NON REG rs r0-r15<mo<sp<fp<ip       ; ip = rs, if rs = r0-r15: ip = mo + rs
 
 brcis 2 40 normaug  IMM condition 0:15 IMM distance 0:63
 brcia 2 41 normaug  IMM condition 0:15 IMM distance 0:63
-brcr  2 43 two      REG rs r0-r15<mo<sp<fp<ip NON
+brcr  2 43 memnarg  IMM condition 0:15 NON REG rs r0-r15<mo<sp<fp<ip       ; ip = cond ? rs : ip,,, if rs = r0-r15: ip = mo + rs
 
 ;interrupt
 
@@ -127,7 +140,11 @@ brcr  2 43 two      REG rs r0-r15<mo<sp<fp<ip NON
 ;flush dcache line (index) a/b 
 
 ; instruction with -> bits inval/flush, address/line, a/b
-CHEO 2 45 bitsel IMM IorDCache_OR_LowerFlagMaskEnable 0:1 IMM InvalOrFlush_OR_invalidateTargetPage 0:1 IMM AddressOrLine_OR_invalidateTransPage 0:1 IMM setAorB_OR_InvalidateAll 0:1 IMM MMUorCACHE 0:1 REG rs r0-r15<mo<sp<fp<ip
-MMUF 2 45 bitsel CONST 1 CONST 0 CONST 0 CONST 0 CONST 1 IMM flagmask 0:8
+cheo 2 45 bitsel IMM IorDCache_OR_LowerFlagMaskEnable 0:1 IMM InvalOrFlush_OR_invalidateTargetPage 0:1 IMM AddressOrLine_OR_invalidateTransPage 0:1 IMM setAorB_OR_InvalidateAll 0:1 IMM MMUorCACHE 0:1 REG rs r0-r15<mo<sp<fp<ip
+invalichclina  2 45 bitsel CONST 1 CONST 1 CONST 0 CONST 1 CONST 0 REG rs r0-r15<mo<sp<fp<ip  ; invalidate icache line setA
+invalichclinb  2 45 bitsel CONST 1 CONST 1 CONST 0 CONST 0 CONST 0 REG rs r0-r15<mo<sp<fp<ip  ; invalidate icache line setB
+invaldchclina  2 45 bitsel CONST 0 CONST 1 CONST 0 CONST 1 CONST 0 REG rs r0-r15<mo<sp<fp<ip  ; invalidate dcache line setA
+invaldchclinb  2 45 bitsel CONST 0 CONST 1 CONST 0 CONST 0 CONST 0 REG rs r0-r15<mo<sp<fp<ip  ; invalidate dcache line setB
+mmuf 2 45 bitsel CONST 1 CONST 0 CONST 0 CONST 0 CONST 1 IMM flagmask 0:8
 ;10XX1 turns the 2nd into flagmask
 ; instruction with -> bits lower flag mask en, ival targ page en, ival trans page en

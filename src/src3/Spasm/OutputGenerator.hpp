@@ -13,6 +13,7 @@ public:
     SMake::Target&,
     Linker&,
     Linker::LinkedResult&,
+    size_t,
     Debug::FullLogger*
   );
 

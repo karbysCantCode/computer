@@ -87,8 +87,8 @@ void Parser::parseIdentifier(TokenHolder& tokenHolder, Arch::Architecture& arch,
 
 void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken, const Arch::Architecture& arch, const Arch::Architecture::InstructionDefinition& instruction, Program::TranslationUnit& translationUnit, Program& program) {
   auto instructionSymbol = std::make_unique<Program::InstructionSymbol>(instrToken.location, instruction);
-  instructionSymbol->operands.reserve(instruction.m_operands.size()); // reserve to prevent resizing overhead
-  
+  instructionSymbol->operands.resize(instruction.m_operands.size()); // reserve to prevent resizing overhead
+
   size_t instructionIndex = 0;
   for (const auto& operand : instruction.m_operands) {
     bool skipComma = true;
@@ -104,7 +104,7 @@ void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken,
       else if constexpr (std::is_same_v<T, Arch::Architecture::ConstantStringOperand>) {
         //this is kind of innecifiaent, because per instruction, the constant str will be converted
         skipComma = false;
-        instructionSymbol->operands[instructionIndex] = std::move(convertConstantStringToOperand(arch, op));
+        instructionSymbol->operands[instructionIndex] = convertConstantStringToOperand(arch, op);
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::RegisterOperand>) {
         
@@ -145,6 +145,9 @@ void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken,
     instructionIndex++;
   }
 
+  const auto initPtr = instrToken.value.data();
+  const auto& endStrView = tokenHolder.peek().value;
+  instructionSymbol->source = {initPtr, static_cast<size_t>(endStrView.data() + endStrView.size() - initPtr)};
   translationUnit.m_statementVector.push_back(std::move(instructionSymbol));
 }
 
@@ -202,7 +205,7 @@ std::unique_ptr<Program::Operand> Parser::convertConstantStringToOperand(const A
 
 std::unique_ptr<Program::Operand> Parser::makeErrorOperand(const Token& errToken, const std::string& message) {
   logError(errToken, message);
-  return std::make_unique<Program::ConstantOperand>(errToken.location, 0);
+  return std::make_unique<Program::ExpressionOperand>(errToken.location, std::make_unique<Program::NumberExpr>(errToken.location, 0));
 }
 
 int Parser::parseNumberString(const Token& token) {
@@ -389,7 +392,7 @@ std::unique_ptr<Program::StatementSymbol> Parser::parseIdentifierNameDefiniton(T
 
   auto shouldContinue = [&]() {
     return isLabel ?
-      tokenHolder.notAtEnd() && (!tokenHolder.match(Token::Type::COLON, 1))
+      tokenHolder.notAtEnd() && (!tokenHolder.match(Token::Type::COLON, 1) && tokenHolder.match(Token::Type::PERIOD, 1))
     : tokenHolder.notAtEnd() && tokenHolder.match(Token::Type::PERIOD, 1); 
   };
 

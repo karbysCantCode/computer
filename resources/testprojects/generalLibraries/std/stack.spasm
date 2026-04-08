@@ -1,0 +1,8 @@
+@define initStackPtr() {
+                   ; move 0x7fffffe into sp
+  movi r1, 65534   ; r1 = 0xfffe
+  movi r2, 2047    ; r2 = 0x07ff
+  mov  spl, r1     ; spl = 0xfffe
+  mov  sph, r2     ; sph = 0x07ff
+                   ; sp  = 0x07fffffe
+}

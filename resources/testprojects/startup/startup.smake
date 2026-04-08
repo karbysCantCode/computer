@@ -1,0 +1,8 @@
+.target startup
+.flist main_files
+.search_add(main_files, all, ".spasm", "src/")
+.include_directory(startup, "../lib", "../../generalLibraries")
+.add_target(startup, main_files)
+.output(startup, ".", "startup.bin")
+.format(startup, "bin")
+.entry(startup, "__start")

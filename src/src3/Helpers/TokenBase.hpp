@@ -17,7 +17,7 @@ template<typename TokenT>
 struct TokenBaseHolder {
 public:
 std::vector<TokenT> m_tokens;
-size_t m_index;
+size_t m_index = 0;
 
 inline bool isAtEnd() const {return m_index >= m_tokens.size();}
 inline bool notAtEnd() const {return m_index < m_tokens.size();}

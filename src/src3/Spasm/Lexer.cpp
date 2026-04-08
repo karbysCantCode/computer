@@ -413,25 +413,30 @@ void SpasmLexer::consumeUntilNotNumber() {
   while (isdigit(peek()) && notAtEnd()) {consume();}
 }
 
+void SpasmLexer::consumeUntilNotHex() {
+  while (ishexnumber(peek()) && notAtEnd()) {consume();}
+}
+
 Token::NicheType SpasmLexer::getNicheTypeAndSetSliceOverNumber() {
   Token::NicheType type = Token::NicheType::UNASSIGNED;
   
   if (match('0')) {
-    consume();
-    if (match('x')) {
+    if (match('x', 1)) {
+      consume();
       type = Token::NicheType::NUMBER_HEX;
       consume();
-      consumeUntilNotNumber();
-    } else if (match('b')) {
+      consumeUntilNotHex();
+    } else if (match('b', 1)) {
+      consume();
       type = Token::NicheType::NUMBER_BIN;
       consume();
       consumeUntilNotNumber();
-    } else if (isdigit(peek()) || isAtWordBoundary()) {
+    // } else if (isdigit(peek()) || isAtWordBoundary()) {
+    } else {
       type = Token::NicheType::NUMBER_DEC;
       consumeUntilNotNumber();
-    } else {
-      //err
-      assert(false);
+      //is just 0
+      //assert(false);
 
     }
   } else if (isdigit(peek())) {

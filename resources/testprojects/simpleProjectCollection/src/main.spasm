@@ -1,0 +1,14 @@
+@include "std/std.spasm"
+
+__start: 
+mov   mo, r0
+mov   r1, r0      ; r1 = 0
+adi   r2, r0, 1   ; r2 = 1
+movi  r3, 0xaabb
+movi  r4, 0x5566
+stear r3, r1      ; store r3 [r1]
+stear r4, r2      ; store r4 [r2]
+adi   r1, r1, 2   ; r1 += 2
+adi   r2, r2, 2   ; r1 += 2
+; alternating aa 55 pattern (in both odd and even caches)
+jmpis 4

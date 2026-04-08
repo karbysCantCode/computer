@@ -3,10 +3,26 @@
 namespace Spasm {
 
 Linker::LinkedResult Linker::run(
+  size_t entrySymbolSetupByteLength,
   Debug::FullLogger* logger
 ) {
   p_logger = logger;
   LinkedResult linked;
+
+  // JUMP TO ENTRY SYM BYTES SETUP
+  linked.maxAddress = entrySymbolSetupByteLength;
+
+  std::stack<Program::TranslationUnit*> definitionResolvingTranslationUnitStack = m_independentTranslationUnits;
+
+  while (!definitionResolvingTranslationUnitStack.empty()) {
+    auto& translationUnit = *definitionResolvingTranslationUnitStack.top();
+    definitionResolvingTranslationUnitStack.pop();
+
+    linkDefinitionSymbols(translationUnit, linked);
+  }
+
+  linked.programDataStartAddress = linked.maxAddress;
+
   while (areUnlinkedIndependentTranslationUnits()) {
     auto& translationUnit = *consumeIndependentTranslationUnitFromStack();
 
@@ -23,6 +39,12 @@ Linker::LinkedResult Linker::run(
   return linked;
 }
 
+void Linker::linkDefinitionSymbols(
+  Program::TranslationUnit& translationUnit, 
+  LinkedResult& linkedResult
+) {
+  placeDefinitionSymbols(linkedResult, translationUnit);
+}
 void Linker::linkTU(
   Program::TranslationUnit& translationUnit, 
   LinkedResult& linkedResult
@@ -224,6 +246,7 @@ void Linker::resolveExpressions(Program::TranslationUnit& translationUnit) {
     auto& expr = translationUnit.m_unresolvedExpressions.front();
     translationUnit.m_unresolvedExpressions.pop();
 
+    std::cout << expr << '\n';
     auto eval = expr->evaluate(m_globalIdentifierMap);
 
     if (!eval.second.empty()) {

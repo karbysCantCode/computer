@@ -13,7 +13,6 @@
 
 
 namespace Spasm {
-  
 
   class Program {
     public:
@@ -24,6 +23,7 @@ namespace Spasm {
 
     struct StatementSymbol {
       const SourceLocation location;
+      std::string_view source;
 
       enum class Kind {
         LABEL,
@@ -142,11 +142,14 @@ namespace Spasm {
       std::unordered_set<std::filesystem::path> m_includedFiles;
       IdentifierMapType m_identifierMap;
       size_t m_dependenciesResolved = 0;
+      size_t m_dependenciesResolvedForDefinitions = 0;
       std::queue<Expr*> m_unresolvedExpressions;
+      TokenHolder processedTokens;
     };
     
     
-    std::stack<std::filesystem::path> m_filePathsToCreateTranslationUnitsOf;
+    std::stack<std::filesystem::path> m_filePathsToCreateTranslationUnitsOfAndPreprocess;
+    std::stack<TranslationUnit*> m_translationUnitsToParseAndLink;
     std::unordered_map<std::filesystem::path, std::unique_ptr<TranslationUnit>> m_translationUnits;
     
 
@@ -259,4 +262,5 @@ namespace Spasm {
   };
 
   void spasmPipeline(SMake::Project&, Arch::Architecture&, CLIOptions&);
+  
 }
