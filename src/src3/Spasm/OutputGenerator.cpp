@@ -24,11 +24,11 @@ void OutputGenerator::run(
   if (it != linker.m_fullNameCollatedIdentifierMap.end()) {
     const uint8_t header[] = { 
       0x40, 0x6C, 
-        static_cast<uint8_t>( it->second->address        & 0xff ),
-        static_cast<uint8_t>((it->second->address >> 8 ) & 0xff ),
+        static_cast<uint8_t>( *it->second->address        & 0xff ),
+        static_cast<uint8_t>((*it->second->address >> 8 ) & 0xff ),
       0x80, 0x6C, 
-        static_cast<uint8_t>((it->second->address >> 16) & 0xff ),
-        static_cast<uint8_t>((it->second->address >> 24) & 0xff ),
+        static_cast<uint8_t>((*it->second->address >> 16) & 0xff ),
+        static_cast<uint8_t>((*it->second->address >> 24) & 0xff ),
       0x01, 0x6B,
       0x82, 0x6B,
       0x10, 0xA8
@@ -181,7 +181,7 @@ void OutputGenerator::fillBytesFromDataDeclarations(const Program::TranslationUn
     }
     //raw data now valid
     //pack binary
-    std::memcpy(binaryData.data() + dataObject.address, dataObject.data.data(), dataObject.data.size());
+    std::memcpy(binaryData.data() + *dataObject.address, dataObject.data.data(), dataObject.data.size());
   }
     
 }

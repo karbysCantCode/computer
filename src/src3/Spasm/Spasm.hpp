@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <unordered_set>
 #include <cassert>
+#include <queue>
 #include <Arch/Arch.hpp>
 #include <Spasm/Lexer.hpp>
 #include "Helpers/CLIOptions.hpp"
@@ -24,19 +25,22 @@ namespace Spasm {
     struct StatementSymbol {
       const SourceLocation location;
       std::string_view source;
+      size_t address = 0;
 
       enum class Kind {
         LABEL,
         DEFINITION,
-        INSTRUCTION
+        INSTRUCTION,
+        RELAXOR
       };
 
       StatementSymbol(const SourceLocation loc) : location(loc) {}
       virtual ~StatementSymbol() = default;
-      virtual Kind getKind() const {assert(false);}
+      virtual Kind getKind() const {assert(false); return Kind::LABEL;}
 
       // virtual void generate() = 0;
     };
+
     struct LabelSymbol : StatementSymbol {
       std::string_view name;
       LabelObject* labelObject;
@@ -57,7 +61,7 @@ namespace Spasm {
       DefinitionSymbol(const SourceLocation& loc) : StatementSymbol(loc) {}
       DefinitionSymbol(const SourceLocation& loc, std::string_view nm, DataObject* object) : StatementSymbol(loc), name(nm), dataObject(object) {}
     
-    };
+    };  
 
     using IdentifierMapType = std::unordered_map<std::string_view, std::shared_ptr<IdentifierObject>>;
     using NonOwningIdentifierMapType = std::unordered_map<std::string_view, IdentifierObject*>;
@@ -87,8 +91,7 @@ namespace Spasm {
       std::vector<std::string_view> getNDepthNameVector(size_t depth) const;
 
       const std::filesystem::path& sourcePath;
-      size_t address = 0;
-      bool addressResolved = false;
+      size_t* address = nullptr;
       IdentifierObject* parent;
       IdentifierMapType children;
       
@@ -132,6 +135,27 @@ namespace Spasm {
         elementSize(elemSize),
         symbolObject(dynamic_cast<DefinitionSymbol*>(symbolObj)) {}
     };
+
+    struct RelaxorDefinition {
+      //OWNING options - condition
+      struct RelaxorOptionPair {
+        std::unique_ptr<Expr> conditionExpr;
+        std::vector<std::unique_ptr<StatementSymbol>> optionStatements;
+      };
+
+      std::vector<RelaxorOptionPair> options;
+      size_t worstCaseSize = 0;
+    };
+
+    struct RelaxorSymbol : StatementSymbol {
+      size_t optionIndex = 0;
+      RelaxorDefinition relaxor;
+
+
+      Kind getKind() const override {return Kind::RELAXOR;}
+
+      RelaxorSymbol(const SourceLocation loc) : StatementSymbol(loc) {}
+    };
     
     class TranslationUnit {
       public:
@@ -147,7 +171,7 @@ namespace Spasm {
       TokenHolder processedTokens;
     };
     
-    
+    std::vector<RelaxorSymbol*> m_relaxorPointerVector;
     std::stack<std::filesystem::path> m_filePathsToCreateTranslationUnitsOfAndPreprocess;
     std::stack<TranslationUnit*> m_translationUnitsToParseAndLink;
     std::unordered_map<std::filesystem::path, std::unique_ptr<TranslationUnit>> m_translationUnits;
@@ -240,7 +264,6 @@ namespace Spasm {
 
     struct InstructionSymbol : StatementSymbol {
       int opcode = -1;
-      size_t address = 0;
       std::vector<std::unique_ptr<Operand>> operands;
       const Arch::Architecture::InstructionDefinition& instruction;
       // void generate() override {}

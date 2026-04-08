@@ -121,11 +121,11 @@ EvaluatePairType Program::IdentifierExpr::evaluate(NonOwningIdentifierMapType& i
     }
   }
 
-  if (!lastIdentifierObject->addressResolved) {
-    return {0, std::format("Identifier \"{}\" is not resolved before it is referenced here. (potentially partial identifier path)", constructedName)};
-  }
+  // if (!lastIdentifierObject->addressResolved) {
+  //   return {0, std::format("Identifier \"{}\" is not resolved before it is referenced here. (potentially partial identifier path)", constructedName)};
+  // }
 
-  value = lastIdentifierObject->address;
+  value = *lastIdentifierObject->address;
   setEvaluated();
   return {value, ""};
 }
@@ -294,7 +294,7 @@ void Spasm::Program::debugPrintIdentifier(const IdentifierObject* obj, int inden
   indent(indentLevel);
   std::cout << "Name: " << obj->name()
             << " Address: " << obj->address
-            << " Resolved: " << obj->addressResolved
+            //<< " Resolved: " << obj->addressResolved
             << "\n";
 
   if (auto lbl = dynamic_cast<const LabelObject*>(obj)) {

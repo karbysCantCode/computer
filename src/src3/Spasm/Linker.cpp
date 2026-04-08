@@ -135,8 +135,8 @@ void Linker::placeDefinitionSymbols(LinkedResult& linkedResult, Program::Transla
 
     m_fullNameCollatedIdentifierMap.emplace(definitionObject.fullName(), definitionObjectPtr);
     
-    definitionObjectPtr->address = linkedResult.maxAddress;
-    definitionObjectPtr->addressResolved = true;
+    definitionSymbol->address = linkedResult.maxAddress;
+    // definitionSymbol->addressResolved = true;
     
     linkedResult.maxAddress += 
       definitionObjectPtr->elementCount * 
@@ -204,8 +204,8 @@ void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationU
 
       m_fullNameCollatedIdentifierMap.emplace(labelObject.fullName(), labelObjectPtr);
       
-      labelObjectPtr->address = linkedResult.maxAddress;
-      labelObjectPtr->addressResolved = true;
+      labelSymbol.address = linkedResult.maxAddress;
+      //labelSymbol.addressResolved = true;
       break;
     }
     case KIND::DEFINITION:
@@ -216,6 +216,14 @@ void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationU
       auto& instructionSymbol = *static_cast<Program::InstructionSymbol*>(statementSymbol.get());
       instructionSymbol.address = linkedResult.maxAddress;
       linkedResult.maxAddress += instructionSymbol.instruction.m_byteLength;
+      linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
+      break;
+    }
+    case KIND::RELAXOR:
+    {
+      auto& relaxorSymbol = *static_cast<Program::RelaxorSymbol*>(statementSymbol.get());
+      relaxorSymbol.address = linkedResult.maxAddress;
+      linkedResult.maxAddress += relaxorSymbol.relaxor.worstCaseSize;
       linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
       break;
     }

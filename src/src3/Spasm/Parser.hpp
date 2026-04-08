@@ -24,8 +24,9 @@ class Parser {
   inline void logDebug(const SourceLocation& sourceLocation, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(sourceLocation.toString() + message);}}
 
   void parseIdentifier(TokenHolder&, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program);
-  void parseInstruction(TokenHolder&, const Token&, const Arch::Architecture&, const Arch::Architecture::InstructionDefinition&, Program::TranslationUnit& translationUnit, Program& program);
+  std::unique_ptr<Program::InstructionSymbol> parseInstruction(TokenHolder&, const Token&, const Arch::Architecture&, Program::TranslationUnit& translationUnit, Program& program);
   void parseLabel(TokenHolder&);
+  void parseRelaxor(TokenHolder&, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program);
 
   std::pair<const Arch::Architecture::RegisterDefinition*, Token> parseExpectRegister(TokenHolder&, const Arch::Architecture&);
   std::unique_ptr<Program::Operand> parseExpectImmediate(TokenHolder&);
@@ -64,5 +65,8 @@ class Parser {
   void parseArrayDataType(TokenHolder&, Program::TranslationUnit&, Program&, bool);
   void parseElementsOfArray(TokenHolder&, Program::TranslationUnit&, Program::DataObject*, bool);
   void parseTextData(TokenHolder&, Program::DataObject*, bool);
+  bool isRelaxorConditional(Token::NicheType type);
+  void parseRelaxorCondition(TokenHolder&, Program::RelaxorDefinition::RelaxorOptionPair&);
+  void parseRelaxorCodeBlock(TokenHolder&,  Program::RelaxorDefinition&, Program::RelaxorDefinition::RelaxorOptionPair&, Arch::Architecture&, Program::TranslationUnit&, Program&);
 };
 }

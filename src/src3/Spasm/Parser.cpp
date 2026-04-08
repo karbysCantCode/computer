@@ -44,6 +44,9 @@ void Parser::ParseTokens(TokenHolder& tokenHolder, Arch::Architecture& arch, Pro
         parseIdentifier(tokenHolder, arch, translationUnit, program);
         break;
       }
+      case TY::RELAXOR: {
+        parseRelaxor(tokenHolder, arch, translationUnit, program);
+      }
       case TY::NEWLINE: {
         tokenHolder.skip();
         break;
@@ -66,9 +69,9 @@ void Parser::parseIdentifier(TokenHolder& tokenHolder, Arch::Architecture& arch,
   case Arch::Architecture::KeywordType::INSTRUCTION:
   {
     tokenHolder.skip();
-    const auto instructionDefinition = arch.m_instructionSet.find((std::string)initToken.value);
-    if (instructionDefinition == arch.m_instructionSet.end()) {logError(initToken, std::format("Unknown instruction \"{}\" referenced.", initToken.value));return;}
-    parseInstruction(tokenHolder, initToken, arch, instructionDefinition->second, translationUnit, program);
+    auto instructionStatement = parseInstruction(tokenHolder, initToken, arch, translationUnit, program);
+    if (!instructionStatement) return;
+    translationUnit.m_statementVector.push_back(std::move(instructionStatement));
     break;
   }
   case Arch::Architecture::KeywordType::DATATYPE:
@@ -85,12 +88,15 @@ void Parser::parseIdentifier(TokenHolder& tokenHolder, Arch::Architecture& arch,
   }
 }
 
-void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken, const Arch::Architecture& arch, const Arch::Architecture::InstructionDefinition& instruction, Program::TranslationUnit& translationUnit, Program& program) {
-  auto instructionSymbol = std::make_unique<Program::InstructionSymbol>(instrToken.location, instruction);
-  instructionSymbol->operands.resize(instruction.m_operands.size()); // reserve to prevent resizing overhead
+std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken, const Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {
+  const auto instructionDefinition = arch.m_instructionSet.find((std::string)instrToken.value);
+  if (instructionDefinition == arch.m_instructionSet.end()) {logError(instrToken, std::format("Unknown instruction \"{}\" referenced.", instrToken.value));return {};}
+  
+  auto instructionSymbol = std::make_unique<Program::InstructionSymbol>(instrToken.location, instructionDefinition->second);
+  instructionSymbol->operands.resize(instructionDefinition->second.m_operands.size()); // reserve to prevent resizing overhead
 
   size_t instructionIndex = 0;
-  for (const auto& operand : instruction.m_operands) {
+  for (const auto& operand : instructionDefinition->second.m_operands) {
     bool skipComma = true;
 
     std::visit([&](auto& op) {
@@ -148,7 +154,7 @@ void Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken,
   const auto initPtr = instrToken.value.data();
   const auto& endStrView = tokenHolder.peek().value;
   instructionSymbol->source = {initPtr, static_cast<size_t>(endStrView.data() + endStrView.size() - initPtr)};
-  translationUnit.m_statementVector.push_back(std::move(instructionSymbol));
+  return instructionSymbol;
 }
 
 std::pair<const Arch::Architecture::RegisterDefinition*, Token> Parser::parseExpectRegister(TokenHolder& tokenHolder, const Arch::Architecture& arch) {
@@ -580,6 +586,7 @@ void Parser::parseNonArrayDataType(TokenHolder& tokenHolder, Program::Translatio
   auto dataPtr = dynamic_cast<Program::DefinitionSymbol*>(dataStatement.get());
   if (!dataPtr) return;
 
+  dataPtr->dataObject->address = &dataPtr->address;
   dataPtr->dataObject->elementCount = 1;
   dataPtr->dataObject->elementSize = byteSize;
   
@@ -723,7 +730,7 @@ void Parser::parseTextData(TokenHolder& tokenHolder, Program::DataObject* dataPt
       const auto number = parseNumberString(valueToken);
       dataPtr->data.resize(dataPtr->elementCount * dataPtr->elementSize);
       
-      for (int i = 0; i < dataPtr->elementCount; i++) {
+      for (size_t i = 0; i < dataPtr->elementCount; i++) {
         std::memcpy(
           &dataPtr->data[i * dataPtr->elementSize],
           &number,
@@ -754,6 +761,75 @@ void Parser::parseTextData(TokenHolder& tokenHolder, Program::DataObject* dataPt
   }
 
   dataPtr->rawDataValid = true;
+}
+
+void Parser::parseRelaxor(TokenHolder& tokenHolder, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {
+  if (!tokenHolder.matchNiche(Token::NicheType::RELAXOR_IF)) {
+    logError(tokenHolder.peek(), "Relaxor statements can only begin with 'if'");
+    tokenHolder.skip();
+    return;
+  }
+
+  auto relaxor = std::make_unique<Program::RelaxorSymbol>(tokenHolder.peek().location);
+  program.m_relaxorPointerVector.push_back(relaxor.get());
+  
+  while (isRelaxorConditional(tokenHolder.peek().nicheType)) {
+    Program::RelaxorDefinition::RelaxorOptionPair& option = relaxor->relaxor.options.emplace_back();
+    parseRelaxorCondition(tokenHolder, option);
+    parseRelaxorCodeBlock(tokenHolder, relaxor->relaxor, option, arch, translationUnit, program);
+  }
+  
+  if (tokenHolder.peek().nicheType == Token::NicheType::RELAXOR_ELSE) {
+    Program::RelaxorDefinition::RelaxorOptionPair& option = relaxor->relaxor.options.emplace_back();
+    option.conditionExpr->value = 1;
+    option.conditionExpr->setEvaluated();
+    parseRelaxorCodeBlock(tokenHolder, relaxor->relaxor, option, arch, translationUnit, program);
+  }
+
+  translationUnit.m_statementVector.push_back(std::move(relaxor));
+}
+
+bool Parser::isRelaxorConditional(Token::NicheType type) {
+  return type == Token::NicheType::RELAXOR_IF ||
+          type == Token::NicheType::RELAXOR_ELIF;
+}
+
+void Parser::parseRelaxorCondition(TokenHolder& tokenHolder, Program::RelaxorDefinition::RelaxorOptionPair& option) {
+  if (!tokenHolder.match(Token::Type::OPENPAREN)) {
+    logError(tokenHolder.peek(), std::format("Expected '(', got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+
+  option.conditionExpr = parseSquareExpression(tokenHolder);
+
+  if (!tokenHolder.match(Token::Type::CLOSEPAREN)) {
+    logError(tokenHolder.peek(), std::format("Expected ')', got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+}
+
+void Parser::parseRelaxorCodeBlock(TokenHolder& tokenHolder, Program::RelaxorDefinition& relaxor, Program::RelaxorDefinition::RelaxorOptionPair& option, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {
+  if (!tokenHolder.match(Token::Type::OPENBLOCK)) {
+    logError(tokenHolder.peek(), std::format("Expected '{{', got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+
+  size_t currentCaseByteSize = 0;
+
+  while (tokenHolder.notAtEnd() && !tokenHolder.match(Token::Type::CLOSEBLOCK)) {
+    const auto& instrtoken = tokenHolder.consume();
+    auto instruction = parseInstruction(tokenHolder, instrtoken, arch, translationUnit, program);
+    if (!instruction) continue;
+    currentCaseByteSize += instruction->instruction.m_byteLength;
+    option.optionStatements.push_back(std::move(instruction));
+  }
+
+  relaxor.worstCaseSize = std::max(currentCaseByteSize, relaxor.worstCaseSize);
+
+  if (!tokenHolder.match(Token::Type::CLOSEBLOCK)) {
+    logError(tokenHolder.peek(), std::format("Expected '}}', got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
 }
 
 }

@@ -9,6 +9,7 @@ namespace Spasm {
   struct Token : TokenBase {
     enum class Type {
       IDENTIFIER,
+      RELAXOR,
       OPENPAREN, //y
       CLOSEPAREN, //y
       STRING, //y
@@ -47,7 +48,11 @@ namespace Spasm {
 
       NUMBER_HEX,
       NUMBER_DEC,
-      NUMBER_BIN
+      NUMBER_BIN,
+
+      RELAXOR_IF,
+      RELAXOR_ELIF,
+      RELAXOR_ELSE
     };
 
     Type type = Type::UNASSIGNED;
@@ -58,6 +63,7 @@ namespace Spasm {
 
   struct TokenHolder : TokenBaseHolder<Token> {
     inline bool match(Token::Type type, size_t distance = 0) const {return peek(distance).type == type;}
+    inline bool matchNiche(Token::NicheType type, size_t distance = 0) const {return peek(distance).nicheType == type;}
     inline void skipUntilAfterType(Token::Type type) {while (!match(type)) {skip();} skip();}
   };
 

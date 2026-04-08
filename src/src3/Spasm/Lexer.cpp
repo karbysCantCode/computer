@@ -1,6 +1,7 @@
 #include "Spasm/Lexer.hpp"
 
 #include <cassert>
+#include <cctype>
 
 namespace Spasm {
 
@@ -175,7 +176,7 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
       }
       case '@':
       {
-        //directive
+        //directive or relaxor
         consume();
         setSliceStart;
         while (!isAtWordBoundary()) {
@@ -184,16 +185,26 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
         const size_t length = p_index - sliceStartIndex;
         const std::string_view directive{sliceStartPtr, length};
         Token::NicheType nt = Token::NicheType::UNASSIGNED;
+        Token::Type t = Token::Type::DIRECTIVE;
         if (directive == "include") {
           nt = Token::NicheType::DIRECTIVE_INCLUDE;
         } else if (directive == "define") {
           nt = Token::NicheType::DIRECTIVE_DEFINE;
         } else if (directive == "entry") {
           nt = Token::NicheType::DIRECTIVE_ENTRY;
-        }
+        } else if (directive == "if") {
+          nt = Token::NicheType::RELAXOR_IF;
+          t  = Token::Type::RELAXOR;
+        } else if (directive == "elif") {
+          nt = Token::NicheType::RELAXOR_ELIF;
+          t  = Token::Type::RELAXOR;
+        } else if (directive == "else") {
+          nt = Token::NicheType::RELAXOR_ELSE;
+           t  = Token::Type::RELAXOR;
+        } 
         output.m_tokens.emplace_back(
           directive, 
-          Token::Type::DIRECTIVE, 
+          t, 
           sliceStartLocation,
           nt
         );
@@ -410,11 +421,11 @@ bool SpasmLexer::isAtWordBoundary() {
 }
 
 void SpasmLexer::consumeUntilNotNumber() {
-  while (isdigit(peek()) && notAtEnd()) {consume();}
+  while (std::isdigit(peek()) && notAtEnd()) {consume();}
 }
 
 void SpasmLexer::consumeUntilNotHex() {
-  while (ishexnumber(peek()) && notAtEnd()) {consume();}
+  while (std::isxdigit(peek()) && notAtEnd()) {consume();}
 }
 
 Token::NicheType SpasmLexer::getNicheTypeAndSetSliceOverNumber() {
