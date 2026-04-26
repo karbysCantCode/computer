@@ -3,17 +3,52 @@
 #include "Spasm/Spasm.hpp"
 #include "Spasm/Lexer.hpp"
 #include <filesystem>
+#include <set>
+
+
+/*
+
+
+
+*/
+
 
 namespace Spasm {
 class Linker {
 public:
+
+struct addressLabelPointerPair {
+  size_t* addressPtr = nullptr;
+  Program::LabelSymbol* labelPtr = nullptr;
+};
+
 struct LinkedResult {
   std::queue<Program::TranslationUnit*> translationUnitQueue;
   size_t maxAddress = 0;
   size_t programDataStartAddress = 0;
+  size_t nAddressesEntered = 0;
+  std::vector<size_t> addressHolder;
+  std::vector<addressLabelPointerPair> addressLabelHolder;
+  // same index as address is the corresponding statement symnol
+  std::vector<Program::StatementSymbol*> statementHolder;
 };
+
+class ExpressionsByLabelHelper {
+public:
+
+  void registerExpression(Program::Expr*, const std::unordered_set<std::string>&);
+  std::unordered_set<Program::Expr*> getExpressionsReferencingTheseLabels(const std::vector<std::string>& fullNameList) const;
+  void registerRelaxor( Program::RelaxorSymbol*, const std::unordered_set<std::string>&);
+  std::set<Program::RelaxorSymbol*> getRelaxorsReferencingTheseLabels(const std::vector<std::string>& fullNameList) const;
+
+private:
+  std::unordered_map<std::string, std::unordered_set<Program::Expr*>> p_labelByExpressionMap;
+  std::unordered_map<std::string, std::set<Program::RelaxorSymbol*>> p_relaxorByExpressionMap;
+};
+
   LinkedResult run(
     size_t entrySymbolSetupByteLength,
+    Program &program,
     Debug::FullLogger* logger
   );
 
@@ -24,7 +59,8 @@ struct LinkedResult {
 
   void linkTU(
     Program::TranslationUnit&, 
-    LinkedResult&
+    LinkedResult&,
+    ExpressionsByLabelHelper&
   );
 
   inline void addIndependentTranslationUnits(Program::TranslationUnit* tuptr) {m_independentTranslationUnits.push(tuptr);}
@@ -51,9 +87,9 @@ private:
 
   void placeDefinitionSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit);
 
-  void placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit);
+  void placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit, ExpressionsByLabelHelper& labelHelper);
   void checkForUndefinedIdentifiers();
-  void resolveExpressions(Program::TranslationUnit& translationUnit);
+  void resolveExpressions(Program::TranslationUnit& translationUnit,  LinkedResult& , ExpressionsByLabelHelper& labelHelper);
   void createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::IdentifierObject* identifierObject);
 };
 

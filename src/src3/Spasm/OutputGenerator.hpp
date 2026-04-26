@@ -26,8 +26,8 @@ private:
   inline void logWarning(const SourceLocation& sLoc, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(sLoc.toString() + message);}}
   inline void logDebug(const SourceLocation& sLoc, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(sLoc.toString() + message);}}
 
-  void fillBytesFromDataDeclarations(const Program::TranslationUnit& translationUnit, std::vector<uint8_t>& binaryData);
-
+  void fillBytesFromDataDeclarations(const Linker::LinkedResult& linkedResult, const Program::TranslationUnit& translationUnit, std::vector<uint8_t>& binaryData);
+  void fillInstruction(Linker::LinkedResult& linkedResult, Program::InstructionSymbol& instructionStatement, std::vector<uint8_t>& binaryData, int addressOverride = -1);
 };
 
 }

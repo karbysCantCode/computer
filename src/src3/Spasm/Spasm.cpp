@@ -66,7 +66,7 @@ namespace Spasm {
       // update here and generator.run
       const size_t entrySymbolJumpByteLength = target.second.m_entrySymbol.empty() ? 0 : 14;
       
-      Linker::LinkedResult linkedResult = linker.run(entrySymbolJumpByteLength, &logger);
+      Linker::LinkedResult linkedResult = linker.run(entrySymbolJumpByteLength, program, &logger);
       
       OutputGenerator generator;
 
@@ -99,15 +99,14 @@ namespace Spasm {
     }
   }
 
-using EvaluatePairType = std::pair<int, std::string>;
-EvaluatePairType Program::IdentifierExpr::evaluate(NonOwningIdentifierMapType& identifierMap) {
+Program::EvaluateTriple Program::IdentifierExpr::evaluate(NonOwningIdentifierMapType& identifierMap, std::vector<size_t>& addressHolder, bool getMentionedLabels) {
   std::string constructedName;
   Program::IdentifierObject* lastIdentifierObject;
   const auto it = identifierMap.find(identifierPath.front());
   constructedName.append(identifierPath.front());
   identifierPath.pop();
   if (it == identifierMap.end()) {
-    return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName)};
+    return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName), {}};
   }
 
   lastIdentifierObject = it->second;
@@ -117,7 +116,7 @@ EvaluatePairType Program::IdentifierExpr::evaluate(NonOwningIdentifierMapType& i
     constructedName.append(identifierPath.front());
     identifierPath.pop();
     if (it == lastIdentifierObject->children.end()) {
-      return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName)};
+      return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName), {}};
     }
   }
 
@@ -125,84 +124,95 @@ EvaluatePairType Program::IdentifierExpr::evaluate(NonOwningIdentifierMapType& i
   //   return {0, std::format("Identifier \"{}\" is not resolved before it is referenced here. (potentially partial identifier path)", constructedName)};
   // }
 
-  value = *lastIdentifierObject->address;
+  value = addressHolder[lastIdentifierObject->addressIndex];
   setEvaluated();
-  return {value, ""};
+  return {value, "", {constructedName}};
 }
 
-EvaluatePairType Program::UnaryExpr::evaluate(NonOwningIdentifierMapType& idenMap) {
+Program::EvaluateTriple Program::UnaryExpr::evaluate(NonOwningIdentifierMapType& idenMap, std::vector<size_t>& addressHolder, bool getMentionedLabels) {
   if (!right) {
-    return {0, "Expression argument doesn't exist."};
+    return {0, "Expression argument doesn't exist.", {}};
   }
 
-  const auto eval = right->evaluate(idenMap);
+  const auto eval = right->evaluate(idenMap, addressHolder, getMentionedLabels);
   switch (op) {
     case Token::Type::SUBTRACT:
-      return {-eval.first, eval.second};
+      return {-eval.value, eval.error, eval.mentionedLabels};
       break;
     case Token::Type::BITWISENOT:
-      return {~eval.first, eval.second};
+      return {~eval.value, eval.error, eval.mentionedLabels};
+      break;
+    case Token::Type::RELATIVEOPERATOR:
+      return {eval.value - (int)addressHolder[*addressIndexPtr], eval.error, eval.mentionedLabels};
       break;
     default: break;
 
   }
-  return {0, "Unknown unary operator type."};
+  return {0, "Unknown unary operator type.", eval.mentionedLabels};
 }
 
-EvaluatePairType Program::BinaryExpr::evaluate(NonOwningIdentifierMapType& idenMap) {
+Program::EvaluateTriple Program::BinaryExpr::evaluate(NonOwningIdentifierMapType& idenMap, std::vector<size_t>& addressHolder, bool getMentionedLabels) {
   if (!right) {
-    return {0, "Expression right argument doesn't exist."};
+    return {0, "Expression right argument doesn't exist.", {}};
   }
   if (!left) {
-    return {0, "Expression left argument doesn't exist."};
+    return {0, "Expression left argument doesn't exist.", {}};
   }
 
-  const auto evalLeft = left->evaluate(idenMap);
-  const auto evalRight = right->evaluate(idenMap);
+  const auto evalLeft = left->evaluate(idenMap, addressHolder, getMentionedLabels);
+  const auto evalRight = right->evaluate(idenMap, addressHolder, getMentionedLabels);
 
-  if (!evalLeft.second.empty()) {
-    return {0, evalLeft.second};
+  //merge label set
+  auto labels = std::move(evalLeft.mentionedLabels);
+  labels.reserve(labels.size() + evalRight.mentionedLabels.size());
+  labels.insert(
+    evalRight.mentionedLabels.begin(),
+    evalRight.mentionedLabels.end()
+  );
+
+  if (!evalLeft.error.empty()) {
+    return {0, evalLeft.error, labels};
   }
-  if (!evalRight.second.empty()) {
-    return {0, evalRight.second};
+  if (!evalRight.error.empty()) {
+    return {0, evalRight.error, labels};
   }
 
   switch (op) {
     using TY = Token::Type;
     case TY::BITWISEOR:
-      return {evalLeft.first | evalRight.first, ""};
+      return {evalLeft.value | evalRight.value, "", labels};
       break;
     case TY::BITWISEXOR:
-      return {evalLeft.first ^ evalRight.first, ""};
+      return {evalLeft.value ^ evalRight.value, "", labels};
       break;
     case TY::BITWISEAND:
-      return {evalLeft.first & evalRight.first, ""};
+      return {evalLeft.value & evalRight.value, "", labels};
       break;
     case TY::LEFTSHIFT:
-      return {evalLeft.first << evalRight.first, ""};
+      return {evalLeft.value << evalRight.value, "", labels};
       break;
     case TY::RIGHTSHIFT:
-      return {evalLeft.first >> evalRight.first, ""};
+      return {evalLeft.value >> evalRight.value, "", labels};
       break;
     case TY::SUBTRACT:
-      return {evalLeft.first - evalRight.first, ""};
+      return {evalLeft.value - evalRight.value, "", labels};
       break;
     case TY::ADD:
-      return {evalLeft.first + evalRight.first, ""};
+      return {evalLeft.value + evalRight.value, "", labels};
       break;
     case TY::MULTIPLY:
-      return {evalLeft.first * evalRight.first, ""};
+      return {evalLeft.value * evalRight.value, "", labels};
       break;
     case TY::DIVIDE:
-      return {evalLeft.first / evalRight.first, ""};
+      return {evalLeft.value / evalRight.value, "", labels};
       break;
     case TY::MOD:
-      return {evalLeft.first % evalRight.first, ""};
+      return {evalLeft.value % evalRight.value, "", labels};
       break;
     default:break;
   }
 
-  return {0, "Unforseen error in binary expression evaluation!"};
+  return {0, "Unforseen error in binary expression evaluation!", labels};
 }
 
 std::string_view Program::IdentifierObject::fullName() const {
@@ -231,6 +241,14 @@ std::vector<std::string_view> Program::IdentifierObject::getNDepthNameVector(siz
 
 std::string_view Program::IdentifierObject::name() const {
   return nameSegments.back();
+}
+
+std::unordered_set<std::string> Program::RelaxorDefinition::getLabelsReferencedFromConditionsInAllOptions() {
+  std::unordered_set<std::string> mentionedLabels;
+  for (const auto& option : options) {
+    mentionedLabels.insert(option.conditionExpr->mentionedLabels.begin(), option.conditionExpr->mentionedLabels.end());
+  }
+  return std::move(mentionedLabels);
 }
 
 void Spasm::Program::debugPrint() const {
@@ -293,7 +311,7 @@ void Spasm::Program::debugPrintStatement(const StatementSymbol* stmt, int indent
 void Spasm::Program::debugPrintIdentifier(const IdentifierObject* obj, int indentLevel) const {
   indent(indentLevel);
   std::cout << "Name: " << obj->name()
-            << " Address: " << obj->address
+            << " Address: " << obj->addressIndex
             //<< " Resolved: " << obj->addressResolved
             << "\n";
 

@@ -29,22 +29,22 @@ class Parser {
   void parseRelaxor(TokenHolder&, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program);
 
   std::pair<const Arch::Architecture::RegisterDefinition*, Token> parseExpectRegister(TokenHolder&, const Arch::Architecture&);
-  std::unique_ptr<Program::Operand> parseExpectImmediate(TokenHolder&);
+  std::unique_ptr<Program::Operand> parseExpectImmediate(TokenHolder&, size_t*);
   std::unique_ptr<Program::Operand> convertConstantStringToOperand(const Arch::Architecture&, const Arch::Architecture::ConstantStringOperand&);
 
-  std::unique_ptr<Program::Operand> makeErrorOperand(const Token&, const std::string&);
-  std::unique_ptr<Program::Expr> makeErrorExpression(const Token&, const std::string&);
+  std::unique_ptr<Program::Operand> makeErrorOperand(const Token&, const std::string&, size_t*);
+  std::unique_ptr<Program::Expr> makeErrorExpression(const Token&, const std::string&, size_t*);
   
   int parseNumberString(const Token&);
-  std::unique_ptr<Program::Expr> parseSquareExpression(TokenHolder&);
-  std::unique_ptr<Program::Expr> parseOr(TokenHolder&);
-  std::unique_ptr<Program::Expr> parseXor(TokenHolder&);
-  std::unique_ptr<Program::Expr> parseAnd(TokenHolder&);
-  std::unique_ptr<Program::Expr> parseShift(TokenHolder&);
-  std::unique_ptr<Program::Expr> parseAdditive(TokenHolder&);
-  std::unique_ptr<Program::Expr> parseMultiplicative(TokenHolder&);
-  std::unique_ptr<Program::Expr> parseUnary(TokenHolder&);
-  std::unique_ptr<Program::Expr> parsePrimary(TokenHolder&);
+  std::unique_ptr<Program::Expr> parseSquareExpression(TokenHolder&, size_t*);
+  std::unique_ptr<Program::Expr> parseOr(TokenHolder&, size_t*);
+  std::unique_ptr<Program::Expr> parseXor(TokenHolder&, size_t*);
+  std::unique_ptr<Program::Expr> parseAnd(TokenHolder&, size_t*);
+  std::unique_ptr<Program::Expr> parseShift(TokenHolder&, size_t*);
+  std::unique_ptr<Program::Expr> parseAdditive(TokenHolder&, size_t*);
+  std::unique_ptr<Program::Expr> parseMultiplicative(TokenHolder&, size_t*);
+  std::unique_ptr<Program::Expr> parseUnary(TokenHolder&, size_t*);
+  std::unique_ptr<Program::Expr> parsePrimary(TokenHolder&, size_t*);
 
   void parseLabelDefinition(TokenHolder&, Program::TranslationUnit&, Program&);
   //bool getOrCreateIdentiferObject(TokenHolder&, Program::TranslationUnit&, Program&, Program::LabelObject*&, bool, Program::LabelSymbol*, std::string_view&); //returns success
@@ -57,7 +57,7 @@ class Parser {
     bool,
     std::vector<std::string_view>&
   );
-  std::unique_ptr<Program::Expr> parseIdentifierToExpression(TokenHolder&);
+  std::unique_ptr<Program::Expr> parseIdentifierToExpression(TokenHolder&, size_t*);
   std::unique_ptr<Program::StatementSymbol> parseIdentifierNameDefiniton(TokenHolder&, Program::TranslationUnit&, Program&, bool);
 
   void parseDataTypeDeclaration(TokenHolder&, Program::TranslationUnit&, Program&);
@@ -66,7 +66,7 @@ class Parser {
   void parseElementsOfArray(TokenHolder&, Program::TranslationUnit&, Program::DataObject*, bool);
   void parseTextData(TokenHolder&, Program::DataObject*, bool);
   bool isRelaxorConditional(Token::NicheType type);
-  void parseRelaxorCondition(TokenHolder&, Program::RelaxorDefinition::RelaxorOptionPair&);
+  void parseRelaxorCondition(TokenHolder&, Program::RelaxorDefinition::RelaxorOptionPair&, size_t*);
   void parseRelaxorCodeBlock(TokenHolder&,  Program::RelaxorDefinition&, Program::RelaxorDefinition::RelaxorOptionPair&, Arch::Architecture&, Program::TranslationUnit&, Program&);
 };
 }

@@ -4,24 +4,20 @@
 
     {
       "name": "Launch",
-      "type": "lldb",
+      "type": "node",
       "request": "launch",
-      "program": "${workspaceRoot}/build/Debug/cpu_software.exe",
+      "program": "${workspaceRoot}/build/Debug/cpu_software",
       "args": [],
       "cwd": "${workspaceRoot}"
     },
     {
-      "name": "C/C++: clang build and debug active file",
-      "type": "cppdbg",
+      "name": "clang++ - Build and debug active file",
+      "type": "lldb",
       "request": "launch",
-      "program": "${fileDirname}/${fileBasenameNoExtension}",
+      "program": "${workspaceRoot}/build/cpu_software",
       "args": [],
-      "stopAtEntry": false,
-      "cwd": "${fileDirname}",
-      "environment": [],
-      "externalConsole": true,
-      "MIMode": "lldb",
-      "preLaunchTask": "C/C++: clang build active file"
+      "cwd": "${workspaceFolder}"
+      //"preLaunchTask": "clang++ build active file"
     },
     {
       "name": "CMake: CMake Script",

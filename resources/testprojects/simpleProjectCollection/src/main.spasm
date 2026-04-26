@@ -11,4 +11,4 @@ stear r4, r2      ; store r4 [r2]
 adi   r1, r1, 2   ; r1 += 2
 adi   r2, r2, 2   ; r1 += 2
 ; alternating aa 55 pattern (in both odd and even caches)
-jmpis 4
+jmpis $__start

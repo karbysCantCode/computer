@@ -35,6 +35,7 @@ namespace Spasm {
       DIVIDE, //y
       MOD, //y
       BITWISENOT, //y
+      RELATIVEOPERATOR,
       
       NEWLINE,
       MACRONEWLINE

@@ -4,29 +4,47 @@ namespace Spasm {
 
 Linker::LinkedResult Linker::run(
   size_t entrySymbolSetupByteLength,
+  Program &program,
   Debug::FullLogger* logger
 ) {
   p_logger = logger;
   LinkedResult linked;
 
+  ExpressionsByLabelHelper expressionHelper;
+
   // JUMP TO ENTRY SYM BYTES SETUP
   linked.maxAddress = entrySymbolSetupByteLength;
 
-  std::stack<Program::TranslationUnit*> definitionResolvingTranslationUnitStack = m_independentTranslationUnits;
-
-  while (!definitionResolvingTranslationUnitStack.empty()) {
-    auto& translationUnit = *definitionResolvingTranslationUnitStack.top();
-    definitionResolvingTranslationUnitStack.pop();
-
+  //std::stack<Program::TranslationUnit*> definitionResolvingTranslationUnitStack = m_independentTranslationUnits;
+  // ok so like you kinda need to go through everything to do definitions not just the indeepnendtnt?
+  
+  for (auto& translationUnitElement : program.m_translationUnits) {
+    auto& translationUnit = *translationUnitElement.second.get();
+    //address holder overhead
+    linked.addressHolder.resize(
+      linked.addressHolder.size() 
+      + translationUnit.m_statementVector.size() 
+      + translationUnit.m_definitionVector.size()
+    );
+    std::cout << translationUnit.m_statementVector.size() << '\n';
+    std::cout << translationUnit.m_definitionVector.size() << '\n';
+    linked.statementHolder.resize(linked.addressHolder.size());
+  
     linkDefinitionSymbols(translationUnit, linked);
   }
+  
+  // while (!definitionResolvingTranslationUnitStack.empty()) {
+  //   auto& translationUnit = *definitionResolvingTranslationUnitStack.top();
+  //   definitionResolvingTranslationUnitStack.pop();
+
+  // }
 
   linked.programDataStartAddress = linked.maxAddress;
 
   while (areUnlinkedIndependentTranslationUnits()) {
     auto& translationUnit = *consumeIndependentTranslationUnitFromStack();
 
-    linkTU(translationUnit, linked);
+    linkTU(translationUnit, linked, expressionHelper);
 
     for (auto dependantUnit : m_dependantTranslationUnitMap[translationUnit.m_sourcePath]) {
       dependantUnit->m_dependenciesResolved++;
@@ -36,6 +54,85 @@ Linker::LinkedResult Linker::run(
     }
   }
 
+  //lets go relaxors!
+  std::unordered_set<Program::RelaxorSymbol*> relaxorQueueSet;
+  std::deque<Program::RelaxorSymbol*> relaxorQueue;
+  relaxorQueue.insert(relaxorQueue.end(), program.m_relaxorPointerVector.begin(), program.m_relaxorPointerVector.end());
+  relaxorQueueSet.insert(program.m_relaxorPointerVector.begin(), program.m_relaxorPointerVector.end());
+
+  while (!relaxorQueue.empty()) {
+    const auto relaxorPtr = relaxorQueue.front();
+    auto& thisRelaxor = *relaxorPtr;
+    relaxorQueue.pop_front();
+    relaxorQueueSet.erase(relaxorPtr);
+
+    int original = thisRelaxor.optionIndex;
+    thisRelaxor.optionIndex = 0;
+    while (
+      thisRelaxor.relaxor.options.size() < thisRelaxor.optionIndex &&
+      thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->value == 0) {
+      thisRelaxor.optionIndex++;
+    }
+
+    const size_t nextAddressIndex = thisRelaxor.addressIndex + 1;
+
+    if (thisRelaxor.relaxor.options.size() >= thisRelaxor.optionIndex) {
+      thisRelaxor.optionIndex = -1;
+      continue;
+    } else if (thisRelaxor.optionIndex == original) {
+      continue;
+    } else if (linked.addressHolder.size() <= nextAddressIndex) {
+      continue;
+    }
+
+    const int sizeChange = thisRelaxor.relaxor.options[original].sumByteSizeOfOption() - thisRelaxor.relaxor.options[thisRelaxor.optionIndex].sumByteSizeOfOption();
+
+    //did change, updating required
+    auto it = std::lower_bound(linked.addressHolder.begin(), linked.addressHolder.end(), linked.addressHolder[nextAddressIndex]);
+
+    if (it != linked.addressHolder.end()) {
+      size_t index = it - linked.addressHolder.begin();
+
+      // get all labels beyond the address of relaxor, 
+      auto labelIt = std::lower_bound(
+        linked.addressLabelHolder.begin(), 
+        linked.addressLabelHolder.end(), 
+        linked.addressHolder[nextAddressIndex],
+        [](const addressLabelPointerPair& item, int value) {
+          return *item.addressPtr < value;
+        }
+      );
+
+      // mass increment
+      if (sizeChange != 0) {
+        for (size_t i = index; i < linked.addressHolder.size(); i++) {
+          linked.addressHolder[i] -= sizeChange;
+        }
+      }
+
+      std::vector<std::string> labelNames;
+      labelNames.resize(labelIt - linked.addressLabelHolder.begin());
+
+      size_t labelIndex = 0;
+      for (auto it2 = labelIt; it2 != linked.addressLabelHolder.end(); ++it2) {
+        labelNames[labelIndex++] = it2->labelPtr->labelObject->fullName();
+      }
+      //then evaluate dependant exprs
+      auto exprs = expressionHelper.getExpressionsReferencingTheseLabels(labelNames);
+      for (auto expr : exprs) {
+        expr->evaluate(m_globalIdentifierMap, linked.addressHolder, false);
+      }
+      // and add relaxors dependant to changed labels back to the start of the q
+      auto relaxors = expressionHelper.getRelaxorsReferencingTheseLabels(labelNames);
+      for (const auto relaxor : relaxors) {
+        if (relaxorQueueSet.find(relaxor) == relaxorQueueSet.end()) {
+          relaxorQueueSet.emplace(relaxor);
+          relaxorQueue.push_front(relaxor);
+        }
+      }
+    }
+
+  }
   return linked;
 }
 
@@ -47,15 +144,18 @@ void Linker::linkDefinitionSymbols(
 }
 void Linker::linkTU(
   Program::TranslationUnit& translationUnit, 
-  LinkedResult& linkedResult
+  LinkedResult& linkedResult,
+  ExpressionsByLabelHelper& labelHelper
 ) {
   //resolve addresses
-  placeDefinitionSymbols(linkedResult, translationUnit);
-  placeOtherSymbols(linkedResult, translationUnit);
+
+  //already done?
+  //placeDefinitionSymbols(linkedResult, translationUnit);
+  placeOtherSymbols(linkedResult, translationUnit, labelHelper);
   //check all identifiers have definitions
   checkForUndefinedIdentifiers();
   //resolve expressions
-  resolveExpressions(translationUnit);
+  resolveExpressions(translationUnit, linkedResult, labelHelper);
 
   //all linked!
   linkedResult.translationUnitQueue.push(&translationUnit);
@@ -134,8 +234,11 @@ void Linker::placeDefinitionSymbols(LinkedResult& linkedResult, Program::Transla
     }
 
     m_fullNameCollatedIdentifierMap.emplace(definitionObject.fullName(), definitionObjectPtr);
-    
-    definitionSymbol->address = linkedResult.maxAddress;
+    definitionSymbol->addressIndex = linkedResult.nAddressesEntered++; 
+    linkedResult.addressHolder[definitionSymbol->addressIndex] = linkedResult.maxAddress;
+    linkedResult.statementHolder[definitionSymbol->addressIndex] = definitionSymbol.get();
+    // cant reallty do this because it gets reallocated every TU
+    //definitionSymbol->address = linkedResult.addressHolder.data() + definitionSymbol->addressIndex * sizeof(size_t);
     // definitionSymbol->addressResolved = true;
     
     linkedResult.maxAddress += 
@@ -145,7 +248,7 @@ void Linker::placeDefinitionSymbols(LinkedResult& linkedResult, Program::Transla
   }
 }
 
-void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit) {
+void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit, ExpressionsByLabelHelper& labelHelper) {
   for (auto& statementSymbol : translationUnit.m_statementVector) {
     switch (statementSymbol.get()->getKind())
     {
@@ -204,7 +307,13 @@ void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationU
 
       m_fullNameCollatedIdentifierMap.emplace(labelObject.fullName(), labelObjectPtr);
       
-      labelSymbol.address = linkedResult.maxAddress;
+      labelSymbol.addressIndex = linkedResult.nAddressesEntered; 
+      linkedResult.nAddressesEntered++;
+      linkedResult.addressHolder[labelSymbol.addressIndex] = linkedResult.maxAddress;
+      linkedResult.statementHolder[labelSymbol.addressIndex] = &labelSymbol;
+      // cant reallty do this because it gets reallocated every TU
+      //labelSymbol.address = linkedResult.addressHolder.data() + labelSymbol.addressIndex * sizeof(size_t);
+
       //labelSymbol.addressResolved = true;
       break;
     }
@@ -214,15 +323,31 @@ void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationU
     case KIND::INSTRUCTION:
     {
       auto& instructionSymbol = *static_cast<Program::InstructionSymbol*>(statementSymbol.get());
-      instructionSymbol.address = linkedResult.maxAddress;
+      instructionSymbol.addressIndex = linkedResult.nAddressesEntered++; 
+      linkedResult.addressHolder[instructionSymbol.addressIndex] = linkedResult.maxAddress;
+      linkedResult.statementHolder[instructionSymbol.addressIndex] = &instructionSymbol;
+      // cant reallty do this because it gets reallocated every TU
+      //instructionSymbol.address = linkedResult.addressHolder.data() + instructionSymbol.addressIndex * sizeof(size_t);
       linkedResult.maxAddress += instructionSymbol.instruction.m_byteLength;
+      instructionSymbol.byteSize = instructionSymbol.instruction.m_byteLength;
       linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
       break;
     }
     case KIND::RELAXOR:
     {
       auto& relaxorSymbol = *static_cast<Program::RelaxorSymbol*>(statementSymbol.get());
-      relaxorSymbol.address = linkedResult.maxAddress;
+      labelHelper.registerRelaxor(&relaxorSymbol, relaxorSymbol.relaxor.getLabelsReferencedFromConditionsInAllOptions()); //expression mentioned set, add KEEPING that to the expr class (base)
+      
+      relaxorSymbol.addressIndex = linkedResult.nAddressesEntered++; 
+      linkedResult.addressHolder[relaxorSymbol.addressIndex] = linkedResult.maxAddress;
+      linkedResult.statementHolder[relaxorSymbol.addressIndex] = &relaxorSymbol;
+
+      // relaxorSymbol.relaxor.worstCaseSize = 0;
+      // for (auto& option : relaxorSymbol.relaxor.options) {
+      //   relaxorSymbol.relaxor.worstCaseSize = std::max(option.sumByteSizeOfOption(), largest);
+      // }
+      // cant reallty do this because it gets reallocated every TU
+      //relaxorSymbol.address = linkedResult.addressHolder.data() + relaxorSymbol.addressIndex * sizeof(size_t);
       linkedResult.maxAddress += relaxorSymbol.relaxor.worstCaseSize;
       linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
       break;
@@ -249,18 +374,59 @@ void Linker::checkForUndefinedIdentifiers() {
   }
 }
 
-void Linker::resolveExpressions(Program::TranslationUnit& translationUnit) {
+void Linker::resolveExpressions(Program::TranslationUnit& translationUnit, LinkedResult& linked, ExpressionsByLabelHelper& labelHelper) {
   while (!translationUnit.m_unresolvedExpressions.empty()) {
-    auto& expr = translationUnit.m_unresolvedExpressions.front();
+    auto& expr = *translationUnit.m_unresolvedExpressions.front();
     translationUnit.m_unresolvedExpressions.pop();
 
-    std::cout << expr << '\n';
-    auto eval = expr->evaluate(m_globalIdentifierMap);
+    // std::cout << expr << '\n';
+    auto eval = expr.evaluate(m_globalIdentifierMap, linked.addressHolder, true);
 
-    if (!eval.second.empty()) {
-      logError(expr->location, eval.second);
+    labelHelper.registerExpression(&expr, eval.mentionedLabels);
+    expr.mentionedLabels = std::move(eval.mentionedLabels);
+
+    if (!eval.error.empty()) {
+      logError(expr.location, eval.error);
       continue;
     }
   }
 }
+
+void Linker::ExpressionsByLabelHelper::registerExpression(Program::Expr* expr, const std::unordered_set<std::string>& mentionedLabels) {
+  for (const auto& fullName : mentionedLabels) {
+    p_labelByExpressionMap[fullName].insert(expr);
+  }
+}
+std::unordered_set<Program::Expr*> Linker::ExpressionsByLabelHelper::getExpressionsReferencingTheseLabels(const std::vector<std::string>& fullNameList) const {
+  std::unordered_set<Program::Expr*> finalSet;
+
+  for (const auto& fullName : fullNameList) {
+    const auto it = p_labelByExpressionMap.find(fullName);
+    if (it == p_labelByExpressionMap.end()) continue;
+
+    finalSet.insert(it->second.begin(), it->second.end());
+  }
+
+  return finalSet;
+}
+
+
+void Linker::ExpressionsByLabelHelper::registerRelaxor(Program::RelaxorSymbol* expr, const std::unordered_set<std::string>& mentionedLabels) {
+  for (const auto& fullName : mentionedLabels) {
+    p_relaxorByExpressionMap[fullName].insert(expr);
+  }
+}
+std::set<Program::RelaxorSymbol*> Linker::ExpressionsByLabelHelper::getRelaxorsReferencingTheseLabels(const std::vector<std::string>& fullNameList) const {
+  std::set<Program::RelaxorSymbol*> finalSet;
+
+  for (const auto& fullName : fullNameList) {
+    const auto it = p_relaxorByExpressionMap.find(fullName);
+    if (it == p_relaxorByExpressionMap.end()) continue;
+
+    finalSet.insert(it->second.begin(), it->second.end());
+  }
+
+  return finalSet;
+}
+
 }

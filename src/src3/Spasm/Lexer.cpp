@@ -350,6 +350,17 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
         continue;
         break;
       }
+      case '$':
+      {
+        consume();
+        output.m_tokens.emplace_back(
+          std::string_view{sliceStartPtr,1}, 
+          Token::Type::RELATIVEOPERATOR, 
+          sliceStartLocation
+        );
+        continue;
+        break;
+      }
       default: {
         if (isdigit(peek())) {
           const auto nt = getNicheTypeAndSetSliceOverNumber();
