@@ -102,22 +102,25 @@ namespace Spasm {
 Program::EvaluateTriple Program::IdentifierExpr::evaluate(NonOwningIdentifierMapType& identifierMap, std::vector<size_t>& addressHolder, bool getMentionedLabels) {
   std::string constructedName;
   Program::IdentifierObject* lastIdentifierObject;
-  const auto it = identifierMap.find(identifierPath.front());
-  constructedName.append(identifierPath.front());
-  identifierPath.pop();
+  auto pathCopy = identifierPath;
+  const auto it = identifierMap.find(pathCopy.front());
+  constructedName.append(pathCopy.front());
+  pathCopy.pop();
   if (it == identifierMap.end()) {
     return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName), {}};
   }
 
   lastIdentifierObject = it->second;
 
-  while (!identifierPath.empty()) {
-    const auto it = lastIdentifierObject->children.find(identifierPath.front());
-    constructedName.append(identifierPath.front());
-    identifierPath.pop();
-    if (it == lastIdentifierObject->children.end()) {
+  while (!pathCopy.empty()) {
+    const auto it2 = lastIdentifierObject->children.find(pathCopy.front());
+    constructedName.append(pathCopy.front());
+    pathCopy.pop();
+    if (it2 == lastIdentifierObject->children.end()) {
       return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName), {}};
     }
+
+    lastIdentifierObject = it2->second.get();
   }
 
   // if (!lastIdentifierObject->addressResolved) {
@@ -134,21 +137,29 @@ Program::EvaluateTriple Program::UnaryExpr::evaluate(NonOwningIdentifierMapType&
     return {0, "Expression argument doesn't exist.", {}};
   }
 
+  EvaluateTriple triple;
+
   const auto eval = right->evaluate(idenMap, addressHolder, getMentionedLabels);
   switch (op) {
     case Token::Type::SUBTRACT:
-      return {-eval.value, eval.error, eval.mentionedLabels};
+      triple = {-eval.value, eval.error, eval.mentionedLabels};
       break;
     case Token::Type::BITWISENOT:
-      return {~eval.value, eval.error, eval.mentionedLabels};
+      triple = {~eval.value, eval.error, eval.mentionedLabels};
       break;
     case Token::Type::RELATIVEOPERATOR:
-      return {eval.value - (int)addressHolder[*addressIndexPtr], eval.error, eval.mentionedLabels};
+      triple = {eval.value - ((int)addressHolder[*addressIndexPtr] + (int)relativeAddressOffset), eval.error, eval.mentionedLabels};
       break;
-    default: break;
+    case Token::Type::ABSOLUTE:
+      triple = {std::abs(eval.value), eval.error, eval.mentionedLabels};
+      break;
+    default: 
+      return {0, "Unknown unary operator type.", eval.mentionedLabels};
+      break;
 
   }
-  return {0, "Unknown unary operator type.", eval.mentionedLabels};
+  value = triple.value;
+  return triple;
 }
 
 Program::EvaluateTriple Program::BinaryExpr::evaluate(NonOwningIdentifierMapType& idenMap, std::vector<size_t>& addressHolder, bool getMentionedLabels) {
@@ -158,6 +169,8 @@ Program::EvaluateTriple Program::BinaryExpr::evaluate(NonOwningIdentifierMapType
   if (!left) {
     return {0, "Expression left argument doesn't exist.", {}};
   }
+  
+  EvaluateTriple triple;
 
   const auto evalLeft = left->evaluate(idenMap, addressHolder, getMentionedLabels);
   const auto evalRight = right->evaluate(idenMap, addressHolder, getMentionedLabels);
@@ -179,40 +192,68 @@ Program::EvaluateTriple Program::BinaryExpr::evaluate(NonOwningIdentifierMapType
 
   switch (op) {
     using TY = Token::Type;
+    case TY::COMPARISONOR:
+      triple =  {evalLeft.value || evalRight.value, "", labels};
+      break;
+    case TY::COMPARISONAND:
+      triple =  {evalLeft.value && evalRight.value, "", labels};
+      break;
     case TY::BITWISEOR:
-      return {evalLeft.value | evalRight.value, "", labels};
+      triple =  {evalLeft.value | evalRight.value, "", labels};
       break;
     case TY::BITWISEXOR:
-      return {evalLeft.value ^ evalRight.value, "", labels};
+      triple =  {evalLeft.value ^ evalRight.value, "", labels};
       break;
     case TY::BITWISEAND:
-      return {evalLeft.value & evalRight.value, "", labels};
+      triple =  {evalLeft.value & evalRight.value, "", labels};
+      break;
+    case TY::EQUAL:
+      triple =  {evalLeft.value == evalRight.value, "", labels};
+      break;
+    case TY::NOTEQUAL:
+      triple =  {evalLeft.value != evalRight.value, "", labels};
+      break;
+    case TY::LESSTHAN:
+      triple =  {evalLeft.value < evalRight.value, "", labels};
+      break;
+    case TY::LESSTHANOREQUAL:
+      triple =  {evalLeft.value <= evalRight.value, "", labels};
+      break;
+    case TY::GREATERTHAN:
+      triple =  {evalLeft.value > evalRight.value, "", labels};
+      break;
+    case TY::GREATERTHANOREQUAL:
+      triple =  {evalLeft.value >= evalRight.value, "", labels};
       break;
     case TY::LEFTSHIFT:
-      return {evalLeft.value << evalRight.value, "", labels};
+      triple =  {evalLeft.value << evalRight.value, "", labels};
       break;
     case TY::RIGHTSHIFT:
-      return {evalLeft.value >> evalRight.value, "", labels};
+      triple =  {evalLeft.value >> evalRight.value, "", labels};
       break;
     case TY::SUBTRACT:
-      return {evalLeft.value - evalRight.value, "", labels};
+      triple =  {evalLeft.value - evalRight.value, "", labels};
       break;
     case TY::ADD:
-      return {evalLeft.value + evalRight.value, "", labels};
+      triple =  {evalLeft.value + evalRight.value, "", labels};
       break;
     case TY::MULTIPLY:
-      return {evalLeft.value * evalRight.value, "", labels};
+      triple =  {evalLeft.value * evalRight.value, "", labels};
       break;
     case TY::DIVIDE:
-      return {evalLeft.value / evalRight.value, "", labels};
+      triple =  {evalLeft.value / evalRight.value, "", labels};
       break;
     case TY::MOD:
-      return {evalLeft.value % evalRight.value, "", labels};
+      triple =  {evalLeft.value % evalRight.value, "", labels};
       break;
-    default:break;
+    default:
+      return {0, "Unforseen error in binary expression evaluation!", labels};
+      break;
   }
 
-  return {0, "Unforseen error in binary expression evaluation!", labels};
+  value = triple.value;
+  return triple;
+
 }
 
 std::string_view Program::IdentifierObject::fullName() const {

@@ -15,9 +15,6 @@ Linker::LinkedResult Linker::run(
   // JUMP TO ENTRY SYM BYTES SETUP
   linked.maxAddress = entrySymbolSetupByteLength;
 
-  //std::stack<Program::TranslationUnit*> definitionResolvingTranslationUnitStack = m_independentTranslationUnits;
-  // ok so like you kinda need to go through everything to do definitions not just the indeepnendtnt?
-  
   for (auto& translationUnitElement : program.m_translationUnits) {
     auto& translationUnit = *translationUnitElement.second.get();
     //address holder overhead
@@ -33,12 +30,6 @@ Linker::LinkedResult Linker::run(
     linkDefinitionSymbols(translationUnit, linked);
   }
   
-  // while (!definitionResolvingTranslationUnitStack.empty()) {
-  //   auto& translationUnit = *definitionResolvingTranslationUnitStack.top();
-  //   definitionResolvingTranslationUnitStack.pop();
-
-  // }
-
   linked.programDataStartAddress = linked.maxAddress;
 
   while (areUnlinkedIndependentTranslationUnits()) {
@@ -69,14 +60,14 @@ Linker::LinkedResult Linker::run(
     int original = thisRelaxor.optionIndex;
     thisRelaxor.optionIndex = 0;
     while (
-      thisRelaxor.relaxor.options.size() < thisRelaxor.optionIndex &&
+      thisRelaxor.relaxor.options.size() > thisRelaxor.optionIndex &&
       thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->value == 0) {
       thisRelaxor.optionIndex++;
     }
 
     const size_t nextAddressIndex = thisRelaxor.addressIndex + 1;
 
-    if (thisRelaxor.relaxor.options.size() >= thisRelaxor.optionIndex) {
+    if (thisRelaxor.relaxor.options.size() <= thisRelaxor.optionIndex) {
       thisRelaxor.optionIndex = -1;
       continue;
     } else if (thisRelaxor.optionIndex == original) {
@@ -85,7 +76,8 @@ Linker::LinkedResult Linker::run(
       continue;
     }
 
-    const int sizeChange = thisRelaxor.relaxor.options[original].sumByteSizeOfOption() - thisRelaxor.relaxor.options[thisRelaxor.optionIndex].sumByteSizeOfOption();
+    
+    const int sizeChange = (original >= 0 ? thisRelaxor.relaxor.options[original].sumByteSizeOfOption() : thisRelaxor.relaxor.worstCaseSize) - thisRelaxor.relaxor.options[thisRelaxor.optionIndex].sumByteSizeOfOption();
 
     //did change, updating required
     auto it = std::lower_bound(linked.addressHolder.begin(), linked.addressHolder.end(), linked.addressHolder[nextAddressIndex]);
@@ -307,8 +299,7 @@ void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationU
 
       m_fullNameCollatedIdentifierMap.emplace(labelObject.fullName(), labelObjectPtr);
       
-      labelSymbol.addressIndex = linkedResult.nAddressesEntered; 
-      linkedResult.nAddressesEntered++;
+      labelSymbol.addressIndex = linkedResult.nAddressesEntered++; 
       linkedResult.addressHolder[labelSymbol.addressIndex] = linkedResult.maxAddress;
       linkedResult.statementHolder[labelSymbol.addressIndex] = &labelSymbol;
       // cant reallty do this because it gets reallocated every TU
@@ -339,6 +330,14 @@ void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationU
       labelHelper.registerRelaxor(&relaxorSymbol, relaxorSymbol.relaxor.getLabelsReferencedFromConditionsInAllOptions()); //expression mentioned set, add KEEPING that to the expr class (base)
       
       relaxorSymbol.addressIndex = linkedResult.nAddressesEntered++; 
+
+      //for
+      for (const auto& option : relaxorSymbol.relaxor.options) {
+        for (auto& statement : option.optionStatements) {
+          statement->addressIndex = relaxorSymbol.addressIndex;
+        }
+      }
+
       linkedResult.addressHolder[relaxorSymbol.addressIndex] = linkedResult.maxAddress;
       linkedResult.statementHolder[relaxorSymbol.addressIndex] = &relaxorSymbol;
 
@@ -381,7 +380,8 @@ void Linker::resolveExpressions(Program::TranslationUnit& translationUnit, Linke
 
     // std::cout << expr << '\n';
     auto eval = expr.evaluate(m_globalIdentifierMap, linked.addressHolder, true);
-
+    expr.setValue(eval.value);
+    std::cout << expr.toString() << " value: " << eval.value << std::endl;
     labelHelper.registerExpression(&expr, eval.mentionedLabels);
     expr.mentionedLabels = std::move(eval.mentionedLabels);
 

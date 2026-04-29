@@ -55,7 +55,11 @@ void OutputGenerator::run(
       case Program::StatementSymbol::Kind::RELAXOR: {
         auto& relaxorStatement = *static_cast<Program::RelaxorSymbol*>(statement.get());
         size_t instructionByteOffset = linkedResult.addressHolder[relaxorStatement.addressIndex];
+        while (!p_logger->Errors.isEmpty()) {
+          std::cout << p_logger->Errors.consumeMessage() << std::endl;
+        }
         for (const auto& instruction : relaxorStatement.relaxor.options[relaxorStatement.optionIndex].optionStatements) {
+          assert(instruction);
           if (instruction->getKind() != Program::StatementSymbol::Kind::INSTRUCTION) {
             logError(instruction->location, "Non instruction statement forbidden inside relaxor.");
             continue;

@@ -1,4 +1,4 @@
-@define jmp(label) {
+@define STD_INTERNAL_full_jump(label) {
   ; destroys mo, r14, r15
   movi r14, [label & 0xffff]         ; low half
   movi r15, [(label << 16) & 0xffff] ; high half
@@ -6,6 +6,7 @@
   mov  moh, r15
   jmpr mo
 }
+;*
 @define jmps(label) {
   ; saves registers
   push r14
@@ -21,3 +22,39 @@
   pop r14
   
 }
+*;
+
+@define jmp(label) {
+  ; abs(bytesToLabel / 2)
+  ; IMPLEMENT COMPARISON OPERATORS
+  @if (($label / 2) <= 1023 && ($label / 2) >= 0) {
+    jmpia [$label / 2]
+  } @elif (($label / 2) >= -1023 && ($label / 2) <= 0) {
+    jmpis [$$$label / 2] 
+  } @else {
+    STD_INTERNAL_full_jump label
+  }
+}
+@define jmps(label) {
+  ; abs(bytesToLabel / 2)
+  ; IMPLEMENT COMPARISON OPERATORS
+  @if (($label / 2) <= 1023 && ($label / 2) >= 0) {
+    jmpia $label / 2
+  } @elif (($label / 2) >= -1023 && ($label / 2) <= 0) {
+    jmpis $$$label / 2
+  } @else {
+    ; saves registers
+    push r14
+    push r15
+    push mol
+    push moh
+    
+    STD_INTERNAL_full_jump label
+
+    pop moh
+    pop mol
+    pop r15
+    pop r14
+  }
+}
+

@@ -17,5 +17,5 @@ shli  4, r3, r1          ; extended shifting with r3 lowbyte
 mov   mol, r3            ; increment 
 ;mov   moh, r4            ;
 cmp   r1, r2              
-brcis c_l0, 10           ; branch if r1 < r2
-jmpis 0                  ; halt
+brcis c_lo, 10           ; branch if r1 < r2
+jmpis $__start                  ; halt

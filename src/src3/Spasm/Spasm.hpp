@@ -6,6 +6,7 @@
 #include <queue>
 #include <Arch/Arch.hpp>
 #include <Spasm/Lexer.hpp>
+#include <sstream>
 #include "Helpers/CLIOptions.hpp"
 
 #include "SMake/SMake.hpp"
@@ -73,12 +74,14 @@ namespace Spasm {
       std::string error;
 
       EvaluateTriple(int v, std::string err, std::unordered_set<std::string> mentionedLbls) : value(v), error(err), mentionedLabels(mentionedLbls) {}
+      EvaluateTriple() {}
     };
 
     struct Expr {
       int value = 0;
       bool evaluated = false;
       size_t* addressIndexPtr = nullptr;
+      size_t relativeAddressOffset = 0;
       std::unordered_set<std::string> mentionedLabels;
 
       SourceLocation location;
@@ -91,8 +94,17 @@ namespace Spasm {
       virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels = false) {assert(false); return {0, "ASSERTED FALSE", {}};}
 
       virtual ~Expr() = default;
-      Expr(const SourceLocation& sLoc, size_t* addressIndex) : location(sLoc), addressIndexPtr(addressIndex) {}
-      Expr(const SourceLocation& sLoc, int val, size_t* addressIndex) : location(sLoc), value(val), addressIndexPtr(addressIndex) {}
+
+      virtual void print(std::ostream& os) const = 0;
+
+      std::string toString() const {
+        std::ostringstream oss;
+        print(oss);
+        return oss.str();
+      }
+
+      Expr(const SourceLocation& sLoc, size_t* addressIndex, size_t expressionOffset) : location(sLoc), addressIndexPtr(addressIndex), relativeAddressOffset(expressionOffset) {}
+      Expr(const SourceLocation& sLoc, int val, size_t* addressIndex, size_t expressionOffset) : location(sLoc), value(val), addressIndexPtr(addressIndex), relativeAddressOffset(expressionOffset) {}
     };
 
     struct IdentifierObject {
@@ -202,18 +214,25 @@ namespace Spasm {
 
     struct NumberExpr : Expr {
       // int value;
-      NumberExpr(const SourceLocation& sLoc, int val, size_t* addressIndex) : Expr(sLoc, val, addressIndex) {}
-
+      NumberExpr(const SourceLocation& sLoc, int val, size_t* addressIndex, size_t expressionOffset) : Expr(sLoc, val, addressIndex, expressionOffset) {}
+      
+      void print(std::ostream& os) const override {
+        os << value;
+      }
       virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels) override {setEvaluated(); return {value, "", {}};}
     };
 
     struct IdentifierExpr : Expr {
       std::queue<std::string_view> identifierPath;
-      IdentifierExpr(const SourceLocation& sLoc, const std::string_view iden, size_t* addressIndex) : Expr(sLoc, addressIndex) {
+      IdentifierExpr(const SourceLocation& sLoc, const std::string_view iden, size_t* addressIndex, size_t expressionOffset) : Expr(sLoc, addressIndex, expressionOffset) {
         identifierPath.push(iden);
       }
-      IdentifierExpr(const SourceLocation& sLoc, size_t* addressIndex) : Expr(sLoc, addressIndex) {}
+      IdentifierExpr(const SourceLocation& sLoc, size_t* addressIndex, size_t expressionOffset) : Expr(sLoc, addressIndex, expressionOffset) {}
 
+      void print(std::ostream& os) const override {
+        if (!identifierPath.empty())
+          os << identifierPath.front();
+      }
       virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels) override;
     };
 
@@ -223,9 +242,26 @@ namespace Spasm {
 
       UnaryExpr(const SourceLocation& sLoc,
         size_t* addressIndex,
+        size_t expressionOffset,
         Token::Type o,
         std::unique_ptr<Expr> rhs)
-        : Expr(sLoc, addressIndex), op(o), right(std::move(rhs)) {}
+        : Expr(sLoc, addressIndex, expressionOffset), op(o), right(std::move(rhs)) {}
+      
+      static std::string tokenToString(Token::Type type) {
+        switch (type) {
+          case Token::Type::RELATIVEOPERATOR: return "$";
+          case Token::Type::ABSOLUTE: return "$$";
+          case Token::Type::SUBTRACT: return "-";
+          case Token::Type::BITWISENOT: return "~";
+          default: return "?";
+        }
+      }
+
+      void print(std::ostream& os) const override {
+        os << "(" << tokenToString(op);
+        right->print(os);
+        os << ")";
+      }
 
       virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels) override;
     };
@@ -237,10 +273,44 @@ namespace Spasm {
 
       BinaryExpr(const SourceLocation& sLoc,
         size_t* addressIndex,
+        size_t expressionOffset,
         Token::Type o,
         std::unique_ptr<Expr> lhs,
         std::unique_ptr<Expr> rhs)
-        : Expr(sLoc, addressIndex), op(o), left(std::move(lhs)),right(std::move(rhs)) {}
+        : Expr(sLoc, addressIndex, expressionOffset), op(o), left(std::move(lhs)),right(std::move(rhs)) {}
+      
+      void print(std::ostream& os) const override {
+        os << "(";
+        left->print(os);
+        os << " " << tokenToString(op) << " ";
+        right->print(os);
+        os << ")";
+      }
+
+      static std::string tokenToString(Token::Type type) {
+        switch (type) {
+          case Token::Type::BITWISEOR: return "|";
+          case Token::Type::BITWISEAND: return "&";
+          case Token::Type::BITWISEXOR: return "^";
+          case Token::Type::LEFTSHIFT: return "<<";
+          case Token::Type::RIGHTSHIFT: return ">>";
+          case Token::Type::ADD: return "+";
+          case Token::Type::SUBTRACT: return "-";
+          case Token::Type::MULTIPLY: return "*";
+          case Token::Type::DIVIDE: return "/";
+          case Token::Type::MOD: return "%";
+          case Token::Type::LESSTHAN: return "<";
+          case Token::Type::GREATERTHAN: return ">";
+          case Token::Type::LESSTHANOREQUAL: return "<=";
+          case Token::Type::GREATERTHANOREQUAL: return ">=";
+          case Token::Type::EQUAL: return "==";
+          case Token::Type::NOTEQUAL: return "!=";
+          case Token::Type::COMPARISONOR: return "||";
+          case Token::Type::COMPARISONAND: return "&&";
+          default: return "?";
+        }
+      }
+
 
       virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels) override;
     };
@@ -285,6 +355,7 @@ namespace Spasm {
 
     struct InstructionSymbol : StatementSymbol {
       int opcode = -1;
+      size_t relativeOffset = 0;
       std::vector<std::unique_ptr<Operand>> operands;
       const Arch::Architecture::InstructionDefinition& instruction;
       // void generate() override {}

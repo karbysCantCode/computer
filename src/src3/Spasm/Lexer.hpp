@@ -36,6 +36,16 @@ namespace Spasm {
       MOD, //y
       BITWISENOT, //y
       RELATIVEOPERATOR,
+      ABSOLUTE,
+
+      LESSTHAN,
+      GREATERTHAN,
+      LESSTHANOREQUAL,
+      GREATERTHANOREQUAL,
+      EQUAL,
+      NOTEQUAL,
+      COMPARISONAND,
+      COMPARISONOR,
       
       NEWLINE,
       MACRONEWLINE

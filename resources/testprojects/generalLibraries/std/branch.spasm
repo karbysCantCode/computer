@@ -1,0 +1,49 @@
+std.internal.full_branch_jump_pass:
+
+@define STD_INTERNAL_full_branch(condition, label) {
+  ; destroys mo, r14, r15
+  brcia condition, $std.internal.full_branch_jump_pass.label
+  movi r14, [label & 0xffff]         ; low half
+  movi r15, [(label << 16) & 0xffff] ; high half
+  mov  mol, r14
+  mov  moh, r15
+  jmpr mo
+  std.internal.full_branch_jump_pass.label:
+}
+
+;  destructive branch
+@define brc(condition, label) {
+  ; abs(bytesToLabel / 2)
+  ; IMPLEMENT COMPARISON OPERATORS
+  @if (($label / 2) <= 63 && ($label / 2) >= 0) {
+    brcia condition, [$label / 2]
+  } @elif (($label / 2) >= -63 && ($label / 2) <= 0) {
+    brcis condition, [$$$label / 2] 
+  } @else {
+    STD_INTERNAL_full_branch condition, label
+  }
+}
+
+; safe branch
+@define brcs(condition, label) {
+  ; abs(bytesToLabel / 2)
+  ; IMPLEMENT COMPARISON OPERATORS
+  @if (($label / 2) <= 63 && ($label / 2) >= 0) {
+    brcia condition, [$label / 2]
+  } @elif (($label / 2) >= -63 && ($label / 2) <= 0) {
+    brcis condition, [$$$label / 2] 
+  } @else {
+    ; saves registers
+    push r14
+    push r15
+    push mol
+    push moh
+    
+    STD_INTERNAL_full_branch condition, label
+
+    pop moh
+    pop mol
+    pop r15
+    pop r14
+  }
+}

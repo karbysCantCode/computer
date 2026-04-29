@@ -88,9 +88,12 @@ void Parser::parseIdentifier(TokenHolder& tokenHolder, Arch::Architecture& arch,
   }
 }
 
-std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken, const Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {
+std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder& tokenHolder, const Token& instrToken, const Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program, size_t expressionAddressOffset) {
   const auto instructionDefinition = arch.m_instructionSet.find((std::string)instrToken.value);
-  if (instructionDefinition == arch.m_instructionSet.end()) {logError(instrToken, std::format("Unknown instruction \"{}\" referenced.", instrToken.value));return {};}
+  if (instructionDefinition == arch.m_instructionSet.end()) {
+    logError(instrToken, std::format("Unknown instruction \"{}\" referenced.", instrToken.value));
+    return {};
+  }
   
   auto instructionSymbol = std::make_unique<Program::InstructionSymbol>(instrToken.location, instructionDefinition->second);
   instructionSymbol->operands.resize(instructionDefinition->second.m_operands.size()); // reserve to prevent resizing overhead
@@ -119,10 +122,10 @@ std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder
         std::unique_ptr<Program::Operand> programOperand;
 
         if (!regptr) {
-          programOperand = makeErrorOperand(identifierToken, "Unknown register", &instructionSymbol->addressIndex);
+          programOperand = makeErrorOperand(identifierToken, "Unknown register", &instructionSymbol->addressIndex, 0);
         }
         else if (op.acceptedRegisterNames.count(regptr->m_registerName) < 1){
-          programOperand = makeErrorOperand(identifierToken, "Register out of range for this field.", &instructionSymbol->addressIndex);
+          programOperand = makeErrorOperand(identifierToken, "Register out of range for this field.", &instructionSymbol->addressIndex, 0);
         }
         else {
           programOperand = std::make_unique<Program::RegisterOperand>(identifierToken.location, *regptr);
@@ -132,15 +135,19 @@ std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder
 
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::ImmediateOperand>) {
-        auto programOperand = parseExpectImmediate(tokenHolder, &instructionSymbol->addressIndex);
+        auto programOperand = parseExpectImmediate(tokenHolder, &instructionSymbol->addressIndex, expressionAddressOffset);
         //get a ptr to the expression of program operand to give it to the unresolved list
-        translationUnit.m_unresolvedExpressions.push(static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get());
+        auto expressionPtr = static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get();
+        expressionPtr->relativeAddressOffset = expressionAddressOffset;
+        translationUnit.m_unresolvedExpressions.push(expressionPtr);
         instructionSymbol->operands[instructionIndex] = std::move(programOperand);
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::ExternalImmediateOperand>) {
-        auto programOperand = parseExpectImmediate(tokenHolder, &instructionSymbol->addressIndex);
+        auto programOperand = parseExpectImmediate(tokenHolder, &instructionSymbol->addressIndex, expressionAddressOffset);
         //get a ptr to the expression of program operand to give it to the unresolved list
-        translationUnit.m_unresolvedExpressions.push(static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get());
+        auto expressionPtr = static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get();
+        expressionPtr->relativeAddressOffset = expressionAddressOffset;
+        translationUnit.m_unresolvedExpressions.push(expressionPtr);
         instructionSymbol->operands[instructionIndex] = std::move(programOperand);
       }
     }, operand);
@@ -167,37 +174,46 @@ std::pair<const Arch::Architecture::RegisterDefinition*, Token> Parser::parseExp
   };
 }
 
-std::unique_ptr<Program::Operand> Parser::parseExpectImmediate(TokenHolder& tokenHolder, size_t* addressIndex) {
+std::unique_ptr<Program::Operand> Parser::parseExpectImmediate(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
   switch (tokenHolder.peek().type) {
     case Token::Type::OPENSQUARE: {
       const auto startToken = tokenHolder.consume();
-      auto expr = std::make_unique<Program::ExpressionOperand>(startToken.location, parseSquareExpression(tokenHolder, addressIndex));
+      auto expr = std::make_unique<Program::ExpressionOperand>(startToken.location, parseSquareExpression(tokenHolder, addressIndex, expressionOffset));
       if (!tokenHolder.match(Token::Type::CLOSESQUARE)) {
-        return makeErrorOperand(tokenHolder.peek(), std::format("Expected ']', got \"{}\"", tokenHolder.peek().value), addressIndex);
+        return makeErrorOperand(tokenHolder.peek(), std::format("Expected ']', got \"{}\"", tokenHolder.peek().value), addressIndex, expressionOffset);
       }
       tokenHolder.skip();
       return expr;
       break;
     }
     case Token::Type::IDENTIFIER: {
-      auto expr = std::make_unique<Program::IdentifierExpr>(tokenHolder.peek().location, tokenHolder.peek().value, addressIndex);
+      auto expr = std::make_unique<Program::IdentifierExpr>(tokenHolder.peek().location, tokenHolder.peek().value, addressIndex, expressionOffset);
       return std::make_unique<Program::ExpressionOperand>(tokenHolder.consume().location, std::move(expr));
     }
     case Token::Type::NUMBER: {
-      auto expr = std::make_unique<Program::NumberExpr>(tokenHolder.peek().location,parseNumberString(tokenHolder.peek()), addressIndex);
+      auto expr = std::make_unique<Program::NumberExpr>(tokenHolder.peek().location,parseNumberString(tokenHolder.peek()), addressIndex, expressionOffset);
       return std::make_unique<Program::ExpressionOperand>(tokenHolder.consume().location, std::move(expr));
     }
     case Token::Type::SUBTRACT: {
-      return std::make_unique<Program::ExpressionOperand>(tokenHolder.consume().location, parseUnary(tokenHolder, addressIndex));
+      return std::make_unique<Program::ExpressionOperand>(tokenHolder.peek().location, parseUnary(tokenHolder, addressIndex, expressionOffset));
+    }
+    case Token::Type::BITWISENOT: {
+      return std::make_unique<Program::ExpressionOperand>(tokenHolder.peek().location, parseUnary(tokenHolder, addressIndex, expressionOffset));
+    }
+    case Token::Type::RELATIVEOPERATOR: {
+      return std::make_unique<Program::ExpressionOperand>(tokenHolder.peek().location, parseUnary(tokenHolder, addressIndex, expressionOffset));
+    }
+    case Token::Type::ABSOLUTE: {
+      return std::make_unique<Program::ExpressionOperand>(tokenHolder.peek().location, parseUnary(tokenHolder, addressIndex, expressionOffset));
     }
     default:
-      return makeErrorOperand(tokenHolder.peek(), std::format("Expected a constant, got \"{}\"", tokenHolder.consume().value), addressIndex);
+      return makeErrorOperand(tokenHolder.peek(), std::format("Expected a constant, got \"{}\"", tokenHolder.consume().value), addressIndex, expressionOffset);
     break;
   }
 }
 
-std::unique_ptr<Program::Expr> Parser::parseSquareExpression(TokenHolder& tokenHolder, size_t* addressIndex) {
-  return parseOr(tokenHolder, addressIndex);
+std::unique_ptr<Program::Expr> Parser::parseSquareExpression(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  return parseBooleanOr(tokenHolder, addressIndex, expressionOffset);
 }
 
 std::unique_ptr<Program::Operand> Parser::convertConstantStringToOperand(const Arch::Architecture& arch, const Arch::Architecture::ConstantStringOperand& constOp) {
@@ -209,9 +225,9 @@ std::unique_ptr<Program::Operand> Parser::convertConstantStringToOperand(const A
   //undefined case
 }
 
-std::unique_ptr<Program::Operand> Parser::makeErrorOperand(const Token& errToken, const std::string& message, size_t* addressIndex) {
+std::unique_ptr<Program::Operand> Parser::makeErrorOperand(const Token& errToken, const std::string& message, size_t* addressIndex, size_t expressionOffset) {
   logError(errToken, message);
-  return std::make_unique<Program::ExpressionOperand>(errToken.location, std::make_unique<Program::NumberExpr>(errToken.location, 0, addressIndex));
+  return std::make_unique<Program::ExpressionOperand>(errToken.location, std::make_unique<Program::NumberExpr>(errToken.location, 0, addressIndex, expressionOffset));
 }
 
 int Parser::parseNumberString(const Token& token) {
@@ -248,32 +264,70 @@ int Parser::parseNumberString(const Token& token) {
   }
 }
 
-std::unique_ptr<Program::Expr> Parser::parseOr(TokenHolder& tokenHolder, size_t* addressIndex) {
-  auto lhs = parseXor(tokenHolder, addressIndex);
+std::unique_ptr<Program::Expr> Parser::parseBooleanOr(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseBooleanAnd(tokenHolder, addressIndex, expressionOffset);
+
+  while (tokenHolder.match(Token::Type::COMPARISONOR) && tokenHolder.notAtEnd()) {
+    const auto locTok = tokenHolder.consume();
+    auto rhs = parseBooleanAnd(tokenHolder, addressIndex, expressionOffset);
+
+    lhs = std::make_unique<Program::BinaryExpr>(
+      locTok.location,
+       addressIndex,
+       expressionOffset,
+      Token::Type::COMPARISONOR,
+      std::move(lhs), std::move(rhs)
+    );
+  }
+  return lhs;
+}
+
+std::unique_ptr<Program::Expr> Parser::parseBooleanAnd(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseOr(tokenHolder, addressIndex, expressionOffset);
+
+  while (tokenHolder.match(Token::Type::COMPARISONAND) && tokenHolder.notAtEnd()) {
+    const auto locTok = tokenHolder.consume();
+    auto rhs = parseOr(tokenHolder, addressIndex, expressionOffset);
+
+    lhs = std::make_unique<Program::BinaryExpr>(
+      locTok.location,
+       addressIndex,
+       expressionOffset,
+      Token::Type::COMPARISONAND,
+      std::move(lhs), std::move(rhs)
+    );
+  }
+  return lhs;
+}
+
+std::unique_ptr<Program::Expr> Parser::parseOr(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseXor(tokenHolder, addressIndex, expressionOffset);
 
   while (tokenHolder.match(Token::Type::BITWISEOR) && tokenHolder.notAtEnd()) {
     const auto locTok = tokenHolder.consume();
-    auto rhs = parseXor(tokenHolder, addressIndex);
+    auto rhs = parseXor(tokenHolder, addressIndex, expressionOffset);
 
     lhs = std::make_unique<Program::BinaryExpr>(
       locTok.location,
       addressIndex,
+      expressionOffset,
       Token::Type::BITWISEOR,
       std::move(lhs), std::move(rhs)
     );
   }
   return lhs;
 }
-std::unique_ptr<Program::Expr> Parser::parseXor(TokenHolder& tokenHolder, size_t* addressIndex) {
-  auto lhs = parseAnd(tokenHolder, addressIndex);
+std::unique_ptr<Program::Expr> Parser::parseXor(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseAnd(tokenHolder, addressIndex, expressionOffset);
 
   while (tokenHolder.match(Token::Type::BITWISEXOR) && tokenHolder.notAtEnd()) {
     const auto locTok = tokenHolder.consume();
-    auto rhs = parseAnd(tokenHolder, addressIndex);
+    auto rhs = parseAnd(tokenHolder, addressIndex, expressionOffset);
 
     lhs = std::make_unique<Program::BinaryExpr>(
       locTok.location,
       addressIndex,
+      expressionOffset,
       Token::Type::BITWISEXOR,
       std::move(lhs), std::move(rhs)
     );
@@ -281,114 +335,160 @@ std::unique_ptr<Program::Expr> Parser::parseXor(TokenHolder& tokenHolder, size_t
 
   return lhs;
 }
-std::unique_ptr<Program::Expr> Parser::parseAnd(TokenHolder& tokenHolder, size_t* addressIndex) {
-  auto lhs = parseShift(tokenHolder, addressIndex);
+std::unique_ptr<Program::Expr> Parser::parseAnd(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseEquality(tokenHolder, addressIndex, expressionOffset);
 
   while (tokenHolder.match(Token::Type::BITWISEAND) && tokenHolder.notAtEnd()) {
     const auto locTok = tokenHolder.consume();
-    auto rhs = parseShift(tokenHolder, addressIndex);
+    auto rhs = parseEquality(tokenHolder, addressIndex, expressionOffset);
 
     lhs = std::make_unique<Program::BinaryExpr>(
       locTok.location,
        addressIndex,
+       expressionOffset,
       Token::Type::BITWISEAND,
       std::move(lhs), std::move(rhs)
     );
   }
   return lhs;
 }
-std::unique_ptr<Program::Expr> Parser::parseShift(TokenHolder& tokenHolder, size_t* addressIndex) {
-  auto lhs = parseAdditive(tokenHolder, addressIndex);
+std::unique_ptr<Program::Expr> Parser::parseEquality(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseComparison(tokenHolder, addressIndex, expressionOffset);
+
+  while ((tokenHolder.match(Token::Type::NOTEQUAL) 
+       || tokenHolder.match(Token::Type::EQUAL))
+      && tokenHolder.notAtEnd()) {
+    auto opTok = tokenHolder.consume();
+    auto rhs = parseComparison(tokenHolder, addressIndex, expressionOffset);
+
+    lhs = std::make_unique<Program::BinaryExpr>(
+      opTok.location,
+      addressIndex,
+      expressionOffset,
+      opTok.type,
+      std::move(lhs), std::move(rhs)
+    );
+  }
+  return lhs;
+}
+std::unique_ptr<Program::Expr> Parser::parseComparison(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseShift(tokenHolder, addressIndex, expressionOffset);
+
+  while ((tokenHolder.match(Token::Type::LESSTHAN) 
+       || tokenHolder.match(Token::Type::LESSTHANOREQUAL)
+       || tokenHolder.match(Token::Type::GREATERTHAN)
+       || tokenHolder.match(Token::Type::GREATERTHANOREQUAL)) 
+      && tokenHolder.notAtEnd()) {
+    auto opTok = tokenHolder.consume();
+    auto rhs = parseShift(tokenHolder, addressIndex, expressionOffset);
+
+    lhs = std::make_unique<Program::BinaryExpr>(
+      opTok.location,
+      addressIndex,
+      expressionOffset,
+      opTok.type,
+      std::move(lhs), std::move(rhs)
+    );
+  }
+  return lhs;
+}
+std::unique_ptr<Program::Expr> Parser::parseShift(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseAdditive(tokenHolder, addressIndex, expressionOffset);
 
   while ((tokenHolder.match(Token::Type::LEFTSHIFT) 
        || tokenHolder.match(Token::Type::RIGHTSHIFT)) 
       && tokenHolder.notAtEnd()) {
     auto opTok = tokenHolder.consume();
-    auto rhs = parseAdditive(tokenHolder, addressIndex);
+    auto rhs = parseAdditive(tokenHolder, addressIndex, expressionOffset);
 
     lhs = std::make_unique<Program::BinaryExpr>(
       opTok.location,
       addressIndex,
+      expressionOffset,
       opTok.type,
       std::move(lhs), std::move(rhs)
     );
   }
   return lhs;
 }
-std::unique_ptr<Program::Expr> Parser::parseAdditive(TokenHolder& tokenHolder, size_t* addressIndex) {
-  auto lhs = parseMultiplicative(tokenHolder, addressIndex);
+std::unique_ptr<Program::Expr> Parser::parseAdditive(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseMultiplicative(tokenHolder, addressIndex, expressionOffset);
 
   while ((tokenHolder.match(Token::Type::ADD) 
        || tokenHolder.match(Token::Type::SUBTRACT)) 
       && tokenHolder.notAtEnd()) {
     auto opTok = tokenHolder.consume();
-    auto rhs = parseMultiplicative(tokenHolder, addressIndex);
+    auto rhs = parseMultiplicative(tokenHolder, addressIndex, expressionOffset);
 
     lhs = std::make_unique<Program::BinaryExpr>(
       opTok.location,
       addressIndex,
+      expressionOffset,
       opTok.type,
       std::move(lhs), std::move(rhs)
     );
   }
   return lhs;
 }
-std::unique_ptr<Program::Expr> Parser::parseMultiplicative(TokenHolder& tokenHolder, size_t* addressIndex) {
-  auto lhs = parseUnary(tokenHolder, addressIndex);
+std::unique_ptr<Program::Expr> Parser::parseMultiplicative(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto lhs = parseUnary(tokenHolder, addressIndex, expressionOffset);
 
   while ((tokenHolder.match(Token::Type::MULTIPLY) 
        || tokenHolder.match(Token::Type::DIVIDE)
        || tokenHolder.match(Token::Type::MOD)) 
       && tokenHolder.notAtEnd()) {
     auto opTok = tokenHolder.consume();
-    auto rhs = parseUnary(tokenHolder, addressIndex);
+    auto rhs = parseUnary(tokenHolder, addressIndex, expressionOffset);
 
     lhs = std::make_unique<Program::BinaryExpr>(
       opTok.location,
       addressIndex,
+      expressionOffset,
       opTok.type,
       std::move(lhs), std::move(rhs)
     );
   }
   return lhs;
 }
-std::unique_ptr<Program::Expr> Parser::parseUnary(TokenHolder& tokenHolder, size_t* addressIndex) {
-  if (tokenHolder.match(Token::Type::RELATIVEOPERATOR) || tokenHolder.match(Token::Type::SUBTRACT) || tokenHolder.match(Token::Type::BITWISENOT)) {
+std::unique_ptr<Program::Expr> Parser::parseUnary(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  if (tokenHolder.match(Token::Type::ABSOLUTE) || tokenHolder.match(Token::Type::RELATIVEOPERATOR) || tokenHolder.match(Token::Type::SUBTRACT) || tokenHolder.match(Token::Type::BITWISENOT)) {
     auto opTok = tokenHolder.consume();
-    auto operand = parseUnary(tokenHolder, addressIndex);
-    return std::make_unique<Program::UnaryExpr>(opTok.location, addressIndex, opTok.type, std::move(operand));
+    auto operand = parseUnary(tokenHolder, addressIndex, expressionOffset);
+    return std::make_unique<Program::UnaryExpr>(opTok.location, addressIndex, expressionOffset, opTok.type, std::move(operand));
   }
 
-  return parsePrimary(tokenHolder, addressIndex);
+  return parsePrimary(tokenHolder, addressIndex, expressionOffset);
 }
-std::unique_ptr<Program::Expr> Parser::parsePrimary(TokenHolder& tokenHolder, size_t* addressIndex) {
+
+std::unique_ptr<Program::Expr> Parser::parsePrimary(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
   switch (tokenHolder.peek().type) {    
     case Token::Type::IDENTIFIER: {
-      return parseIdentifierToExpression(tokenHolder, addressIndex);
+      return parseIdentifierToExpression(tokenHolder, addressIndex, expressionOffset);
     }
     case Token::Type::NUMBER: {
-      return std::make_unique<Program::NumberExpr>(tokenHolder.peek().location, parseNumberString(tokenHolder.consume()), addressIndex);
+      return std::make_unique<Program::NumberExpr>(tokenHolder.peek().location, parseNumberString(tokenHolder.consume()), addressIndex, expressionOffset);
     }
     case Token::Type::OPENPAREN: {
       tokenHolder.skip();
 
-      auto expr = parseOr(tokenHolder, addressIndex);
+      auto expr = parseSquareExpression(tokenHolder, addressIndex, expressionOffset);
 
       if (!tokenHolder.match(Token::Type::CLOSEPAREN)) {
         logError(tokenHolder.peek(), std::format("Expected '(', got \"{}\"", tokenHolder.peek().value));
-        return std::make_unique<Program::NumberExpr>(tokenHolder.peek().location, 0, addressIndex);
+        return std::make_unique<Program::NumberExpr>(tokenHolder.peek().location, 0, addressIndex, expressionOffset);
       }
+      tokenHolder.skip();
 
       return expr;
     }
     default:
-    return makeErrorExpression(tokenHolder.peek(), std::format("Expected number or identifier token, got \"{}\"", tokenHolder.consume().value), addressIndex);
+    return makeErrorExpression(tokenHolder.peek(), std::format("Expected number or identifier token, got \"{}\"", tokenHolder.consume().value), addressIndex, expressionOffset);
   }
 }
 
-std::unique_ptr<Program::Expr> Parser::makeErrorExpression(const Token& errToken, const std::string& message, size_t* addressIndex) {
+std::unique_ptr<Program::Expr> Parser::makeErrorExpression(const Token& errToken, const std::string& message, size_t* addressIndex, size_t expressionOffset) {
   logError(errToken, message);
-  return std::make_unique<Program::NumberExpr>(errToken.location, 0, addressIndex);
+  return std::make_unique<Program::NumberExpr>(errToken.location, 0, addressIndex, expressionOffset);
 }
 
 void Parser::parseLabelDefinition(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program) {
@@ -553,8 +653,8 @@ bool Parser::getOrCreatePartialIdentifier(
   return true;
 }
 
-std::unique_ptr<Program::Expr> Parser::parseIdentifierToExpression(TokenHolder& tokenHolder, size_t* addressIndex) {
-  auto expr = std::make_unique<Program::IdentifierExpr>(tokenHolder.peek().location, addressIndex);
+std::unique_ptr<Program::Expr> Parser::parseIdentifierToExpression(TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset) {
+  auto expr = std::make_unique<Program::IdentifierExpr>(tokenHolder.peek().location, addressIndex, expressionOffset);
   while (tokenHolder.match(Token::Type::PERIOD, 1) && tokenHolder.notAtEnd()) {
     expr->identifierPath.push(tokenHolder.consume().value);
     tokenHolder.skip();
@@ -607,7 +707,7 @@ void Parser::parseNonArrayDataType(TokenHolder& tokenHolder, Program::Translatio
     isSquare = true;
     tokenHolder.skip();
   }
-  auto expr = parseSquareExpression(tokenHolder, &dataStatement->addressIndex);
+  auto expr = parseSquareExpression(tokenHolder, &dataStatement->addressIndex, 0);
   if (isSquare) {
     if (tokenHolder.match(Token::Type::CLOSESQUARE)) {
       tokenHolder.skip();
@@ -699,7 +799,7 @@ void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program::Translation
   
   //doesnt need a check bc the comma check -> break will exit if is at end! (bc returns \0)
   while (true) {
-    auto expr = parseSquareExpression(tokenHolder, &dataPtr->symbolObject->addressIndex);
+    auto expr = parseSquareExpression(tokenHolder, &dataPtr->symbolObject->addressIndex, 0);
     translationUnit.m_unresolvedExpressions.push(expr.get());
     dataPtr->exprData.push_back(std::move(expr));
 
@@ -780,16 +880,21 @@ void Parser::parseRelaxor(TokenHolder& tokenHolder, Arch::Architecture& arch, Pr
   program.m_relaxorPointerVector.push_back(relaxor.get());
   
   while (isRelaxorConditional(tokenHolder.peek().nicheType)) {
+    tokenHolder.skip();
     Program::RelaxorDefinition::RelaxorOptionPair& option = relaxor->relaxor.options.emplace_back();
-    parseRelaxorCondition(tokenHolder, option, &relaxor->addressIndex);
-    parseRelaxorCodeBlock(tokenHolder, relaxor->relaxor, option, arch, translationUnit, program);
+    parseRelaxorCondition(tokenHolder, option, &relaxor->addressIndex, translationUnit);
+    parseRelaxorCodeBlock(tokenHolder, *relaxor.get(), option, arch, translationUnit, program);
   }
   
   if (tokenHolder.peek().nicheType == Token::NicheType::RELAXOR_ELSE) {
+    tokenHolder.skip();
     Program::RelaxorDefinition::RelaxorOptionPair& option = relaxor->relaxor.options.emplace_back();
+    
+    option.conditionExpr = std::make_unique<Program::NumberExpr>(relaxor->location, 0, &relaxor->addressIndex, 0);
     option.conditionExpr->value = 1;
     option.conditionExpr->setEvaluated();
-    parseRelaxorCodeBlock(tokenHolder, relaxor->relaxor, option, arch, translationUnit, program);
+
+    parseRelaxorCodeBlock(tokenHolder, *relaxor.get(), option, arch, translationUnit, program);
   }
 
   translationUnit.m_statementVector.push_back(std::move(relaxor));
@@ -800,44 +905,70 @@ bool Parser::isRelaxorConditional(Token::NicheType type) {
           type == Token::NicheType::RELAXOR_ELIF;
 }
 
-void Parser::parseRelaxorCondition(TokenHolder& tokenHolder, Program::RelaxorDefinition::RelaxorOptionPair& option, size_t* addressIndex) {
+void Parser::parseRelaxorCondition(TokenHolder& tokenHolder, Program::RelaxorDefinition::RelaxorOptionPair& option, size_t* addressIndex, Program::TranslationUnit& translationUnit) {
   if (!tokenHolder.match(Token::Type::OPENPAREN)) {
     logError(tokenHolder.peek(), std::format("Expected '(', got \"{}\"", tokenHolder.peek().value));
     return;
   }
 
-  option.conditionExpr = parseSquareExpression(tokenHolder, addressIndex);
+  tokenHolder.skip(); // skip init '('
 
+  option.conditionExpr = parseSquareExpression(tokenHolder, addressIndex, 0);
+  // std::ostringstream ss;
+  // option.conditionExpr->print(ss);
+  std::cout << "EXPR:" << option.conditionExpr->toString() << std::endl;
+  translationUnit.m_unresolvedExpressions.push(option.conditionExpr.get());
   if (!tokenHolder.match(Token::Type::CLOSEPAREN)) {
     logError(tokenHolder.peek(), std::format("Expected ')', got \"{}\"", tokenHolder.peek().value));
     return;
   }
+
+  tokenHolder.skip(); // skip final ')'
 }
 
-void Parser::parseRelaxorCodeBlock(TokenHolder& tokenHolder, Program::RelaxorDefinition& relaxor, Program::RelaxorDefinition::RelaxorOptionPair& option, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {
+void Parser::parseRelaxorCodeBlock(TokenHolder& tokenHolder, Program::RelaxorSymbol& relaxor, Program::RelaxorDefinition::RelaxorOptionPair& option, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {
   if (!tokenHolder.match(Token::Type::OPENBLOCK)) {
     logError(tokenHolder.peek(), std::format("Expected '{{', got \"{}\"", tokenHolder.peek().value));
     return;
   }
 
+  tokenHolder.skip();
+
   size_t currentCaseByteSize = 0;
 
   while (tokenHolder.notAtEnd() && !tokenHolder.match(Token::Type::CLOSEBLOCK)) {
-    const auto& instrtoken = tokenHolder.consume();
-    auto instruction = parseInstruction(tokenHolder, instrtoken, arch, translationUnit, program);
-    if (!instruction) continue;
-    currentCaseByteSize += instruction->instruction.m_byteLength;
-    option.optionStatements.push_back(std::move(instruction));
+    const auto& instrtoken = tokenHolder.peek();
+    if (instrtoken.type != Token::Type::IDENTIFIER) {
+      tokenHolder.skip();
+      continue;
+    }
+
+    std::unique_ptr<Program::StatementSymbol> statement;
+    if (tokenHolder.match(Token::Type::PERIOD, 1)) {
+      //label defintion
+      statement = parseIdentifierNameDefiniton(tokenHolder, translationUnit, program, true);
+    } else {
+      //instruction
+      tokenHolder.skip();
+      statement = parseInstruction(tokenHolder, instrtoken, arch, translationUnit, program, currentCaseByteSize);
+      if (!statement) continue;
+      currentCaseByteSize += static_cast<Program::InstructionSymbol*>(statement.get())->instruction.m_byteLength;
+    }
+    if (statement) {
+      statement->addressIndex = relaxor.addressIndex;
+      option.optionStatements.push_back(std::move(statement));
+    }
   }
 
   option.setCachedSize(currentCaseByteSize);
 
-  relaxor.worstCaseSize = std::max(currentCaseByteSize, relaxor.worstCaseSize);
+  relaxor.relaxor.worstCaseSize = std::max(currentCaseByteSize, relaxor.relaxor.worstCaseSize);
 
   if (!tokenHolder.match(Token::Type::CLOSEBLOCK)) {
     logError(tokenHolder.peek(), std::format("Expected '}}', got \"{}\"", tokenHolder.peek().value));
     return;
   }
+  tokenHolder.skip();
 }
 
 }

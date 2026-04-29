@@ -214,11 +214,20 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
       case '|':
       {
         consume();
-        output.m_tokens.emplace_back(
-          std::string_view{sliceStartPtr,1}, 
-          Token::Type::BITWISEOR,
-          sliceStartLocation
-        );
+        if (match('|')) {
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,2}, 
+            Token::Type::COMPARISONOR,
+            sliceStartLocation
+          );   
+        } else {
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,1}, 
+            Token::Type::BITWISEOR,
+            sliceStartLocation
+          );          
+        }
         continue;
         break;
       }
@@ -236,37 +245,104 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
       case '&':
       {
         consume();
-        output.m_tokens.emplace_back(
-          std::string_view{sliceStartPtr,1}, 
-          Token::Type::BITWISEAND, 
-          sliceStartLocation
-        );
+        if (match('&')) {
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,2}, 
+            Token::Type::COMPARISONAND,
+            sliceStartLocation
+          );   
+        } else {
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,1}, 
+            Token::Type::BITWISEAND,
+            sliceStartLocation
+          );          
+        }
         continue;
         break;
       }
       case '<':
       {
-        if (!match('<', 1)) {break;} //fallthrough to identifier parsing ig
         consume();
-        consume();
-        output.m_tokens.emplace_back(
-          std::string_view{sliceStartPtr,2}, 
-          Token::Type::LEFTSHIFT, 
-          sliceStartLocation
-        );
+        switch (peek())
+        {
+        case '<':
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,2}, 
+            Token::Type::LEFTSHIFT, 
+            sliceStartLocation
+          );
+          break;
+        case '=':
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,2}, 
+            Token::Type::LESSTHANOREQUAL, 
+            sliceStartLocation
+          );
+          break;
+        
+        default:
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,1}, 
+            Token::Type::LESSTHAN, 
+            sliceStartLocation
+          );
+          break;
+        }
         continue;
         break;
       }
       case '>':
       {
-        if (!match('>', 1)) {break;} //fallthrough to identifier parsing ig
         consume();
+        switch (peek())
+        {
+        case '>':
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,2}, 
+            Token::Type::RIGHTSHIFT, 
+            sliceStartLocation
+          );
+          break;
+        case '=':
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,2}, 
+            Token::Type::GREATERTHANOREQUAL, 
+            sliceStartLocation
+          );
+          break;
+        
+        default:
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,1}, 
+            Token::Type::GREATERTHAN, 
+            sliceStartLocation
+          );
+          break;
+        }
+        continue;
+        break;
+      }
+      case '=':
+      {
         consume();
-        output.m_tokens.emplace_back(
-          std::string_view{sliceStartPtr,2}, 
-          Token::Type::RIGHTSHIFT, 
-          sliceStartLocation
-        );
+        if (!match('=')) {
+          if (p_logger) {
+            p_logger->Errors.logMessage(std::format("{}:{}:{}: LEXER ERROR: Unexpected operator '=', did you mean '=='?", path.string(), p_line, p_column));
+          }
+        } else {
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,2}, 
+            Token::Type::EQUAL, 
+            sliceStartLocation
+          );
+        }
         continue;
         break;
       }
@@ -342,22 +418,41 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
       case '!':
       {
         consume();
-        output.m_tokens.emplace_back(
-          std::string_view{sliceStartPtr,1}, 
-          Token::Type::BITWISENOT, 
-          sliceStartLocation
-        );
+        if (match('=')) {
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,2}, 
+            Token::Type::NOTEQUAL, 
+            sliceStartLocation
+          );
+        } else {
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,1}, 
+            Token::Type::BITWISENOT, 
+            sliceStartLocation
+          );
+        }
         continue;
         break;
       }
       case '$':
       {
         consume();
-        output.m_tokens.emplace_back(
-          std::string_view{sliceStartPtr,1}, 
-          Token::Type::RELATIVEOPERATOR, 
-          sliceStartLocation
-        );
+        if (match('$')) {
+          consume();
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,2}, 
+            Token::Type::ABSOLUTE, 
+            sliceStartLocation
+          );
+        } else {
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,1}, 
+            Token::Type::RELATIVEOPERATOR, 
+            sliceStartLocation
+          );
+        }
+
         continue;
         break;
       }
@@ -424,6 +519,8 @@ bool SpasmLexer::isAtWordBoundary() {
     case '>':
     case '<':
     case ':':
+    case '$':
+    case '=':
     return true;
     default: 
     return false;
