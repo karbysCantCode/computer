@@ -178,6 +178,22 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
       {
         //directive or relaxor
         consume();
+
+        if (match('@')) {
+          consume();
+          while (!isAtWordBoundary()) {
+            consume();
+          }
+          const size_t length = p_index - sliceStartIndex;
+          output.m_tokens.emplace_back(
+            std::string_view{sliceStartPtr,length}, 
+            Token::Type::IDENTIFIER, 
+            sliceStartLocation,
+            Token::NicheType::MACRO_UNIQUE
+          );
+          break;
+        }
+
         setSliceStart;
         while (!isAtWordBoundary()) {
           consume();

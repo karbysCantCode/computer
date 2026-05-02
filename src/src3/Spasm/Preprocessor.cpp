@@ -147,18 +147,26 @@ void Preprocessor::recurseDefineContents(AbstractMacro* macro, InnerMacroMapType
 
   std::vector<std::unique_ptr<TokenHolder>> temporaryOwner;
 
-  std::unordered_set<std::string_view> invokedMacros;
-  std::stack<std::string_view> invokedMacroStack;
+  std::unordered_set<AbstractMacro*> invokedMacros;
+  std::stack<AbstractMacro*> invokedMacroStack;
 
   while (!processStack.empty()) {
     auto& currentHolder = *processStack.top();
 
     while (currentHolder.notAtEnd()) {
       if (!currentHolder.match(Token::Type::DIRECTIVE)) {
+        if (currentHolder.matchNiche(Token::NicheType::MACRO_UNIQUE)) {
+          const auto token = currentHolder.consume();
+          auto str = std::make_unique<std::string>('.' + invokedMacroStack.top()->getMangledName() + std::string(token.value));
+          newTokenHolder.m_tokens.emplace_back(std::string_view(str->data(), str->size()), Token::Type::IDENTIFIER, token.location);
+          //newTokenHolder.m_tokens.emplace_back(std::string_view(str->data(), str->size()), Token::Type::PERIOD, token.location);
+          translationUnit.m_stringOwner.push_back(std::move(str));
+          continue;
+        }
         const auto token = currentHolder.consume();
         const auto it = macroMap.find(token.value);
-        if (it != macroMap.end()) {
-          if (invokedMacros.find(token.value) != invokedMacros.end()) {
+        if (it != macroMap.end() && !currentHolder.match(Token::Type::PERIOD) && !currentHolder.match(Token::Type::PERIOD, -2) && !currentHolder.match(Token::Type::COLON)) {
+          if (invokedMacros.find(it->second.get()) != invokedMacros.end()) {
             logError(token, "Recursive macro use.");
             continue;
           }
@@ -167,8 +175,8 @@ void Preprocessor::recurseDefineContents(AbstractMacro* macro, InnerMacroMapType
           processStack.push(temporaryHolder.get());
           temporaryOwner.push_back(std::move(temporaryHolder));
 
-          invokedMacros.insert(token.value);
-          invokedMacroStack.push(token.value);
+          invokedMacros.insert(it->second.get());
+          invokedMacroStack.push(it->second.get());
           break;
         } else {
           newTokenHolder.m_tokens.push_back(token);

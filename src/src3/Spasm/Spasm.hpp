@@ -216,6 +216,7 @@ namespace Spasm {
       IdentifierMapStringType m_identifierFullNameMap;
       std::vector<std::unique_ptr<IdentifierObject*>>m_identifierObjectPtrHolder;
       std::vector<std::unique_ptr<IdentifierObject>> m_identifierObjectUndefinedHolder;
+      std::vector<std::unique_ptr<std::string>> m_stringOwner;
       size_t m_dependenciesResolved = 0;
       size_t m_dependenciesResolvedForDefinitions = 0;
       std::queue<Expr*> m_unresolvedExpressions;

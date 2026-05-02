@@ -4,13 +4,12 @@
 FP contains pointer to the fp address of the calling function (where fp -> fp + 3 is the addr)
 
 *;
-std.internal.call.call_return:
 
 @define call(label) {
   ; destroys r15
-  movi r15, std.internal.call.call_return.label
+  movi r15, $@@return >> 16    ; ret high
   push r15
-  mov r15, std.internal.call.call_return.label
+  mov r15, $@@return && 0xffff ; ret low
   push r15
   mov r15, fph
   push r15
@@ -18,20 +17,20 @@ std.internal.call.call_return:
   push r15
   mov fp, sp
   jmp label
-  std.internal.call.call_return.label:
+  @@return:
 
 }
 
 @define return() {
-  ; destroys r15
+  ; destroys r15, gp
   mov  sp, fp
   pop  r15
   mov  fpl, r15
   pop  r15
   mov  fph, r15
   pop  r15
-  mov  ipl, r15
+  mov  gpl, r15
   pop  r15
-  mov  iph, r15
-  jmpr ip
+  mov  gph, r15
+  jmpr gp
 }

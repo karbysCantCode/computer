@@ -16,6 +16,7 @@ class Preprocessor {
     TokenHolder contents;
     std::string_view name;
     Token definitionToken;
+    size_t invokeCount = 0;
 
     enum class Kind {
       FUNCTION,
@@ -25,6 +26,7 @@ class Preprocessor {
 
     virtual Kind getKind() const {assert(false); return Kind::NONE;}
 
+    inline std::string getMangledName() const {return std::to_string(invokeCount) + std::string(name);}
 
 
     AbstractMacro(const Token& defTok) : definitionToken(defTok) {}
