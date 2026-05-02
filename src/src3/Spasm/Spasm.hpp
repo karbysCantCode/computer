@@ -45,7 +45,13 @@ namespace Spasm {
 
     struct LabelSymbol : StatementSymbol {
       std::string_view name;
-      LabelObject* labelObject;
+      std::unique_ptr<LabelObject> labelObject;
+
+      /*
+      label and definition symbols own their objects
+      identifierobjects (label and data) are only 'real' (defined) if
+        they actually have a statement symbol attatched to them.
+      */
 
       // void generate() override {}
       Kind getKind() const override {return Kind::LABEL;}
@@ -56,7 +62,7 @@ namespace Spasm {
     };
     struct DefinitionSymbol : StatementSymbol {
       std::string_view name;
-      DataObject* dataObject;
+      std::unique_ptr<DataObject> dataObject;
 
       // void generate() override {}
       Kind getKind() const override {return Kind::DEFINITION;}
@@ -65,8 +71,9 @@ namespace Spasm {
     
     };  
 
-    using IdentifierMapType = std::unordered_map<std::string_view, std::shared_ptr<IdentifierObject>>;
-    using NonOwningIdentifierMapType = std::unordered_map<std::string_view, IdentifierObject*>;
+    using IdentifierMapType = std::unordered_map<std::string_view, IdentifierObject**>;
+    using IdentifierMapStringType = std::unordered_map<std::string, IdentifierObject**>;
+    //using NonOwningIdentifierMapType = std::unordered_map<std::string_view, IdentifierObject*>;
     
     struct EvaluateTriple {
       std::unordered_set<std::string> mentionedLabels;
@@ -83,6 +90,7 @@ namespace Spasm {
       size_t* addressIndexPtr = nullptr;
       size_t relativeAddressOffset = 0;
       std::unordered_set<std::string> mentionedLabels;
+      IdentifierMapType* identifierMap = nullptr;
 
       SourceLocation location;
 
@@ -91,7 +99,7 @@ namespace Spasm {
       bool isEvaluated() const {return evaluated;}
       void setEvaluated() {evaluated = true;}
       
-      virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels = false) {assert(false); return {0, "ASSERTED FALSE", {}};}
+      virtual EvaluateTriple evaluate(std::vector<size_t>&, bool getMentionedLabels = false) {assert(false); return {0, "ASSERTED FALSE", {}};}
 
       virtual ~Expr() = default;
 
@@ -103,16 +111,16 @@ namespace Spasm {
         return oss.str();
       }
 
-      Expr(const SourceLocation& sLoc, size_t* addressIndex, size_t expressionOffset) : location(sLoc), addressIndexPtr(addressIndex), relativeAddressOffset(expressionOffset) {}
-      Expr(const SourceLocation& sLoc, int val, size_t* addressIndex, size_t expressionOffset) : location(sLoc), value(val), addressIndexPtr(addressIndex), relativeAddressOffset(expressionOffset) {}
+      Expr(const SourceLocation& sLoc, size_t* addressIndex, size_t expressionOffset, IdentifierMapType* idenMap) : identifierMap(idenMap), location(sLoc), addressIndexPtr(addressIndex), relativeAddressOffset(expressionOffset) {}
+      Expr(const SourceLocation& sLoc, int val, size_t* addressIndex, size_t expressionOffset, IdentifierMapType* idenMap) : identifierMap(idenMap), location(sLoc), value(val), addressIndexPtr(addressIndex), relativeAddressOffset(expressionOffset) {}
     };
 
     struct IdentifierObject {
       // handle when assembling parent child etc
       std::vector<std::string_view> nameSegments;
-      std::string_view fullName() const;
+      std::string fullName() const;
       std::string_view name() const;
-      std::string_view getNDepthName(size_t depth) const;
+      std::string getNDepthName(size_t depth) const;
       std::vector<std::string_view> getNDepthNameVector(size_t depth) const;
 
       const std::filesystem::path& sourcePath;
@@ -120,17 +128,22 @@ namespace Spasm {
       IdentifierObject* parent;
       IdentifierMapType children;
       
-      virtual bool isLabel() const {return false;}
-      virtual bool isIdentifier() const {return false;}
+      virtual inline bool isLabel() const {return false;}
+      virtual inline bool isIdentifier() const {return false;}
+      virtual inline bool hasSymbolObject() const {return false;}
+      virtual inline StatementSymbol* getAbstractSymbolPointer() const {return nullptr;}
       virtual ~IdentifierObject() = default;
       
       IdentifierObject(const std::filesystem::path& srcPath, IdentifierObject* parnt) : sourcePath(srcPath), parent(parnt) {}
+      void assimilate(IdentifierObject& identifier);
     };
     struct LabelObject : IdentifierObject {
       LabelSymbol* symbolObject;
       
-      virtual bool isLabel() const override {return true;}
-      virtual bool isIdentifier() const override {return false;}
+      virtual inline bool isLabel() const override {return true;}
+      virtual inline bool isIdentifier() const override {return false;}
+      virtual inline bool hasSymbolObject() const override {return symbolObject != nullptr;}
+      virtual inline StatementSymbol* getAbstractSymbolPointer() const override {return symbolObject;}
 
       LabelObject(const std::filesystem::path& srcPath) : IdentifierObject(srcPath, nullptr) {}
       LabelObject(const std::filesystem::path& srcPath, LabelObject* parnt) : IdentifierObject(srcPath, parnt) {}
@@ -145,9 +158,11 @@ namespace Spasm {
       std::vector<std::unique_ptr<Expr>> exprData;
       DefinitionSymbol* symbolObject;
       
-      virtual bool isLabel() const override {return false;}
-      virtual bool isIdentifier() const override {return true;}
-      
+      virtual inline bool isLabel() const override {return false;}
+      virtual inline bool isIdentifier() const override {return true;}
+      virtual inline bool hasSymbolObject() const override {return symbolObject != nullptr;}
+      virtual inline StatementSymbol* getAbstractSymbolPointer() const override {return symbolObject;}
+
       DataObject(const std::filesystem::path& srcPath, IdentifierObject* parnt) : IdentifierObject(srcPath, parnt) {}
       DataObject(
         const std::filesystem::path& srcPath,
@@ -196,6 +211,9 @@ namespace Spasm {
       std::vector<std::unique_ptr<DefinitionSymbol>> m_definitionVector;
       std::unordered_set<std::filesystem::path> m_includedFiles;
       IdentifierMapType m_identifierMap;
+      IdentifierMapStringType m_identifierFullNameMap;
+      std::vector<std::unique_ptr<IdentifierObject*>>m_identifierObjectPtrHolder;
+      std::vector<std::unique_ptr<IdentifierObject>> m_identifierObjectUndefinedHolder;
       size_t m_dependenciesResolved = 0;
       size_t m_dependenciesResolvedForDefinitions = 0;
       std::queue<Expr*> m_unresolvedExpressions;
@@ -214,26 +232,32 @@ namespace Spasm {
 
     struct NumberExpr : Expr {
       // int value;
-      NumberExpr(const SourceLocation& sLoc, int val, size_t* addressIndex, size_t expressionOffset) : Expr(sLoc, val, addressIndex, expressionOffset) {}
+      NumberExpr(const SourceLocation& sLoc, int val, size_t* addressIndex, size_t expressionOffset, IdentifierMapType* idenMap) : Expr(sLoc, val, addressIndex, expressionOffset, idenMap) {}
       
       void print(std::ostream& os) const override {
         os << value;
       }
-      virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels) override {setEvaluated(); return {value, "", {}};}
+      virtual EvaluateTriple evaluate(std::vector<size_t>&, bool getMentionedLabels) override {setEvaluated(); return {value, "", {}};}
     };
 
     struct IdentifierExpr : Expr {
       std::queue<std::string_view> identifierPath;
-      IdentifierExpr(const SourceLocation& sLoc, const std::string_view iden, size_t* addressIndex, size_t expressionOffset) : Expr(sLoc, addressIndex, expressionOffset) {
+      IdentifierExpr(const SourceLocation& sLoc, const std::string_view iden, size_t* addressIndex, size_t expressionOffset, IdentifierMapType* idenMap) : Expr(sLoc, addressIndex, expressionOffset, idenMap) {
         identifierPath.push(iden);
       }
-      IdentifierExpr(const SourceLocation& sLoc, size_t* addressIndex, size_t expressionOffset) : Expr(sLoc, addressIndex, expressionOffset) {}
+      IdentifierExpr(const SourceLocation& sLoc, size_t* addressIndex, size_t expressionOffset, IdentifierMapType* idenMap) : Expr(sLoc, addressIndex, expressionOffset, idenMap) {}
 
       void print(std::ostream& os) const override {
-        if (!identifierPath.empty())
-          os << identifierPath.front();
+        auto ipathcopy = identifierPath;
+        while (!ipathcopy.empty()) {
+          os << ipathcopy.front();
+          ipathcopy.pop();
+          if (!ipathcopy.empty()) {
+            os << '.';
+          }
+        }
       }
-      virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels) override;
+      virtual EvaluateTriple evaluate(std::vector<size_t>&, bool getMentionedLabels) override;
     };
 
     struct UnaryExpr : Expr {
@@ -243,9 +267,10 @@ namespace Spasm {
       UnaryExpr(const SourceLocation& sLoc,
         size_t* addressIndex,
         size_t expressionOffset,
+        IdentifierMapType* idenMap,
         Token::Type o,
         std::unique_ptr<Expr> rhs)
-        : Expr(sLoc, addressIndex, expressionOffset), op(o), right(std::move(rhs)) {}
+        : Expr(sLoc, addressIndex, expressionOffset, idenMap), op(o), right(std::move(rhs)) {}
       
       static std::string tokenToString(Token::Type type) {
         switch (type) {
@@ -263,7 +288,7 @@ namespace Spasm {
         os << ")";
       }
 
-      virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels) override;
+      virtual EvaluateTriple evaluate(std::vector<size_t>&, bool getMentionedLabels) override;
     };
 
     struct BinaryExpr : Expr {
@@ -274,10 +299,11 @@ namespace Spasm {
       BinaryExpr(const SourceLocation& sLoc,
         size_t* addressIndex,
         size_t expressionOffset,
+        IdentifierMapType* idenMap,
         Token::Type o,
         std::unique_ptr<Expr> lhs,
         std::unique_ptr<Expr> rhs)
-        : Expr(sLoc, addressIndex, expressionOffset), op(o), left(std::move(lhs)),right(std::move(rhs)) {}
+        : Expr(sLoc, addressIndex, expressionOffset, idenMap), op(o), left(std::move(lhs)),right(std::move(rhs)) {}
       
       void print(std::ostream& os) const override {
         os << "(";
@@ -312,7 +338,7 @@ namespace Spasm {
       }
 
 
-      virtual EvaluateTriple evaluate(NonOwningIdentifierMapType&, std::vector<size_t>&, bool getMentionedLabels) override;
+      virtual EvaluateTriple evaluate(std::vector<size_t>&, bool getMentionedLabels) override;
     };
 
     struct Operand {

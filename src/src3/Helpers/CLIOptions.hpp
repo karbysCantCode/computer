@@ -6,6 +6,7 @@ struct CLIOptions {
   bool spasm = false;
   bool smake = false;
   bool newArch = false;
+  bool regexArchDump = false;
 
   bool silent = false;
   bool warns = false;

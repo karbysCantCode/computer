@@ -99,18 +99,18 @@ namespace Spasm {
     }
   }
 
-Program::EvaluateTriple Program::IdentifierExpr::evaluate(NonOwningIdentifierMapType& identifierMap, std::vector<size_t>& addressHolder, bool getMentionedLabels) {
+Program::EvaluateTriple Program::IdentifierExpr::evaluate(std::vector<size_t>& addressHolder, bool getMentionedLabels) {
   std::string constructedName;
   Program::IdentifierObject* lastIdentifierObject;
   auto pathCopy = identifierPath;
-  const auto it = identifierMap.find(pathCopy.front());
+  const auto it = identifierMap->find(pathCopy.front());
   constructedName.append(pathCopy.front());
   pathCopy.pop();
-  if (it == identifierMap.end()) {
+  if (it == identifierMap->end()) {
     return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName), {}};
   }
 
-  lastIdentifierObject = it->second;
+  lastIdentifierObject = *it->second;
 
   while (!pathCopy.empty()) {
     const auto it2 = lastIdentifierObject->children.find(pathCopy.front());
@@ -120,7 +120,7 @@ Program::EvaluateTriple Program::IdentifierExpr::evaluate(NonOwningIdentifierMap
       return {0, std::format("Identifier \"{}\" is not declared before it is referenced here. (potentially partial identifier path)", constructedName), {}};
     }
 
-    lastIdentifierObject = it2->second.get();
+    lastIdentifierObject = *it2->second;
   }
 
   // if (!lastIdentifierObject->addressResolved) {
@@ -132,14 +132,14 @@ Program::EvaluateTriple Program::IdentifierExpr::evaluate(NonOwningIdentifierMap
   return {value, "", {constructedName}};
 }
 
-Program::EvaluateTriple Program::UnaryExpr::evaluate(NonOwningIdentifierMapType& idenMap, std::vector<size_t>& addressHolder, bool getMentionedLabels) {
+Program::EvaluateTriple Program::UnaryExpr::evaluate(std::vector<size_t>& addressHolder, bool getMentionedLabels) {
   if (!right) {
     return {0, "Expression argument doesn't exist.", {}};
   }
 
   EvaluateTriple triple;
 
-  const auto eval = right->evaluate(idenMap, addressHolder, getMentionedLabels);
+  const auto eval = right->evaluate(addressHolder, getMentionedLabels);
   switch (op) {
     case Token::Type::SUBTRACT:
       triple = {-eval.value, eval.error, eval.mentionedLabels};
@@ -162,7 +162,7 @@ Program::EvaluateTriple Program::UnaryExpr::evaluate(NonOwningIdentifierMapType&
   return triple;
 }
 
-Program::EvaluateTriple Program::BinaryExpr::evaluate(NonOwningIdentifierMapType& idenMap, std::vector<size_t>& addressHolder, bool getMentionedLabels) {
+Program::EvaluateTriple Program::BinaryExpr::evaluate(std::vector<size_t>& addressHolder, bool getMentionedLabels) {
   if (!right) {
     return {0, "Expression right argument doesn't exist.", {}};
   }
@@ -172,8 +172,8 @@ Program::EvaluateTriple Program::BinaryExpr::evaluate(NonOwningIdentifierMapType
   
   EvaluateTriple triple;
 
-  const auto evalLeft = left->evaluate(idenMap, addressHolder, getMentionedLabels);
-  const auto evalRight = right->evaluate(idenMap, addressHolder, getMentionedLabels);
+  const auto evalLeft = left->evaluate(addressHolder, getMentionedLabels);
+  const auto evalRight = right->evaluate(addressHolder, getMentionedLabels);
 
   //merge label set
   auto labels = std::move(evalLeft.mentionedLabels);
@@ -256,22 +256,39 @@ Program::EvaluateTriple Program::BinaryExpr::evaluate(NonOwningIdentifierMapType
 
 }
 
-std::string_view Program::IdentifierObject::fullName() const {
-  const auto* start = nameSegments[0].data();
-  const auto& backRef = nameSegments.back();
-  const auto* end = backRef.data() + backRef.size();
-  return std::string_view(start, end - start);
+std::string Program::IdentifierObject::fullName() const {
+  std::string name;
+  for (const auto seg : nameSegments) {
+    name.append(seg);
+    name.push_back('.');
+  }
+  return name;
+
+  //old 
+  // const auto* start = nameSegments[0].data();
+  // const auto& backRef = nameSegments.back();
+  // const auto* end = backRef.data() + backRef.size();
+  // const auto size = end - start;
+  // return std::string_view(start, size);
 }
 
 //depth 1 and 0 both return the global identifier
 //depth N > 1 returns N segments 
-std::string_view Program::IdentifierObject::getNDepthName(size_t depth) const {
-  depth = depth == 0 ? 0 : depth-1;
-  depth = depth > nameSegments.size() ? nameSegments.size() : depth;
-  const auto* start = nameSegments[0].data();
-  const auto& backRef = nameSegments[depth];
-  const auto* end = backRef.data() + backRef.size();
-  return std::string_view(start, end - start);
+std::string Program::IdentifierObject::getNDepthName(size_t depth) const {
+  std::string name;
+  depth = depth == 0 ? 1 : depth-1;
+  for (size_t i = 0; i < depth; i++) {
+    name.append(nameSegments[i]);
+    name.push_back('.');
+  }
+  return name;
+
+  //old
+  // depth = depth > nameSegments.size() ? nameSegments.size() : depth;
+  // const auto* start = nameSegments[0].data();
+  // const auto& backRef = nameSegments[depth];
+  // const auto* end = backRef.data() + backRef.size();
+  // return std::string_view(start, end - start);
 }
 
 std::vector<std::string_view> Program::IdentifierObject::getNDepthNameVector(size_t depth) const {
@@ -282,6 +299,14 @@ std::vector<std::string_view> Program::IdentifierObject::getNDepthNameVector(siz
 
 std::string_view Program::IdentifierObject::name() const {
   return nameSegments.back();
+}
+
+void Program::IdentifierObject::assimilate(IdentifierObject& identifier) {
+  addressIndex = identifier.addressIndex;
+  nameSegments = identifier.nameSegments;
+  addressIndex = identifier.addressIndex;
+  parent       = identifier.parent;
+  children.merge(identifier.children);
 }
 
 std::unordered_set<std::string> Program::RelaxorDefinition::getLabelsReferencedFromConditionsInAllOptions() {
@@ -309,7 +334,7 @@ void Spasm::Program::debugPrint() const {
     for (const auto& [name, obj] : tu.m_identifierMap) {
       indent(2);
       std::cout << "Identifier Key: " << name << "\n";
-      debugPrintIdentifier(obj.get(), 3);
+      debugPrintIdentifier(*obj, 3);
     }
 
     std::cout << "\nUnresolved Expressions Stack:\n";
@@ -363,7 +388,7 @@ void Spasm::Program::debugPrintIdentifier(const IdentifierObject* obj, int inden
     for (const auto& [childName, child] : lbl->children) {
       indent(indentLevel + 1);
       std::cout << "Child Label: " << childName << "\n";
-      debugPrintIdentifier(child.get(), indentLevel + 2);
+      debugPrintIdentifier(*child, indentLevel + 2);
     }
   }
   else if (auto data = dynamic_cast<const DataObject*>(obj)) {

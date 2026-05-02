@@ -14,9 +14,11 @@ Linker::LinkedResult Linker::run(
 
   // JUMP TO ENTRY SYM BYTES SETUP
   linked.maxAddress = entrySymbolSetupByteLength;
+  
 
   for (auto& translationUnitElement : program.m_translationUnits) {
     auto& translationUnit = *translationUnitElement.second.get();
+    m_allTranslationUnits.push_back(&translationUnit);
     //address holder overhead
     linked.addressHolder.resize(
       linked.addressHolder.size() 
@@ -35,7 +37,7 @@ Linker::LinkedResult Linker::run(
   while (areUnlinkedIndependentTranslationUnits()) {
     auto& translationUnit = *consumeIndependentTranslationUnitFromStack();
 
-    linkTU(translationUnit, linked, expressionHelper);
+    linkTU(program, translationUnit, linked, expressionHelper);
 
     for (auto dependantUnit : m_dependantTranslationUnitMap[translationUnit.m_sourcePath]) {
       dependantUnit->m_dependenciesResolved++;
@@ -112,7 +114,7 @@ Linker::LinkedResult Linker::run(
       //then evaluate dependant exprs
       auto exprs = expressionHelper.getExpressionsReferencingTheseLabels(labelNames);
       for (auto expr : exprs) {
-        expr->evaluate(m_globalIdentifierMap, linked.addressHolder, false);
+        expr->evaluate(linked.addressHolder, false);
       }
       // and add relaxors dependant to changed labels back to the start of the q
       auto relaxors = expressionHelper.getRelaxorsReferencingTheseLabels(labelNames);
@@ -135,6 +137,7 @@ void Linker::linkDefinitionSymbols(
   placeDefinitionSymbols(linkedResult, translationUnit);
 }
 void Linker::linkTU(
+  Program& program,
   Program::TranslationUnit& translationUnit, 
   LinkedResult& linkedResult,
   ExpressionsByLabelHelper& labelHelper
@@ -142,10 +145,13 @@ void Linker::linkTU(
   //resolve addresses
 
   //already done?
+
+  //get identifiers from included
+  inheritIncludedIdentifers(program, translationUnit);
   //placeDefinitionSymbols(linkedResult, translationUnit);
   placeOtherSymbols(linkedResult, translationUnit, labelHelper);
   //check all identifiers have definitions
-  checkForUndefinedIdentifiers();
+  checkForUndefinedIdentifiers(translationUnit);
   //resolve expressions
   resolveExpressions(translationUnit, linkedResult, labelHelper);
 
@@ -153,7 +159,33 @@ void Linker::linkTU(
   linkedResult.translationUnitQueue.push(&translationUnit);
 }
 
-void Linker::createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::IdentifierObject* identifierObject) {
+void Linker::inheritIncludedIdentifers(
+  Program& program, 
+  Program::TranslationUnit& translationUnit
+) {
+  for (const auto& path : translationUnit.m_includedFiles) {
+    Program::TranslationUnit& includedUnit = *program.m_translationUnits[path].get();
+    
+    for (const auto& element : includedUnit.m_identifierMap) {
+      auto [it, success] = translationUnit.m_identifierMap.emplace(element);
+      if (!success) {
+        if ((*it->second)->hasSymbolObject()) {
+          if ((*element.second)->hasSymbolObject()) {
+            //both defined, error
+            logError((*element.second)->getAbstractSymbolPointer()->location, std::format("Identifier {} already defined in {}.", (*element.second)->fullName(), (*it->second)->getAbstractSymbolPointer()->location.toString()));
+            continue;
+          }
+
+        
+        } 
+      }
+    }
+    translationUnit.m_identifierFullNameMap.merge(includedUnit.m_identifierFullNameMap);
+    translationUnit.m_identifierMap.merge(includedUnit.m_identifierMap);
+  }
+}
+
+void Linker::createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::TranslationUnit& translationUnit, Program::IdentifierObject* identifierObject) {
   size_t segCount = 0;
   Program::LabelObject* parent = nullptr;
   auto& identifierSourceLoc = identifierObject->isIdentifier() 
@@ -162,21 +194,28 @@ void Linker::createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::Ide
   while (segCount < identifierObject->nameSegments.size() - 1) {
     segCount++;
     const auto currentName = identifierObject->getNDepthName(segCount);
-    const auto& it = m_fullNameCollatedIdentifierMap.find(currentName);
-    if (!iteratorAlreadyInFullNameMap(it)) {
+    const auto& it = translationUnit.m_identifierFullNameMap.find(currentName);
+    if (!iteratorAlreadyInFullNameMap(translationUnit, it)) {
       auto ref = std::make_unique<Program::LabelObject>(identifierObject->sourcePath, parent);
+      auto uniquePtr = std::make_unique<Program::IdentifierObject*>(ref.get());
       if (!parent) {
-        m_globalIdentifierMap.emplace(currentName, ref.get());
+        //is global
+        translationUnit.m_identifierMap.emplace(currentName, uniquePtr.get());
+      } else {
+        auto [a,b] = parent->children.emplace(currentName, uniquePtr.get());
+        std::cout << "is inserted to child?" << b << std::endl;
       }
       parent = ref.get();
       ref->nameSegments = identifierObject->getNDepthNameVector(segCount);
-      m_fullNameCollatedIdentifierMap.emplace(currentName, ref.get());
-      m_temporaryIdentifierOwner.emplace(currentName, std::move(ref));
+      translationUnit.m_identifierFullNameMap.emplace(currentName, uniquePtr.get());
+      translationUnit.m_identifierObjectUndefinedHolder.push_back(std::move(ref));
+      
+      translationUnit.m_identifierObjectPtrHolder.push_back(std::move(uniquePtr));
     } else {
-      if (auto newParent = dynamic_cast<Program::LabelObject*>(it->second)) {
+      if (auto newParent = dynamic_cast<Program::LabelObject*>(*it->second)) {
         parent = newParent;
       } else {
-        logError(identifierSourceLoc, std::format("Identifier \"{}\" is a data declaration and cannot have children.", it->second->fullName()));
+        logError(identifierSourceLoc, std::format("Identifier \"{}\" is a data declaration and cannot have children.", (*it->second)->fullName()));
       }
     }
   }
@@ -188,45 +227,50 @@ void Linker::placeDefinitionSymbols(LinkedResult& linkedResult, Program::Transla
   
     auto& definitionObject = *definitionSymbol->dataObject;
     auto& definitionObjectPtr = definitionSymbol->dataObject;
-    const auto it = m_fullNameCollatedIdentifierMap.find(definitionObject.fullName());
 
-    if (iteratorAlreadyInFullNameMap(it)) {
-      if (auto ptr = dynamic_cast<Spasm::Program::LabelObject*>(it->second)) {
-        logError(definitionSymbol->location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
-      } else if (auto ptr = dynamic_cast<Spasm::Program::DataObject*>(it->second)) {
-        logError(definitionSymbol->location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
-      } else {
-        logError(definitionSymbol->location, "Identifier is already defined with unknown type so no location is provided.");
-      }
+    //surely i dont need any of this anymore
 
-      continue;
-    }
-    //if it doesnt already exist ie, no fullname found
-    if (!definitionObject.parent ) {
-      if (!nameAlreadyInGlobalMap(definitionObject.name())) {
-        m_globalIdentifierMap.emplace(definitionObject.name(), &definitionObject); 
-      } else {
-        logError(definitionSymbol->location, "somehow there is a parent-less identifier object in the linkers map, without an entry in the fullname, in the globalmap, this just shouldnt happen...");
-        continue;
-      }
-    } else {
-      const auto parentIt = m_fullNameCollatedIdentifierMap.find(definitionObject.parent->fullName());
-      if (iteratorAlreadyInFullNameMap(parentIt)) {
-        if (parentIt->second->isIdentifier()) {
-          //illegal bc self is definiton and parent is def
-          logError(definitionSymbol->location, std::format("Parent of data object \"{}\" is defined as a data object at \"{}\" (data objects cannot be parents.)", definitionObject.fullName(), static_cast<Program::DataObject*>(it->second)->symbolObject->location.toString()));
-          continue;
-        } else {
-          const auto& defSharedPtr = parentIt->second->children.find(definitionObject.name())->second;
-          parentIt->second->children.emplace(definitionObject.name(), defSharedPtr);
-        }
-      } else {
-        createTemporaryLabelObjectsToConstructSymbolFamilyTree(definitionObjectPtr);
-      }
-    }
+    // const auto it = translationUnit.m_identifierFullNameMap.find(definitionObject.fullName());
 
-    m_fullNameCollatedIdentifierMap.emplace(definitionObject.fullName(), definitionObjectPtr);
+    // if (iteratorAlreadyInFullNameMap(translationUnit, it)) {
+    //   if (auto ptr = dynamic_cast<Spasm::Program::LabelObject*>(*it->second)) {
+    //     logError(definitionSymbol->location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
+    //   } else if (auto ptr = dynamic_cast<Spasm::Program::DataObject*>(*it->second)) {
+    //     logError(definitionSymbol->location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
+    //   } else {
+    //     logError(definitionSymbol->location, "Identifier is already defined with unknown type so no location is provided.");
+    //   }
+
+    //   continue;
+    // }
+    // //if it doesnt already exist ie, no fullname found
+    // if (!definitionObject.parent ) {
+    //   if (!nameAlreadyInGlobalMap(translationUnit, definitionObject.name())) {
+    //     assert(false); // if this triggers, the below line needs to be CORRECTLY implemented
+    //     //translationUnit.m_identifierMap.emplace(definitionObject.name(), definitionObject); 
+    //   } else {
+    //     logError(definitionSymbol->location, "somehow there is a parent-less identifier object in the linkers map, without an entry in the fullname, in the globalmap, this just shouldnt happen...");
+    //     continue;
+    //   }
+    // } else {
+    //   const auto parentIt = translationUnit.m_identifierFullNameMap.find(definitionObject.parent->fullName());
+    //   if (iteratorAlreadyInFullNameMap(translationUnit, parentIt)) {
+    //     if ((*parentIt->second)->isIdentifier()) {
+    //       //illegal bc self is definiton and parent is def
+    //       logError(definitionSymbol->location, std::format("Parent of data object \"{}\" is defined as a data object at \"{}\" (data objects cannot be parents.)", definitionObject.fullName(), static_cast<Program::DataObject*>(it->second)->symbolObject->location.toString()));
+    //       continue;
+    //     } else {
+    //       const auto& defSharedPtr = (*parentIt->second)->children.find(definitionObject.name())->second;
+    //       (*parentIt->second)->children.emplace(definitionObject.name(), defSharedPtr);
+    //     }
+    //   } else {
+    //     createTemporaryLabelObjectsToConstructSymbolFamilyTree(translationUnit, definitionObjectPtr.get());
+    //   }
+    // }
+
+    //translationUnit.m_identifierFullNameMap.emplace(definitionObject.fullName(), definitionObjectPtr);
     definitionSymbol->addressIndex = linkedResult.nAddressesEntered++; 
+    definitionObject.addressIndex = definitionSymbol->addressIndex;
     linkedResult.addressHolder[definitionSymbol->addressIndex] = linkedResult.maxAddress;
     linkedResult.statementHolder[definitionSymbol->addressIndex] = definitionSymbol.get();
     // cant reallty do this because it gets reallocated every TU
@@ -252,54 +296,61 @@ void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationU
       auto& labelObjectPtr = labelSymbol.labelObject;
       if (!labelObjectPtr) return; //should already habve an error?
 
-
+      //surely i dont need any of this anymore...
       
-      const auto it = m_fullNameCollatedIdentifierMap.find(labelObject.fullName());
+      // const auto it = translationUnit.m_identifierFullNameMap.find(labelObject.fullName());
 
-      if (iteratorAlreadyInFullNameMap(it)) {
-        if (auto ptr = dynamic_cast<Spasm::Program::LabelObject*>(it->second)) {
-          if (ptr->symbolObject) {
-            logError(labelSymbol.location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
-          } else {
-            //is a temporary, is okay!! just like switch urself into it
-            labelObject.children.merge(ptr->children);
-            //labelObject.parent = ptr->parent; // not sure???
-            m_fullNameCollatedIdentifierMap[labelObject.fullName()] = labelObjectPtr;
-            if (ptr->parent && labelObjectPtr->parent) {
-              ptr->parent->children[ptr->fullName()] = std::move(labelObject.parent->children[labelObject.fullName()]);
-            }
-            if (labelObject.nameSegments.size() == 1) {
-              m_globalIdentifierMap[labelObject.fullName()] = labelObjectPtr;
-            }
-            m_temporaryIdentifierOwner.erase(ptr->fullName());
-          }
-        } else if (auto ptr = dynamic_cast<Spasm::Program::DataObject*>(it->second)) {
-          logError(labelSymbol.location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
-        } else {
-          logError(labelSymbol.location, "Identifier is already defined with unknown type so no location is provided.");
-        }
+      // if (iteratorAlreadyInFullNameMap(translationUnit, it)) {
+      //   if (auto ptr = dynamic_cast<Spasm::Program::LabelObject*>(*it->second)) {
+      //     if (ptr->symbolObject) {
+      //       logError(labelSymbol.location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
+      //     } else {
+      //       //is a temporary, is okay!! just like switch urself into it
+      //       //labelObject.children.merge(ptr->children);
+      //       //labelObject.parent = ptr->parent; // not sure???
+      //       // ???? wtf is this line V
+      //       //translationUnit.m_identifierFullNameMap[labelObject.fullName()].get() = labelObjectPtr;
 
-        continue;
-      }
-      //if it doesnt already exist ie, no fullname found
-      if (!labelObject.parent) {
-        if (!nameAlreadyInGlobalMap(labelObject.fullName())) {
-          m_globalIdentifierMap.emplace(labelObject.name(), &labelObject); 
-        } else {
-          logError(labelSymbol.location, "somehow there is a parent-less identifier object in the linkers map, without an entry in the fullname, in the globalmap, this just shouldnt happen...");
-          continue;
-        }
-      } else {
-        const auto parentIt = m_fullNameCollatedIdentifierMap.find(labelObject.parent->fullName());
-        if (iteratorAlreadyInFullNameMap(parentIt)) {
-          const auto& lblSharedPtr = parentIt->second->children.find(labelObject.name())->second;
-          parentIt->second->children.emplace(labelObject.name(), lblSharedPtr);
-        }
-      }
+      //       if (ptr->parent && labelObjectPtr->parent) {
+      //         std::cout << "POTENTIAL ERR 1\n"; 
+      //         //ptr->parent->children[ptr->fullName()] = std::move(labelObject.parent->children[labelObject.fullName()]);
+      //       }
+      //       if (labelObject.nameSegments.size() == 1) {
+      //         std::cout << "POTENTIAL ERR 2\n"; //if trugger, below line needs to be implemented
+      //         //translationUnit.m_identifierMap[labelObject.fullName()] = labelObjectPtr;
+      //       }
+      //       //HUH???
+      //       //m_temporaryIdentifierOwner.erase(ptr->fullName());
+      //     }
+      //   } else if (auto ptr = dynamic_cast<Spasm::Program::DataObject*>(*it->second)) {
+      //     logError(labelSymbol.location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
+      //   } else {
+      //     logError(labelSymbol.location, "Identifier is already defined with unknown type so no location is provided.");
+      //   }
 
-      m_fullNameCollatedIdentifierMap.emplace(labelObject.fullName(), labelObjectPtr);
+      //   continue;
+      // }
+      // //if it doesnt already exist ie, no fullname found
+      // if (!labelObject.parent) {
+      //   if (!nameAlreadyInGlobalMap(translationUnit, labelObject.fullName())) {
+      //     std::cout << "POTENTIAL ERR 3\n";
+      //     //m_globalIdentifierMap.emplace(labelObject.name(), &labelObject); 
+      //   } else {
+      //     logError(labelSymbol.location, "somehow there is a parent-less identifier object in the linkers map, without an entry in the fullname, in the globalmap, this just shouldnt happen...");
+      //     continue;
+      //   }
+      // } else {
+      //   const auto parentIt = translationUnit.m_identifierFullNameMap.find(labelObject.parent->fullName());
+      //   if (iteratorAlreadyInFullNameMap(translationUnit, parentIt)) {
+      //     const auto& lblSharedPtr = parentIt->second->children.find(labelObject.name())->second;
+      //     parentIt->second->children.emplace(labelObject.name(), lblSharedPtr);
+      //   }
+      // }
+
+      // m_fullNameCollatedIdentifierMap.emplace(labelObject.fullName(), labelObjectPtr);
       
       labelSymbol.addressIndex = linkedResult.nAddressesEntered++; 
+      labelObject.addressIndex = labelSymbol.addressIndex;
       linkedResult.addressHolder[labelSymbol.addressIndex] = linkedResult.maxAddress;
       linkedResult.statementHolder[labelSymbol.addressIndex] = &labelSymbol;
       // cant reallty do this because it gets reallocated every TU
@@ -359,14 +410,14 @@ void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationU
   }
 }
 
-void Linker::checkForUndefinedIdentifiers() {
-  for (const auto& it : m_fullNameCollatedIdentifierMap) {
-    if (it.second->isIdentifier()) {
-      if (!static_cast<Program::DataObject*>(it.second)->symbolObject) {
+void Linker::checkForUndefinedIdentifiers(Program::TranslationUnit& translationUnit) {
+  for (const auto& it : translationUnit.m_identifierFullNameMap) {
+    if ((*it.second)->isIdentifier()) {
+      if (!static_cast<Program::DataObject*>(*it.second)->symbolObject) {
         logError(SourceLocation("LINKER", 0,0), std::format("Data identifier \"{}\" is uninitialised.", it.first));
       }
-    } else if (it.second->isLabel()) {
-      if (!static_cast<Program::LabelObject*>(it.second)->symbolObject) {
+    } else if ((*it.second)->isLabel()) {
+      if (!static_cast<Program::LabelObject*>(*it.second)->symbolObject) {
         logError(SourceLocation("LINKER", 0,0), std::format("Label identifier \"{}\" is uninitialised.", it.first));
       }
     }
@@ -379,7 +430,7 @@ void Linker::resolveExpressions(Program::TranslationUnit& translationUnit, Linke
     translationUnit.m_unresolvedExpressions.pop();
 
     // std::cout << expr << '\n';
-    auto eval = expr.evaluate(m_globalIdentifierMap, linked.addressHolder, true);
+    auto eval = expr.evaluate(linked.addressHolder, true);
     expr.setValue(eval.value);
     std::cout << expr.toString() << " value: " << eval.value << std::endl;
     labelHelper.registerExpression(&expr, eval.mentionedLabels);

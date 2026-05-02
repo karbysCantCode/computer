@@ -90,6 +90,10 @@ bool CLIOptions::evaluate(int argc, char* argv[]) {
       debugs = true;
     } else if (option == "-s") {
       silent = true;
+    } else if (option == "--regex-arch") {
+      regexArchDump = true;
+    } else {
+      std::cout << "Unknown arg \"" << option << "\", use --help for usage.\n";
     }
     arg++;
   }

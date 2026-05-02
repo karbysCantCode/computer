@@ -20,9 +20,18 @@ void OutputGenerator::run(
   binaryData.resize(linkedResult.maxAddress);
 
   // jump to entry symbol bytes
-  auto it = linker.m_fullNameCollatedIdentifierMap.find(target.m_entrySymbol);
-  if (it != linker.m_fullNameCollatedIdentifierMap.end()) {
-    size_t address = linkedResult.addressHolder[it->second->addressIndex];
+  Spasm::Program::IdentifierMapStringType::iterator it;
+  bool foundIt = false;
+  for (const auto& translationUnit : linker.m_allTranslationUnits) {
+    auto localIt = translationUnit->m_identifierFullNameMap.find(std::string(target.m_entrySymbol + '.'));
+    if (localIt != translationUnit->m_identifierFullNameMap.end()) {
+      it = localIt;
+      foundIt = true;
+      break;
+    }
+  }
+  if (foundIt) {
+    size_t address = linkedResult.addressHolder[(*it->second)->addressIndex];
     const uint8_t header[] = { 
       0x40, 0x6C, 
         static_cast<uint8_t>( address        & 0xff ),
@@ -137,7 +146,9 @@ void OutputGenerator::fillInstruction(Linker::LinkedResult& linkedResult, Progra
   uint16_t mainInstructionBits = 0;
   mainInstructionBits |= instructionDefinition.m_opcode << 10; //place opcode in msb
   std::vector<uint8_t> extraData;
-  
+  if (instructionDefinition.m_name == "stear2") {
+    int i2222 = 1;
+  }
   int fieldShiftAmount = 10;
   for (size_t operandIndex = 0; operandIndex < instructionDefinition.m_operands.size(); operandIndex++) {
     const size_t fieldSize = instructionDefinition.m_format.m_formatOperandSizes[operandIndex+1];
@@ -196,7 +207,7 @@ void OutputGenerator::fillInstruction(Linker::LinkedResult& linkedResult, Progra
     
     if (fieldShiftAmount < 16) {
       //should exclude immx
-      mainInstructionBits |= value << fieldShiftAmount;
+      mainInstructionBits |= (value << fieldShiftAmount);
     }
   }
 

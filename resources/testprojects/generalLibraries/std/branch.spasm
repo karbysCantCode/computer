@@ -2,7 +2,7 @@ std.internal.full_branch_jump_pass:
 
 @define STD_INTERNAL_full_branch(condition, label) {
   ; destroys mo, r14, r15
-  brcia condition, $std.internal.full_branch_jump_pass.label
+  brcia condition, [$$$std.internal.full_branch_jump_pass.label / 2]
   movi r14, [label & 0xffff]         ; low half
   movi r15, [(label << 16) & 0xffff] ; high half
   mov  mol, r14

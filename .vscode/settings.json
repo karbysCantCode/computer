@@ -47,7 +47,7 @@
     "editor.tabSize": 2,
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "cmake.debugConfig": {
-    "args": ["--smake", "../resources/testprojects/simpleProjectCollection/simple.smake", "-v", "-vv", "--arch", "../resources/archRev3.arch"]
+    "args": ["--smake", "../resources/testprojects/simpleProjectCollection/simple.smake", "-v", "-vv", "--regex-arch", "--arch", "../resources/archRev3.arch"]
     },
     "workbench.colorTheme": "Monokai",
     "workbench.iconTheme": "vs-seti",

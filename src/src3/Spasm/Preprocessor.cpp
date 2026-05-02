@@ -392,7 +392,7 @@ void Preprocessor::processInclude(
     auto preprocessedTokens = lexer.run(*transUnitPtr->m_source, transUnitPtr->m_sourcePath);
 
     transUnitPtr->processedTokens = run(preprocessedTokens, target, *transUnitPtr, targetProgram, dependantTranslationUnitMap, p_logger);
-    
+
     for (auto& macro : p_macroMap[path]) {
       auto [it, inserted] = myMacroMap.emplace(macro.first, macro.second);
       if (!inserted) {

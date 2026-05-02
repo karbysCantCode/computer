@@ -16,6 +16,25 @@ class Parser {
   private:
   Debug::FullLogger* p_logger;
 
+  struct ExpressionParserArgumentHolder {
+    TokenHolder& tokenHolder;
+    size_t* addressIndex;
+    size_t expressionOffset;
+    Program::IdentifierMapType* identifierMap;
+
+    ExpressionParserArgumentHolder(
+      TokenHolder& tokHolder,
+      size_t* adrssIndex,
+      size_t exprOffset,
+      Program::IdentifierMapType* idenMap
+    ) : 
+      tokenHolder(tokHolder),
+      addressIndex(adrssIndex),
+      expressionOffset(exprOffset),
+      identifierMap(idenMap)
+    {}
+  };
+
   inline void logError(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Errors.logMessage(errToken.location.toString() + message);}}
   inline void logWarning(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(errToken.location.toString() + message);}}
   inline void logDebug(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(errToken.location.toString() + message);}}
@@ -29,26 +48,29 @@ class Parser {
   void parseRelaxor(TokenHolder&, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program);
 
   std::pair<const Arch::Architecture::RegisterDefinition*, Token> parseExpectRegister(TokenHolder&, const Arch::Architecture&);
-  std::unique_ptr<Program::Operand> parseExpectImmediate(TokenHolder&, size_t*, size_t);
+  std::unique_ptr<Program::Operand> parseExpectImmediate(TokenHolder&,Program::TranslationUnit&, size_t*, size_t);
   std::unique_ptr<Program::Operand> convertConstantStringToOperand(const Arch::Architecture&, const Arch::Architecture::ConstantStringOperand&);
 
-  std::unique_ptr<Program::Expr> makeErrorExpression(const Token&, const std::string&, size_t*, size_t);
-  std::unique_ptr<Program::Operand> makeErrorOperand(const Token&, const std::string&, size_t*, size_t);
+  #define ExpressionParserArgumentTypes TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset, Program::IdentifierMapType* identifierMap
+  #define ExpressionParserArguments tokenHolder, addressIndex, expressionOffset, identifierMap
+  #define ExpressionParserConstructorArguments addressIndex, expressionOffset, identifierMap
+  std::unique_ptr<Program::Expr> makeErrorExpression(const Token&, const std::string&, ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Operand> makeErrorOperand(const Token&, const std::string&, size_t*, size_t, Program::IdentifierMapType*);
   
   int parseNumberString(const Token&);
-  std::unique_ptr<Program::Expr> parseSquareExpression(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseBooleanOr(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseBooleanAnd(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseOr(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseXor(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseAnd(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseEquality(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseComparison(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseShift(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseAdditive(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseMultiplicative(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parseUnary(TokenHolder&, size_t*, size_t);
-  std::unique_ptr<Program::Expr> parsePrimary(TokenHolder&, size_t*, size_t);
+  std::unique_ptr<Program::Expr> parseSquareExpression(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseBooleanOr(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseBooleanAnd(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseOr(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseXor(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseAnd(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseEquality(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseComparison(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseShift(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseAdditive(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseMultiplicative(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parseUnary(ExpressionParserArgumentTypes);
+  std::unique_ptr<Program::Expr> parsePrimary(ExpressionParserArgumentTypes);
 
   void parseLabelDefinition(TokenHolder&, Program::TranslationUnit&, Program&);
   //bool getOrCreateIdentiferObject(TokenHolder&, Program::TranslationUnit&, Program&, Program::LabelObject*&, bool, Program::LabelSymbol*, std::string_view&); //returns success
@@ -61,7 +83,7 @@ class Parser {
     bool,
     std::vector<std::string_view>&
   );
-  std::unique_ptr<Program::Expr> parseIdentifierToExpression(TokenHolder&, size_t*, size_t);
+  std::unique_ptr<Program::Expr> parseIdentifierToExpression(ExpressionParserArgumentTypes);
   std::unique_ptr<Program::StatementSymbol> parseIdentifierNameDefiniton(TokenHolder&, Program::TranslationUnit&, Program&, bool);
 
   void parseDataTypeDeclaration(TokenHolder&, Program::TranslationUnit&, Program&);

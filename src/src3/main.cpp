@@ -26,7 +26,30 @@ int main(int argc, char* argv[]) {
     }
   }
   
-  architecture.debugPrint();
+  if (options.debugs) {
+    architecture.debugPrint();
+  }
+
+  if (options.regexArchDump) {
+    std::string instructionString = "(";
+    for (const auto& instruction : architecture.m_instructionSet) {
+      instructionString.append(instruction.second.m_name);
+      instructionString.push_back('|');
+    }
+    instructionString.pop_back();
+    instructionString.push_back(')');
+
+    std::string registerString = "(";
+    for (const auto& registr : architecture.m_registerSet) {
+      registerString.append(registr.second.m_registerName);
+      registerString.push_back('|');
+    }
+    registerString.pop_back();
+    registerString.push_back(')');
+
+    std::cout << "REGEX REGISTER SET:" << registerString << std::endl;
+    std::cout << "REGEX INSTRUCTION SET:" << instructionString << std::endl;
+  }
 
   
   
@@ -47,7 +70,9 @@ int main(int argc, char* argv[]) {
       std::cout << smakeLogger.Debugs.consumeMessage() << '\n';
     }
   }
-  SMake::printProject(project);
+  if (options.debugs) {
+    SMake::printProject(project);
+  }
 
   Spasm::spasmPipeline(project, architecture, options);
   

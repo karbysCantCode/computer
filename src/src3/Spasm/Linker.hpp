@@ -57,7 +57,13 @@ private:
     LinkedResult&
   );
 
+  void inheritIncludedIdentifers(
+    Program&, 
+    Program::TranslationUnit&
+  );
+
   void linkTU(
+    Program&,
     Program::TranslationUnit&, 
     LinkedResult&,
     ExpressionsByLabelHelper&
@@ -66,10 +72,11 @@ private:
   inline void addIndependentTranslationUnits(Program::TranslationUnit* tuptr) {m_independentTranslationUnits.push(tuptr);}
   inline bool areUnlinkedIndependentTranslationUnits() const {return !m_independentTranslationUnits.empty();}
   inline auto consumeIndependentTranslationUnitFromStack() {auto& TU = m_independentTranslationUnits.top(); m_independentTranslationUnits.pop(); return TU;}
+  std::vector<Program::TranslationUnit*> m_allTranslationUnits;
   std::stack<Program::TranslationUnit*> m_independentTranslationUnits;
   std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>> m_dependantTranslationUnitMap;
-  std::unordered_map<std::string_view, Program::IdentifierObject*> m_fullNameCollatedIdentifierMap;
-  std::unordered_map<std::string_view, Program::IdentifierObject*> m_globalIdentifierMap;
+  // std::unordered_map<std::string_view, Program::IdentifierObject*> m_fullNameCollatedIdentifierMap;
+  // std::unordered_map<std::string_view, Program::IdentifierObject*> m_globalIdentifierMap;
   std::unordered_map<std::string_view, std::unique_ptr<Program::LabelObject>> m_temporaryIdentifierOwner;
   bool m_hadError;
 
@@ -82,15 +89,15 @@ private:
   inline void logWarning(const SourceLocation& sLoc, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(sLoc.toString() + message);}}
   inline void logDebug(const SourceLocation& sLoc, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(sLoc.toString() + message);}}
 
-  bool iteratorAlreadyInFullNameMap(Spasm::Program::NonOwningIdentifierMapType::iterator iterator) const {return iterator != m_fullNameCollatedIdentifierMap.end();}
-  bool nameAlreadyInGlobalMap(const std::string_view& fullname) const {return m_globalIdentifierMap.find(fullname) != m_globalIdentifierMap.end();}
+  bool iteratorAlreadyInFullNameMap(const Program::TranslationUnit& translationUnit, Program::IdentifierMapStringType::iterator iterator) const {return iterator != translationUnit.m_identifierFullNameMap.end();}
+  bool nameAlreadyInGlobalMap(const Program::TranslationUnit& translationUnit, const std::string_view& fullname) const {return translationUnit.m_identifierMap.find(fullname) != translationUnit.m_identifierMap.end();}
 
   void placeDefinitionSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit);
 
   void placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit, ExpressionsByLabelHelper& labelHelper);
-  void checkForUndefinedIdentifiers();
+  void checkForUndefinedIdentifiers(Program::TranslationUnit& translationUnit);
   void resolveExpressions(Program::TranslationUnit& translationUnit,  LinkedResult& , ExpressionsByLabelHelper& labelHelper);
-  void createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::IdentifierObject* identifierObject);
+  void createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::TranslationUnit&, Program::IdentifierObject* identifierObject);
 };
 
 }
