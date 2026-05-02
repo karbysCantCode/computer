@@ -21,6 +21,8 @@ FP contains pointer to the fp address of the calling function (where fp -> fp + 
 
 }
 
+; maybe some sort of instruction for pushing the halves of the 32 could be good
+
 @define return() {
   ; destroys r15, gp
   mov  sp, fp

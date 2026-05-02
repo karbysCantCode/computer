@@ -149,6 +149,8 @@ void Preprocessor::recurseDefineContents(AbstractMacro* macro, InnerMacroMapType
 
   std::unordered_set<AbstractMacro*> invokedMacros;
   std::stack<AbstractMacro*> invokedMacroStack;
+  invokedMacros.insert(macro);
+  invokedMacroStack.push(macro);
 
   while (!processStack.empty()) {
     auto& currentHolder = *processStack.top();

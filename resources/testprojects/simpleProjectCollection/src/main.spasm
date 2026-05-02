@@ -37,16 +37,18 @@ os.memory.init:
 os.memory.paging:
 @define os_memory_paging_pageindexbits 15
 ARRAY os.memory.paging.allocatedPageBitmap, [1<<(os_memory_paging_pageindexbits - 4)], 2, 0 ; bitmap of page allocated 
-WORD os.memory.paging.last_freed_page 0xffff
+WORD os.memory.paging.last_freed_page, 0xffff
 ; for the purpose of testing while program is in rom:
 
-WORD os.memory.paging.highest_allocated_page 0
+WORD os.memory.paging.highest_allocated_page, 0
 os.memory.paging.allocator.alloc:
 ; MUST BE CALLED WITH VIRTUAL MEMORY OFF
 ; the issue currently is that the data segments are in ROM (non editable/readable)
 ; but realisitically they'd be in RAM when in practice.
 ;dont forget to push called
 ; r7: number
+
+
 
 os.memory.paging.allocator.free:
   ; MUST BE CALLED WITH VIRTUAL MEMORY OFF
@@ -64,16 +66,19 @@ os.memory.paging.allocator.free:
   movi  r15, [(os.memory.paging.last_freed_page & 0xffff0000) >> 16]
   mov   moh, r15
   lea2  r6, 0       ; load last freed index into r6
+  mov   r15, r6  
   stea2 r7, 0       ; stores new freed page into last freed page
   ;cmpi  r6, 0xf000   
   ;brc   c_hs, os.memory.paging.allocator.free.end   ; skip to end if last freed is invalid range
-  mov   mol, r7
-  shri  6, r7, mol
-  mov   moh, r7
-  shli  10, r7, mol  
+  mov   r6, r7
+  shri  6, r7, r6   ; shift it down so the msb are in the correct place for the memory address
+  mov   moh, r7 
+  shli  10, r7, r6  ; shift up so the lsb are in the correct place for the memory address
   mov   mol, r7     ; shift last freed into actual address
-  stea2 r6, 0       ; writes the OLD last freed page into the new freed page
+  stea2 r15, 0      ; writes the OLD last freed page into the new freed page
   ;os.memory.paging.allocator.free.end:
+
+  return
   
 
 os.memory.allocator:

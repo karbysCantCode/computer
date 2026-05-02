@@ -3,6 +3,8 @@
 @include "entryPoint.spasm"
 @include "jump.spasm"
 @include "branch.spasm"
+@include "call.spasm"
+
 
 ; helper label namespaces
 std:
