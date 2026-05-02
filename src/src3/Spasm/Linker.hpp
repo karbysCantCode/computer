@@ -54,7 +54,8 @@ private:
 
   void linkDefinitionSymbols(
     Program::TranslationUnit&, 
-    LinkedResult&
+    LinkedResult&,
+    ExpressionsByLabelHelper&
   );
 
   void inheritIncludedIdentifers(

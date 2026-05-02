@@ -125,7 +125,7 @@ namespace Spasm {
 
       const std::filesystem::path& sourcePath;
       size_t addressIndex = 0;
-      IdentifierObject* parent;
+      IdentifierObject* parent = nullptr;
       IdentifierMapType children;
       
       virtual inline bool isLabel() const {return false;}
@@ -138,7 +138,7 @@ namespace Spasm {
       void assimilate(IdentifierObject& identifier);
     };
     struct LabelObject : IdentifierObject {
-      LabelSymbol* symbolObject;
+      LabelSymbol* symbolObject = nullptr;
       
       virtual inline bool isLabel() const override {return true;}
       virtual inline bool isIdentifier() const override {return false;}
@@ -152,11 +152,13 @@ namespace Spasm {
     };
     struct DataObject : IdentifierObject {
       size_t elementCount; // in elements
+      std::unique_ptr<Expr> elementCountExpression;
       size_t elementSize; // in bytes
+      std::unique_ptr<Expr> elementSizeExpression;
       std::vector<uint8_t> data;
       bool rawDataValid = false;
       std::vector<std::unique_ptr<Expr>> exprData;
-      DefinitionSymbol* symbolObject;
+      DefinitionSymbol* symbolObject = nullptr;
       
       virtual inline bool isLabel() const override {return false;}
       virtual inline bool isIdentifier() const override {return true;}

@@ -490,6 +490,9 @@ std::unique_ptr<Program::Expr> Parser::makeErrorExpression(const Token& errToken
 void Parser::parseLabelDefinition(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program) {
   auto statementSymbol = parseIdentifierNameDefiniton(tokenHolder, translationUnit, program, true);
   if (!statementSymbol) return;
+  auto labelPtr = dynamic_cast<Program::LabelSymbol*>(statementSymbol.get());
+  if (!labelPtr) return;
+  labelPtr->labelObject->symbolObject = labelPtr;
   translationUnit.m_statementVector.push_back(std::move(statementSymbol));
 }
 
@@ -613,6 +616,8 @@ bool Parser::getOrCreatePartialIdentifier(
         translationUnit.m_identifierObjectPtrHolder.push_back(std::move(uniquePtr));
         if (auto labSym = dynamic_cast<Program::LabelSymbol*>(symbol)) {
           labSym->labelObject = std::move(reference);
+        } else {
+          assert(false);
         }
       } else {
         auto reference = std::make_unique<Program::DataObject>(
@@ -631,6 +636,8 @@ bool Parser::getOrCreatePartialIdentifier(
         translationUnit.m_identifierObjectPtrHolder.push_back(std::move(uniquePtr));
         if (auto defSym = dynamic_cast<Program::DefinitionSymbol*>(symbol)) {
           defSym->dataObject = std::move(reference);
+        } else {
+          assert(false);
         }
       }
       //pool->emplace(name, std::move(reference));
@@ -651,23 +658,17 @@ bool Parser::getOrCreatePartialIdentifier(
     parentLabel
   );
 
-  assert(reference.get() != nullptr);
 
   parentLabel = reference.get();
-  assert(reference.get() != nullptr);
   reference->nameSegments = nameSegments; //copy
-  assert(reference.get() != nullptr);
   auto uniquePtr = std::make_unique<Program::IdentifierObject*>(reference.get());
-  assert(reference.get() != nullptr);
   pool->emplace(name, uniquePtr.get());
-  assert(reference.get() != nullptr);
   std::cout << "reference ptr = " << reference << "\n";
   const auto nme = reference->fullName();
   translationUnit.m_identifierFullNameMap.emplace(
     nme, 
     uniquePtr.get()
   );
-  assert(reference.get() != nullptr);
   translationUnit.m_identifierObjectPtrHolder.push_back(std::move(uniquePtr));
   translationUnit.m_identifierObjectUndefinedHolder.push_back(std::move(reference));
 
@@ -713,6 +714,7 @@ void Parser::parseNonArrayDataType(TokenHolder& tokenHolder, Program::Translatio
   auto dataPtr = dynamic_cast<Program::DefinitionSymbol*>(dataStatement.get());
   if (!dataPtr) return;
 
+  dataPtr->dataObject->symbolObject = dataPtr;
   dataPtr->dataObject->addressIndex = dataPtr->addressIndex;
   dataPtr->dataObject->elementCount = 1;
   dataPtr->dataObject->elementSize = byteSize;
@@ -760,6 +762,7 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
   if (!dataStatement) return;
   auto dataStatPtr = dynamic_cast<Program::DefinitionSymbol*>(dataStatement.get());
   auto dataPtr = dataStatPtr->dataObject.get();
+  dataPtr->symbolObject = dataStatPtr;
 
   translationUnit.m_definitionVector.emplace_back(dynamic_cast<Program::DefinitionSymbol*>(dataStatement.release()));
 
@@ -773,10 +776,18 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
   bool isAuto = false;
   if (tokenHolder.match(Token::Type::NUMBER)) {
     dataPtr->elementCount = parseNumberString(tokenHolder.consume());
+  } else if (tokenHolder.match(Token::Type::OPENSQUARE)) {
+      tokenHolder.skip();
+      dataPtr->elementCountExpression = parseSquareExpression(tokenHolder, &dataStatement->addressIndex, 0, &translationUnit.m_identifierMap);
+      translationUnit.m_unresolvedExpressions.push(dataPtr->elementCountExpression.get());
+      if (!tokenHolder.match(Token::Type::CLOSESQUARE)) {
+        logError(tokenHolder.peek(), std::format("Expected ']', got \"{}\"",tokenHolder.peek().value));
+        return;
+      }
   } else if (tokenHolder.peek().value == "AUTO") {
     isAuto = true;
   } else {
-    logError(tokenHolder.peek(), std::format("Expected identifier, got \"{}\"", tokenHolder.peek().value));
+    logError(tokenHolder.peek(), std::format("Expected identifier, '[' or number, got \"{}\"", tokenHolder.peek().value));
     return;
   }
 
@@ -789,7 +800,15 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
   if (isArray) {
     //consume element size
     if (tokenHolder.match(Token::Type::NUMBER)) {
-    dataPtr->elementSize = parseNumberString(tokenHolder.consume());
+      dataPtr->elementSize = parseNumberString(tokenHolder.consume());
+    } else if (tokenHolder.match(Token::Type::OPENSQUARE)) {
+      tokenHolder.skip();
+      dataPtr->elementSizeExpression = parseSquareExpression(tokenHolder, &dataStatement->addressIndex, 0, &translationUnit.m_identifierMap);
+      translationUnit.m_unresolvedExpressions.push(dataPtr->elementSizeExpression.get());
+      if (!tokenHolder.match(Token::Type::CLOSESQUARE)) {
+        logError(tokenHolder.peek(), std::format("Expected ']', got \"{}\"",tokenHolder.peek().value));
+        return;
+      }
     } else {
       logError(tokenHolder.peek(), std::format("Expected identifier, got \"{}\"", tokenHolder.peek().value));
       return;

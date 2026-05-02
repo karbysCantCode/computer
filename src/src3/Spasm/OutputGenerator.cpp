@@ -151,8 +151,15 @@ void OutputGenerator::fillInstruction(Linker::LinkedResult& linkedResult, Progra
   }
   int fieldShiftAmount = 10;
   for (size_t operandIndex = 0; operandIndex < instructionDefinition.m_operands.size(); operandIndex++) {
-    const size_t fieldSize = instructionDefinition.m_format.m_formatOperandSizes[operandIndex+1];
-    fieldShiftAmount -= fieldSize; //+1 to skip the opcode field
+    const size_t opPlusOne = operandIndex+1;
+    size_t fieldSize = 0;
+    if (instructionDefinition.m_format.m_formatOperandSizes.size() > opPlusOne) {
+      fieldSize = instructionDefinition.m_format.m_formatOperandSizes[operandIndex+1];
+      fieldShiftAmount -= fieldSize; //+1 to skip the opcode field
+    } else {
+      fieldShiftAmount = -1;
+    }
+    
 
     uint16_t value = 0;
 
@@ -205,7 +212,7 @@ void OutputGenerator::fillInstruction(Linker::LinkedResult& linkedResult, Progra
       }
     }, instructionDefinition.m_operands[operandIndex]);
     
-    if (fieldShiftAmount < 16) {
+    if (fieldShiftAmount >= 0) {
       //should exclude immx
       mainInstructionBits |= (value << fieldShiftAmount);
     }

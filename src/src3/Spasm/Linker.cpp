@@ -29,7 +29,7 @@ Linker::LinkedResult Linker::run(
     std::cout << translationUnit.m_definitionVector.size() << '\n';
     linked.statementHolder.resize(linked.addressHolder.size());
   
-    linkDefinitionSymbols(translationUnit, linked);
+    linkDefinitionSymbols(translationUnit, linked, expressionHelper);
   }
   
   linked.programDataStartAddress = linked.maxAddress;
@@ -132,8 +132,10 @@ Linker::LinkedResult Linker::run(
 
 void Linker::linkDefinitionSymbols(
   Program::TranslationUnit& translationUnit, 
-  LinkedResult& linkedResult
+  LinkedResult& linkedResult,
+  ExpressionsByLabelHelper& labelHelper
 ) {
+  resolveExpressions(translationUnit, linkedResult, labelHelper);
   placeDefinitionSymbols(linkedResult, translationUnit);
 }
 void Linker::linkTU(
@@ -166,7 +168,7 @@ void Linker::inheritIncludedIdentifers(
   for (const auto& path : translationUnit.m_includedFiles) {
     Program::TranslationUnit& includedUnit = *program.m_translationUnits[path].get();
     
-    for (const auto& element : includedUnit.m_identifierMap) {
+    for (auto& element : includedUnit.m_identifierMap) {
       auto [it, success] = translationUnit.m_identifierMap.emplace(element);
       if (!success) {
         if ((*it->second)->hasSymbolObject()) {
@@ -176,8 +178,10 @@ void Linker::inheritIncludedIdentifers(
             continue;
           }
 
-        
-        } 
+          element.second = it->second;
+        } else if ((*element.second)->hasSymbolObject()) {
+          it->second = element.second;
+        }
       }
     }
     translationUnit.m_identifierFullNameMap.merge(includedUnit.m_identifierFullNameMap);
@@ -276,7 +280,12 @@ void Linker::placeDefinitionSymbols(LinkedResult& linkedResult, Program::Transla
     // cant reallty do this because it gets reallocated every TU
     //definitionSymbol->address = linkedResult.addressHolder.data() + definitionSymbol->addressIndex * sizeof(size_t);
     // definitionSymbol->addressResolved = true;
-    
+    if (definitionObjectPtr->elementCountExpression) {
+      definitionObjectPtr->elementCount = definitionObjectPtr->elementCountExpression->value;
+    }
+    if (definitionObjectPtr->elementSizeExpression) {
+      definitionObjectPtr->elementSize = definitionObjectPtr->elementSizeExpression->value;
+    }
     linkedResult.maxAddress += 
       definitionObjectPtr->elementCount * 
       definitionObjectPtr->elementSize;

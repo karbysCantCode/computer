@@ -47,10 +47,10 @@ mull 2 5  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
 mulh 2 6  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
 
 shl  2 7  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
-shli 2 21 normal IMM immediate 0:15 REG ra r0-r7 REG rb r0-r7
+shli 2 21 normal IMM immediate 0:15 REG rd r0-r7 REG rb r0-r7
 
 shr  2 8  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
-shri 2 22 normal IMM immediate 0:15 REG ra r0-r7 REG rb r0-r7
+shri 2 22 normal IMM immediate 0:15 REG rd r0-r7 REG rb r0-r7
 
 rol  2 9  normal REG rd r0-r15 REG ra r0-r7 REG rb r0-r7
 roli 2 24 normal IMM immediate 0:15 REG rd r0-r7 REG ra r0-r7

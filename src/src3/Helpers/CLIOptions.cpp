@@ -35,7 +35,7 @@ bool CLIOptions::evaluate(int argc, char* argv[]) {
         auto pathString = std::string(argv[arg]);
         smakePath = {pathString};
         if (!std::filesystem::exists(smakePath)) {
-          std::cerr << "file \"" << smakePath.generic_string() << "\" does not exist. Aborted.";
+          std::cerr << "file \"" << std::filesystem::weakly_canonical(smakePath).generic_string() << "\" does not exist. Aborted.";
           return false;
         }
         smakePath = std::filesystem::canonical(smakePath);
@@ -54,7 +54,7 @@ bool CLIOptions::evaluate(int argc, char* argv[]) {
         auto pathString = std::string(argv[arg]);
         spasmPath = {pathString};
         if (!std::filesystem::exists(spasmPath)) {
-          std::cerr << "file \"" << spasmPath.generic_string() << "\" does not exist. Aborted.";
+          std::cerr << "file \"" << std::filesystem::weakly_canonical(spasmPath).generic_string() << "\" does not exist. Aborted.";
           return false;
         }
         spasmPath = std::filesystem::canonical(spasmPath);
@@ -71,8 +71,8 @@ bool CLIOptions::evaluate(int argc, char* argv[]) {
       if (arg < argc) {
         auto pathString = std::string(argv[arg]);
         newArchPath = {pathString};
-                if (!std::filesystem::exists(newArchPath)) {
-          std::cerr << "file \"" << newArchPath.generic_string() << "\" does not exist. Aborted.";
+        if (!std::filesystem::exists(newArchPath)) {
+          std::cerr << "file \"" << std::filesystem::weakly_canonical(newArchPath) << "\" does not exist. Aborted.";
           return false;
         }
         newArchPath = std::filesystem::canonical(newArchPath);
