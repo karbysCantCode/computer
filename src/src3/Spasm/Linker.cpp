@@ -48,85 +48,13 @@ Linker::LinkedResult Linker::run(
   }
 
   //lets go relaxors!
-  std::unordered_set<Program::RelaxorSymbol*> relaxorQueueSet;
-  std::deque<Program::RelaxorSymbol*> relaxorQueue;
-  relaxorQueue.insert(relaxorQueue.end(), program.m_relaxorPointerVector.begin(), program.m_relaxorPointerVector.end());
-  relaxorQueueSet.insert(program.m_relaxorPointerVector.begin(), program.m_relaxorPointerVector.end());
+  resolveRelaxors(program, linked, expressionHelper);
+  
+  // fill data vectors since like long ones need the element count defined but you 
+  // cant garuntee that or osmething
 
-  while (!relaxorQueue.empty()) {
-    const auto relaxorPtr = relaxorQueue.front();
-    auto& thisRelaxor = *relaxorPtr;
-    relaxorQueue.pop_front();
-    relaxorQueueSet.erase(relaxorPtr);
+  fillDataStructures();
 
-    int original = thisRelaxor.optionIndex;
-    thisRelaxor.optionIndex = 0;
-    while (
-      thisRelaxor.relaxor.options.size() > thisRelaxor.optionIndex &&
-      thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->value == 0) {
-      thisRelaxor.optionIndex++;
-    }
-
-    const size_t nextAddressIndex = thisRelaxor.addressIndex + 1;
-
-    if (thisRelaxor.relaxor.options.size() <= thisRelaxor.optionIndex) {
-      thisRelaxor.optionIndex = -1;
-      continue;
-    } else if (thisRelaxor.optionIndex == original) {
-      continue;
-    } else if (linked.addressHolder.size() <= nextAddressIndex) {
-      continue;
-    }
-
-    
-    const int sizeChange = (original >= 0 ? thisRelaxor.relaxor.options[original].sumByteSizeOfOption() : thisRelaxor.relaxor.worstCaseSize) - thisRelaxor.relaxor.options[thisRelaxor.optionIndex].sumByteSizeOfOption();
-
-    //did change, updating required
-    auto it = std::lower_bound(linked.addressHolder.begin(), linked.addressHolder.end(), linked.addressHolder[nextAddressIndex]);
-
-    if (it != linked.addressHolder.end()) {
-      size_t index = it - linked.addressHolder.begin();
-
-      // get all labels beyond the address of relaxor, 
-      auto labelIt = std::lower_bound(
-        linked.addressLabelHolder.begin(), 
-        linked.addressLabelHolder.end(), 
-        linked.addressHolder[nextAddressIndex],
-        [](const addressLabelPointerPair& item, int value) {
-          return *item.addressPtr < value;
-        }
-      );
-
-      // mass increment
-      if (sizeChange != 0) {
-        for (size_t i = index; i < linked.addressHolder.size(); i++) {
-          linked.addressHolder[i] -= sizeChange;
-        }
-      }
-
-      std::vector<std::string> labelNames;
-      labelNames.resize(labelIt - linked.addressLabelHolder.begin());
-
-      size_t labelIndex = 0;
-      for (auto it2 = labelIt; it2 != linked.addressLabelHolder.end(); ++it2) {
-        labelNames[labelIndex++] = it2->labelPtr->labelObject->fullName();
-      }
-      //then evaluate dependant exprs
-      auto exprs = expressionHelper.getExpressionsReferencingTheseLabels(labelNames);
-      for (auto expr : exprs) {
-        expr->evaluate(linked.addressHolder, false);
-      }
-      // and add relaxors dependant to changed labels back to the start of the q
-      auto relaxors = expressionHelper.getRelaxorsReferencingTheseLabels(labelNames);
-      for (const auto relaxor : relaxors) {
-        if (relaxorQueueSet.find(relaxor) == relaxorQueueSet.end()) {
-          relaxorQueueSet.emplace(relaxor);
-          relaxorQueue.push_front(relaxor);
-        }
-      }
-    }
-
-  }
   return linked;
 }
 
@@ -489,4 +417,130 @@ std::set<Program::RelaxorSymbol*> Linker::ExpressionsByLabelHelper::getRelaxorsR
   return finalSet;
 }
 
+
+void Linker::resolveRelaxors(Program& program, LinkedResult& linked, ExpressionsByLabelHelper& expressionHelper) {
+  std::unordered_set<Program::RelaxorSymbol*> relaxorQueueSet;
+  std::deque<Program::RelaxorSymbol*> relaxorQueue;
+  relaxorQueue.insert(relaxorQueue.end(), program.m_relaxorPointerVector.begin(), program.m_relaxorPointerVector.end());
+  relaxorQueueSet.insert(program.m_relaxorPointerVector.begin(), program.m_relaxorPointerVector.end());
+  
+  while (!relaxorQueue.empty()) {
+    const auto relaxorPtr = relaxorQueue.front();
+    auto& thisRelaxor = *relaxorPtr;
+    relaxorQueue.pop_front();
+    relaxorQueueSet.erase(relaxorPtr);
+    
+    int original = thisRelaxor.optionIndex;
+    thisRelaxor.optionIndex = 0;
+    while (
+      thisRelaxor.relaxor.options.size() > thisRelaxor.optionIndex &&
+      thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->value == 0) {
+        thisRelaxor.optionIndex++;
+      }
+      
+      const size_t nextAddressIndex = thisRelaxor.addressIndex + 1;
+      
+      if (thisRelaxor.relaxor.options.size() <= thisRelaxor.optionIndex) {
+        thisRelaxor.optionIndex = -1;
+        continue;
+      } else if (thisRelaxor.optionIndex == original) {
+        continue;
+      } else if (linked.addressHolder.size() <= nextAddressIndex) {
+        continue;
+      }
+      
+      
+      const int sizeChange = (original >= 0 ? thisRelaxor.relaxor.options[original].sumByteSizeOfOption() : thisRelaxor.relaxor.worstCaseSize) - thisRelaxor.relaxor.options[thisRelaxor.optionIndex].sumByteSizeOfOption();
+      
+      //did change, updating required
+      auto it = std::lower_bound(linked.addressHolder.begin(), linked.addressHolder.end(), linked.addressHolder[nextAddressIndex]);
+      
+      if (it != linked.addressHolder.end()) {
+        size_t index = it - linked.addressHolder.begin();
+        
+        // get all labels beyond the address of relaxor, 
+        auto labelIt = std::lower_bound(
+          linked.addressLabelHolder.begin(), 
+          linked.addressLabelHolder.end(), 
+          linked.addressHolder[nextAddressIndex],
+          [](const addressLabelPointerPair& item, int value) {
+            return *item.addressPtr < value;
+          }
+        );
+        
+        // mass increment
+        if (sizeChange != 0) {
+          for (size_t i = index; i < linked.addressHolder.size(); i++) {
+            linked.addressHolder[i] -= sizeChange;
+          }
+        }
+        
+        std::vector<std::string> labelNames;
+        labelNames.resize(labelIt - linked.addressLabelHolder.begin());
+        
+        size_t labelIndex = 0;
+        for (auto it2 = labelIt; it2 != linked.addressLabelHolder.end(); ++it2) {
+          labelNames[labelIndex++] = it2->labelPtr->labelObject->fullName();
+        }
+        //then evaluate dependant exprs
+        auto exprs = expressionHelper.getExpressionsReferencingTheseLabels(labelNames);
+        for (auto expr : exprs) {
+          expr->evaluate(linked.addressHolder, false);
+        }
+        // and add relaxors dependant to changed labels back to the start of the q
+        auto relaxors = expressionHelper.getRelaxorsReferencingTheseLabels(labelNames);
+        for (const auto relaxor : relaxors) {
+          if (relaxorQueueSet.find(relaxor) == relaxorQueueSet.end()) {
+            relaxorQueueSet.emplace(relaxor);
+            relaxorQueue.push_front(relaxor);
+          }
+        }
+      }
+      
+    }
+    
+  }
+
+
+void Linker::fillDataStructures() {
+  for (const auto& translationUnit : m_allTranslationUnits) {
+  for (auto& definitionSymbol : translationUnit->m_definitionVector) {
+    Program::DataObject* dataPtr = definitionSymbol->dataObject.get();
+    if (dataPtr->rawDataValid) continue;
+    if (dataPtr->elementCountExpression) {
+      dataPtr->elementCount = dataPtr->elementCountExpression->value;
+    }
+    if (dataPtr->elementSizeExpression) {
+      dataPtr->elementSize = dataPtr->elementSizeExpression->value;
+    }
+
+    dataPtr->data.resize(dataPtr->elementCount * dataPtr->elementSize);
+
+    if (dataPtr->initialisingExpression) {
+      const int* value = &dataPtr->initialisingExpression->value;
+      const size_t length = std::min(sizeof(*value), dataPtr->elementSize);
+      for (int i = 0; i < dataPtr->elementCount; i++) {
+        std::memcpy(
+          &dataPtr->data[i * dataPtr->elementSize],
+          value,
+          length
+        );
+      }
+    } else if (!dataPtr->exprData.empty()) {
+      const size_t lowest = std::min(dataPtr->elementCount, dataPtr->exprData.size());
+      if (dataPtr->elementCount != dataPtr->exprData.size()) {
+        logWarning(definitionSymbol->location, std::format("Data structure \"{}\" defined size and provided number of elements do not match. Defaulted to the lower: {}", definitionSymbol->name, lowest));
+      }
+      for (int i = 0; i < lowest; i++) {
+        const int* value = &dataPtr->exprData[i]->value;
+        std::memcpy(
+          &dataPtr->data[i * dataPtr->elementSize],
+          value,
+          std::min(sizeof(*value), dataPtr->elementSize)
+        );
+      }
+    }
+  }
+  }
+}
 }

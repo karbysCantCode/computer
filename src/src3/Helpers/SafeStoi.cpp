@@ -2,28 +2,28 @@
 
 #include <format>
 
-namespace std {
-  std::pair<int, std::string> safe_stoi(const std::string& str) {
+//namespace std {
+  std::pair<long, std::string> safe_stol(const std::string& str) {
     try
     {
-      return {std::stoi(str), ""};
+      return {std::stol(str), ""};
     }
     catch(const std::exception& e)
     {
-      return {0, std::format("Failed to convert number, err \"{}\"", str)};
+      return {0, std::format("Failed to convert number, err \"{}\", with excfeption {}", str, e.what())};
     }
     
   }
 
-  std::pair<int, std::string> safe_stoi(const std::string& str, int base) {
+  std::pair<long, std::string> safe_stol(const std::string& str, int base) {
     try
     {
-      return {std::stoi(str, nullptr, base), ""};
+      return {std::stol(str, nullptr, base), ""};
     }
     catch(const std::exception& e)
     {
-      return {0, std::format("Failed to convert number, err \"{}\"", str)};
+      return {0, std::format("Failed to convert number, err \"{}\", with exception {}", str, e.what())};
     }
     
   }
-}
+//}

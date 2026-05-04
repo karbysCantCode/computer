@@ -3,8 +3,8 @@
 #include <string>
 #include <utility>
 
-namespace std {
-  std::pair<int, std::string> safe_stoi(const std::string& str);
+//namespace std {
+  std::pair<long, std::string> safe_stol(const std::string& str);
 
-  std::pair<int, std::string> safe_stoi(const std::string& str, int base);
-}
+  std::pair<long, std::string> safe_stol(const std::string& str, int base);
+//}

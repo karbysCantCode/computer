@@ -98,7 +98,9 @@ private:
   void placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit, ExpressionsByLabelHelper& labelHelper);
   void checkForUndefinedIdentifiers(Program::TranslationUnit& translationUnit);
   void resolveExpressions(Program::TranslationUnit& translationUnit,  LinkedResult& , ExpressionsByLabelHelper& labelHelper);
+  void resolveRelaxors(Program& program, LinkedResult& linked, ExpressionsByLabelHelper& expressionHelper);
   void createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::TranslationUnit&, Program::IdentifierObject* identifierObject);
+  void fillDataStructures();
 };
 
 }

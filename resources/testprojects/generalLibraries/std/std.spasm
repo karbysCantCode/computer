@@ -4,8 +4,8 @@
 @include "jump.spasm"
 @include "branch.spasm"
 @include "call.spasm"
-
-
+@include "vmem.spasm"
+@include "memory.spasm"
 ; helper label namespaces
 std:
 std.internal:

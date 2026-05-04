@@ -158,6 +158,7 @@ namespace Spasm {
       std::vector<uint8_t> data;
       bool rawDataValid = false;
       std::vector<std::unique_ptr<Expr>> exprData;
+      std::unique_ptr<Expr> initialisingExpression;
       DefinitionSymbol* symbolObject = nullptr;
       
       virtual inline bool isLabel() const override {return false;}

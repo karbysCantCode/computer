@@ -93,9 +93,9 @@ namespace Spasm {
         while (!logger.Debugs.isEmpty()) {
           std::cout << logger.Debugs.consumeMessage() << '\n';
         }
-      }
+        program.debugPrint();
+      } 
       
-      program.debugPrint();
     }
   }
 

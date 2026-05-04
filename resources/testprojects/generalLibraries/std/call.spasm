@@ -5,7 +5,13 @@ FP contains pointer to the fp address of the calling function (where fp -> fp + 
 
 *;
 
-@define call(label) {
+; if sp can be garunteed to be where it was when call was issued,
+;    non-f call/ret should be used, as they are cheaper
+; if you need fp to be updated, or cannot garuntee sp to be in
+;    the same location, the f variants store and update the fp
+;    so that this is handled.
+
+@define fcall(label) {
   ; destroys r15
   movi r15, $@@return >> 16    ; ret high
   push r15
@@ -18,18 +24,38 @@ FP contains pointer to the fp address of the calling function (where fp -> fp + 
   mov fp, sp
   jmp label
   @@return:
-
 }
 
 ; maybe some sort of instruction for pushing the halves of the 32 could be good
 
-@define return() {
+@define freturn() {
   ; destroys r15, gp
   mov  sp, fp
   pop  r15
   mov  fpl, r15
   pop  r15
   mov  fph, r15
+  pop  r15
+  mov  gpl, r15
+  pop  r15
+  mov  gph, r15
+  jmpr gp
+}
+
+@define call(label) {
+  ; destroys r15
+  movi r15, $@@return >> 16    ; ret high
+  push r15
+  mov r15, $@@return && 0xffff ; ret low
+  push r15
+  jmp label
+  @@return:
+}
+
+; maybe some sort of instruction for pushing the halves of the 32 could be good
+
+@define return() {
+  ; destroys r15, gp
   pop  r15
   mov  gpl, r15
   pop  r15

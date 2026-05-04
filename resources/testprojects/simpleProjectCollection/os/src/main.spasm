@@ -1,0 +1,23 @@
+@include "std.spasm"
+
+;*
+notes:
+map vpage index 0x7fff to the a syscall handler, make it non-editable
+start sp at page 0x7ffe
+functionality:
+[Y] initialise memory cache
+[X] spawn processes
+[X] initialise and communicate with io devices
+[X] handle syscall
+[X] 
+[X]
+[X]
+[X]
+[X]
+*;
+
+__start:
+; not neccessary (for simulator)
+; call os.memory.cache.initialise
+
+

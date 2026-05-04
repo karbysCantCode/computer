@@ -90,7 +90,8 @@ class Parser {
   void parseNonArrayDataType(TokenHolder&, Program::TranslationUnit&, Program&, size_t);
   void parseArrayDataType(TokenHolder&, Program::TranslationUnit&, Program&, bool);
   void parseElementsOfArray(TokenHolder&, Program::TranslationUnit&, Program::DataObject*, bool);
-  void parseTextData(TokenHolder&, Program::DataObject*, bool);
+  void parseTextData(Program::TranslationUnit&, TokenHolder&, Program::DataObject*, bool);
+  void parseArrayData(Program::TranslationUnit&, TokenHolder&, Program::DataObject*, bool);
   bool isRelaxorConditional(Token::NicheType type);
   void parseRelaxorCondition(TokenHolder&, Program::RelaxorDefinition::RelaxorOptionPair&, size_t*, Program::TranslationUnit&);
   void parseRelaxorCodeBlock(TokenHolder&,  Program::RelaxorSymbol&, Program::RelaxorDefinition::RelaxorOptionPair&, Arch::Architecture&, Program::TranslationUnit&, Program&);

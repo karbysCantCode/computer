@@ -1,0 +1,23 @@
+@include "std.spasm"
+os.memory.cache.initialise:
+; trashes: r1, r2, r3, mol
+; invalidate every line of Cache
+mov   r1, r0
+mov   mo, r0
+
+movi  r2, 2048           ; tag is 11 bits, therefore 2048 cache lines
+os.memory.cache.initialise.loop:
+invalichclina mo         ; inval line r1 of Icache set A
+invalichclinb mo         ; inval line r1 of Icache set b
+invaldchclina mo         ; inval line r1 of Dcache set A
+invaldchclinb mo         ; inval line r1 of Dcache set b
+adi   r1, r1, 1          ; increment counter
+shli  4, r3, r1          ; extended shifting with r3 lowbyte
+;shri  12, r4, r1         ; extended shifting with r4 highbyte PROBABLY DONT NEED EXTENDED SHIFTING BC 11 + 4 BITS IS 15, LESS THAN 16 SO 
+mov   mol, r3            ; increment 
+;mov   moh, r4            ;
+cmp   r1, r2              
+brcis c_lo, os.memory.cache.initialise.loop ; branch if r1 < r2
+
+return
+;jmpis $os.memory.cache.initialise                  ; halt

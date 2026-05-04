@@ -1,0 +1,43 @@
+@define disableDataVmem(LrA) {
+  mov  LrA, vm
+  andi LrA, LrA, 0b0000000000000010
+  mov  vm, LrA
+}
+
+@define disableToRestoreDataVmem(LrA, LrB) {
+  ; saves vm to LrB
+  mov  LrA, vm
+  mov  LrB, vm
+  andi LrA, LrA, 0b0000000000000010
+  mov  vm, LrA
+}
+
+@define enableDataVmem(LrA) {
+  mov  LrA, vm
+  ori LrA, LrA, 0b0000000000000001
+  mov  vm, LrA
+}
+
+@define disableInstrVmem(LrA) {
+  mov  LrA, vm
+  andi LrA, LrA, 0b0000000000000001
+  mov  vm, LrA
+}
+
+@define disableToRestoreInstrVmem(LrA, LrB) {
+    ; saves vm to LrB
+  mov  LrA, vm
+  mov  LrB, vm
+  andi LrA, LrA, 0b0000000000000001
+  mov  vm, LrA
+}
+
+@define enableInstrVmem(LrA) {
+  mov  LrA, vm
+  ori LrA, LrA, 0b0000000000000010
+  mov  vm, LrA
+}
+
+@define restoreVmem(LrA) {
+  mov  vm, LrA
+}

@@ -102,7 +102,7 @@ std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder
   for (const auto& operand : instructionDefinition->second.m_operands) {
     bool skipComma = true;
 
-    std::visit([&](auto& op) {
+    std::visit([&](auto& op) -> void {
       using T = std::decay_t<decltype(op)>;
 
       if constexpr (std::is_same_v<T, Arch::Architecture::ConstantIntOperand>) {
@@ -117,6 +117,11 @@ std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::RegisterOperand>) {
         
+        if (tokenHolder.match(Token::Type::NEWLINE)) {
+          logError(tokenHolder.peek(), std::format("Expected an argument for instruction \"{}\", got newline.", instrToken.value));
+          return;
+        }
+
         const auto [regptr, identifierToken] = parseExpectRegister(tokenHolder, arch);
         
         std::unique_ptr<Program::Operand> programOperand;
@@ -135,6 +140,10 @@ std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder
 
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::ImmediateOperand>) {
+        if (tokenHolder.match(Token::Type::NEWLINE)) {
+          logError(tokenHolder.peek(), std::format("Expected an argument for instruction \"{}\", got newline.", instrToken.value));
+          return;
+        }
         auto programOperand = parseExpectImmediate(tokenHolder, translationUnit, &instructionSymbol->addressIndex, expressionAddressOffset);
         //get a ptr to the expression of program operand to give it to the unresolved list
         auto expressionPtr = static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get();
@@ -143,6 +152,10 @@ std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder
         instructionSymbol->operands[instructionIndex] = std::move(programOperand);
       }
       else if constexpr (std::is_same_v<T, Arch::Architecture::ExternalImmediateOperand>) {
+        if (tokenHolder.match(Token::Type::NEWLINE)) {
+          logError(tokenHolder.peek(), std::format("Expected an argument for instruction \"{}\", got newline.", instrToken.value));
+          return;
+        }
         auto programOperand = parseExpectImmediate(tokenHolder, translationUnit, &instructionSymbol->addressIndex, expressionAddressOffset);
         //get a ptr to the expression of program operand to give it to the unresolved list
         auto expressionPtr = static_cast<Program::ExpressionOperand*>(programOperand.get())->expression.get();
@@ -240,21 +253,21 @@ int Parser::parseNumberString(const Token& token) {
   switch (token.nicheType)
   {
   case Token::NicheType::NUMBER_DEC:{
-    auto [num, errm] = std::safe_stoi((std::string)token.value, 10);
+    auto [num, errm] = safe_stol((std::string)token.value, 10);
     if (!errm.empty()) {
       logError(token, errm);
     }
     return num;}
     break;
   case Token::NicheType::NUMBER_HEX:{
-    auto [num, errm] = std::safe_stoi((std::string)token.value, 16);
+    auto [num, errm] = safe_stol((std::string)token.value, 16);
     if (!errm.empty()) {
       logError(token, errm);
     }
     return num;}
     break;
   case Token::NicheType::NUMBER_BIN:{
-    auto [num, errm] = std::safe_stoi((std::string)token.value, 2);
+    auto [num, errm] = safe_stol((std::string)token.value, 2);
     if (!errm.empty()) {
       logError(token, errm);
     }
@@ -551,7 +564,7 @@ std::unique_ptr<Program::StatementSymbol> Parser::parseIdentifierNameDefiniton(T
     );
   }
   
-  getOrCreatePartialIdentifier(
+  if (!getOrCreatePartialIdentifier(
     tokenHolder,
     translationUnit,
     parentLabel,
@@ -559,7 +572,10 @@ std::unique_ptr<Program::StatementSymbol> Parser::parseIdentifierNameDefiniton(T
     symbol.get(),
     isLabel,
     nameSegments
-  );
+  )) {
+    tokenHolder.skip(isLabel ? 2 : 1);
+    return nullptr;
+  }
 
   tokenHolder.skip(isLabel ? 2 : 1); 
 
@@ -589,6 +605,9 @@ bool Parser::getOrCreatePartialIdentifier(
     //exists
     if (creating) {
       logError(identifierToken, std::format("Identifier \"{}\" already exists.", identifierToken.value));
+      for (const auto& t : tokenHolder.m_tokens) {
+        std::cout << t.value;
+      }
       return false;
     }  
 
@@ -777,13 +796,13 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
   if (tokenHolder.match(Token::Type::NUMBER)) {
     dataPtr->elementCount = parseNumberString(tokenHolder.consume());
   } else if (tokenHolder.match(Token::Type::OPENSQUARE)) {
-      tokenHolder.skip();
-      dataPtr->elementCountExpression = parseSquareExpression(tokenHolder, &dataStatement->addressIndex, 0, &translationUnit.m_identifierMap);
-      translationUnit.m_unresolvedExpressions.push(dataPtr->elementCountExpression.get());
-      if (!tokenHolder.match(Token::Type::CLOSESQUARE)) {
-        logError(tokenHolder.peek(), std::format("Expected ']', got \"{}\"",tokenHolder.peek().value));
-        return;
-      }
+    tokenHolder.skip();
+    dataPtr->elementCountExpression = parseSquareExpression(tokenHolder, &dataStatement->addressIndex, 0, &translationUnit.m_identifierMap);
+    translationUnit.m_unresolvedExpressions.push(dataPtr->elementCountExpression.get());
+    if (!tokenHolder.match(Token::Type::CLOSESQUARE)) {
+      logError(tokenHolder.peek(), std::format("Expected ']', got \"{}\"",tokenHolder.peek().value));
+      return;
+    }
   } else if (tokenHolder.peek().value == "AUTO") {
     isAuto = true;
   } else {
@@ -798,34 +817,10 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
   tokenHolder.skip(2);
 
   if (isArray) {
-    //consume element size
-    if (tokenHolder.match(Token::Type::NUMBER)) {
-      dataPtr->elementSize = parseNumberString(tokenHolder.consume());
-    } else if (tokenHolder.match(Token::Type::OPENSQUARE)) {
-      tokenHolder.skip();
-      dataPtr->elementSizeExpression = parseSquareExpression(tokenHolder, &dataStatement->addressIndex, 0, &translationUnit.m_identifierMap);
-      translationUnit.m_unresolvedExpressions.push(dataPtr->elementSizeExpression.get());
-      if (!tokenHolder.match(Token::Type::CLOSESQUARE)) {
-        logError(tokenHolder.peek(), std::format("Expected ']', got \"{}\"",tokenHolder.peek().value));
-        return;
-      }
-    } else {
-      logError(tokenHolder.peek(), std::format("Expected identifier, got \"{}\"", tokenHolder.peek().value));
-      return;
-    }
-
-    if (!tokenHolder.match(Token::Type::COMMA)) {
-    logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
-    return;
-    }
-    tokenHolder.skip();
-
-    parseElementsOfArray(tokenHolder, translationUnit, dataPtr, isAuto);
+    parseArrayData(translationUnit, tokenHolder, dataPtr, isAuto);
   } else {
-    parseTextData(tokenHolder, dataPtr, isAuto);
-
+    parseTextData(translationUnit, tokenHolder, dataPtr, isAuto);
   }
-
 }
 
 void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program::DataObject* dataPtr, bool isAuto) {
@@ -859,7 +854,77 @@ void Parser::parseElementsOfArray(TokenHolder& tokenHolder, Program::Translation
     logError(dataPtr->symbolObject->location, std::format("{} elements expected, {} given.", dataPtr->elementCount, dataPtr->exprData.size()));
   }
 }
-void Parser::parseTextData(TokenHolder& tokenHolder, Program::DataObject* dataPtr, bool isAuto) {
+void Parser::parseArrayData(Program::TranslationUnit& translationUnit, TokenHolder& tokenHolder, Program::DataObject* dataPtr, bool isAuto) {
+  //consume element size
+  if (tokenHolder.match(Token::Type::NUMBER)) {
+    dataPtr->elementSize = parseNumberString(tokenHolder.consume());
+  } else if (tokenHolder.match(Token::Type::OPENSQUARE)) {
+    tokenHolder.skip();
+    dataPtr->elementSizeExpression = parseSquareExpression(tokenHolder, &dataPtr->addressIndex, 0, &translationUnit.m_identifierMap);
+    translationUnit.m_unresolvedExpressions.push(dataPtr->elementSizeExpression.get());
+    if (!tokenHolder.match(Token::Type::CLOSESQUARE)) {
+      logError(tokenHolder.peek(), std::format("Expected ']', got \"{}\"",tokenHolder.peek().value));
+      return;
+    }
+  } else {
+    logError(tokenHolder.peek(), std::format("Expected identifier, got \"{}\"", tokenHolder.peek().value));
+    return;
+  }
+
+  if (!tokenHolder.match(Token::Type::COMMA)) {
+  logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));
+  return;
+  }
+  tokenHolder.skip();
+
+  switch (tokenHolder.peek().type)
+  {
+  case Token::Type::NUMBER:
+  {
+    if (isAuto) {
+      logError(tokenHolder.peek(), "Auto not supported for initialising values.");
+      break;
+    }
+    const auto number = parseNumberString(tokenHolder.consume());
+    dataPtr->data.resize(dataPtr->elementCount * dataPtr->elementSize);
+    
+    for (size_t i = 0; i < dataPtr->elementCount; i++) {
+      std::memcpy(
+        &dataPtr->data[i * dataPtr->elementSize],
+        &number,
+        std::min(sizeof(number), dataPtr->elementSize)
+      );
+    }
+    dataPtr->rawDataValid = true;
+    break;
+  }
+  case Token::Type::OPENSQUARE:
+  {
+    if (isAuto) {
+      logError(tokenHolder.peek(), "Auto not supported for initialising values.");
+      tokenHolder.skipUntilAfterType(Token::Type::CLOSESQUARE);
+      break;
+    }
+    tokenHolder.skip();
+    dataPtr->initialisingExpression = parseSquareExpression(tokenHolder, &dataPtr->addressIndex, 0, &translationUnit.m_identifierMap);
+    if (!tokenHolder.match(Token::Type::CLOSESQUARE)) {
+      logError(tokenHolder.peek(), std::format("expected ']', got \"{}\"", tokenHolder.peek().value));
+      break;
+    }
+    break;
+  }
+  case Token::Type::OPENBLOCK:
+    parseElementsOfArray(tokenHolder, translationUnit, dataPtr, isAuto);
+    break;
+  
+  default:
+    logError(tokenHolder.peek(), std::format("Expected a number, '[', or '{{', got \"{}\"", tokenHolder.peek().value));
+    break;
+  }
+
+}
+
+void Parser::parseTextData(Program::TranslationUnit& translationUnit, TokenHolder& tokenHolder, Program::DataObject* dataPtr, bool isAuto) {
   assert(dataPtr!=nullptr);
   dataPtr->elementSize = 1;
 
@@ -884,12 +949,34 @@ void Parser::parseTextData(TokenHolder& tokenHolder, Program::DataObject* dataPt
         );
       }
 
+      dataPtr->rawDataValid = true;
+      break;
+    }
+    case Token::Type::OPENSQUARE: {
+      tokenHolder.skip();
+
+      if (isAuto) {
+        logError(valueToken, "Auto length cannot be used on a TEXT object with an initialising value.");
+        tokenHolder.skipUntilAfterType(Token::Type::CLOSESQUARE);
+        return;
+      }
+
+      dataPtr->initialisingExpression = parseSquareExpression(tokenHolder, &dataPtr->addressIndex, 0, &translationUnit.m_identifierMap);
+
+      if (!tokenHolder.match(Token::Type::CLOSESQUARE)) {
+        logError(tokenHolder.peek(), std::format("Excepted ']', got \"{}\"", tokenHolder.peek().value));
+        break;
+      }
+      
+      tokenHolder.skip();
+
       break;
     }
     case Token::Type::STRING: {
       tokenHolder.skip();
 
       size_t pos = 0;
+      dataPtr->data.resize(valueToken.value.size());
       while (pos < valueToken.value.size()) {
         dataPtr->data.push_back(valueToken.value[pos++]);
       }
@@ -898,6 +985,7 @@ void Parser::parseTextData(TokenHolder& tokenHolder, Program::DataObject* dataPt
         dataPtr->elementCount = pos;
       }
 
+      dataPtr->rawDataValid = true;
       break;
     }
     default: {
@@ -906,7 +994,6 @@ void Parser::parseTextData(TokenHolder& tokenHolder, Program::DataObject* dataPt
     }
   }
 
-  dataPtr->rawDataValid = true;
 }
 
 void Parser::parseRelaxor(TokenHolder& tokenHolder, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {
@@ -984,7 +1071,7 @@ void Parser::parseRelaxorCodeBlock(TokenHolder& tokenHolder, Program::RelaxorSym
     }
 
     std::unique_ptr<Program::StatementSymbol> statement;
-    if (tokenHolder.match(Token::Type::PERIOD, 1)) {
+    if (tokenHolder.match(Token::Type::PERIOD, 1) || tokenHolder.match(Token::Type::COLON, 1)) {
       //label defintion
       statement = parseIdentifierNameDefiniton(tokenHolder, translationUnit, program, true);
     } else {

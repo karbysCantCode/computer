@@ -32,11 +32,24 @@ class Preprocessor {
     AbstractMacro(const Token& defTok) : definitionToken(defTok) {}
   };
 
+  using MacroMapType = std::unordered_map<
+    std::filesystem::path, 
+    std::unordered_map<
+      std::string_view, 
+      std::shared_ptr<AbstractMacro>
+    >
+  >;
+
+  using InnerMacroMapType = std::unordered_map<
+    std::string_view, 
+    std::shared_ptr<AbstractMacro>
+  >;
+
   struct FunctionMacro : AbstractMacro{
     std::map<std::string_view, size_t> arguments;
 
     virtual Kind getKind() const override {return Kind::FUNCTION;}
-    bool fillWithReplacedContents(TokenHolder& tokenHolder, std::vector<std::vector<Token>> replacementArgs);
+    bool fillWithReplacedContents(Debug::FullLogger* logger, Program::TranslationUnit&, TokenHolder& tokenHolder, InnerMacroMapType& macroMap, std::vector<std::vector<Token>> replacementArgs);
     void addArgument(const std::string_view arg) {arguments.emplace(arg, arguments.size());}
     
     FunctionMacro(const Token& defTok) : AbstractMacro(defTok) {}
@@ -49,18 +62,6 @@ class Preprocessor {
 
   TokenHolder run(TokenHolder&, SMake::Target&, Spasm::Program::TranslationUnit&, Spasm::Program&, std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>>&, Debug::FullLogger* logger = nullptr);
   private:
-  using MacroMapType = std::unordered_map<
-    std::filesystem::path, 
-    std::unordered_map<
-      std::string_view, 
-      std::shared_ptr<AbstractMacro>
-    >
-  >;
-
-  using InnerMacroMapType = std::unordered_map<
-      std::string_view, 
-      std::shared_ptr<AbstractMacro>
-    >;
 
   Debug::FullLogger* p_logger;
   MacroMapType p_macroMap;
@@ -69,6 +70,7 @@ class Preprocessor {
   //std::unordered_map<std::string_view, std::variant<FunctionMacro, ReplacementMacro>>* p_macroMap;
 
   inline void logError(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Errors.logMessage(errToken.location.toString() + message);}}
+  static inline void logError(Debug::FullLogger* logger, const Token& errToken, const std::string& message) {if (logger != nullptr) {logger->Errors.logMessage(errToken.location.toString() + message);}}
   inline void logWarning(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(errToken.location.toString() + message);}}
   inline void logDebug(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(errToken.location.toString() + message);}}
 
@@ -98,8 +100,8 @@ class Preprocessor {
 
   FunctionMacro parseFunctionMacroDefinition(TokenHolder&, TokenHolder&);
   ReplacementMacro parseReplacementMacroDefinition(TokenHolder&, TokenHolder&);
-  TokenHolder processMacroInvocation(AbstractMacro*, TokenHolder&, InnerMacroMapType&);
-  void recurseDefineContents(
+  static TokenHolder processMacroInvocation(Debug::FullLogger* logger, Program::TranslationUnit&, AbstractMacro*, TokenHolder&, InnerMacroMapType&);
+  TokenHolder recurseDefineContents(
     AbstractMacro* macro,
     InnerMacroMapType& macroMap, 
     SMake::Target& target, 

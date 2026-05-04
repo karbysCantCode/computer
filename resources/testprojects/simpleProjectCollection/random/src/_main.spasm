@@ -1,0 +1,131 @@
+@include "std/std.spasm"
+
+__start: 
+mov   mo, r0
+mov   r1, r0      ; r1 = 0
+adi   r2, r0, 2   ; r2 = 2
+movi  r3, 0xaabb
+movi  r4, 0x5566
+movi  r5, 0x00ff
+__start.ab56loop:
+stear2 r3, r1      ; store r3 [r1]
+stear2 r4, r2      ; store r4 [r2]
+adi   r1, r1, 4   ; r1 += 2
+adi   r2, r2, 4   ; r1 += 2
+; alternating aa 55 pattern (in both odd and even caches)
+cmp r5, r1
+brc c_ls, __start.ab56loop
+
+; page allocator function
+os:
+
+os.init:
+jmp os.memory.init
+
+o
+
+os.data:
+os.data.copy:
+; r7: length
+; mo: src
+; fp: dst
+
+
+os.memory:
+
+os.memory.init:
+; init hardware memory structures
+
+os.memory.paging:
+;*
+TRANSLATION PAGING:
+
+the translation page table is a 256 * 16 * 2 byte table
+where there are 16 2 byte entries for each context
+these entries either are invalid (defined by 1 in MSB)
+or the page index of a page containing 2048 (2^11) translations,
+where the page index | page offset is the physical page
+for that virtual page address
+This table is begins at 0x0000000 
+and its final entry at  0x0002000
+(so the next free address is 0x0002002) or something??
+*;
+@define os_memory_paging_pageindexbits 15
+TEXT helloworld, AUTO, "hello world"
+ARRAY os.memory.paging.allocatedPageBitmap, [1<<(os_memory_paging_pageindexbits - 4)], 2, 0 ; bitmap of page allocated 
+WORD os.memory.paging.last_freed_page, 0xffff
+; for the purpose of testing while program is in rom:
+
+WORD os.memory.paging.highest_allocated_page, 0
+os.memory.paging.allocator.alloc:
+; MUST BE CALLED WITH VIRTUAL MEMORY OFF
+; the issue currently is that the data segments are in ROM (non editable/readable)
+; but realisitically they'd be in RAM when in practice.
+;dont forget to push called
+; r7: number of page indexes to be allocated
+
+
+
+os.memory.paging.allocator.free:
+;@define os_memory_paging_allocator_free_core(rLA, rLB, rC) {
+  ; MUST BE CALLED WITH VIRTUAL MEMORY OFF
+  ; trashes: r4, r5, r6, r7, moh, mol
+
+  ; r7: number of page indexes to be freed
+  ; following are the page indexes to be freed
+
+  ; the issue currently is that the data segments are in ROM (non editable/readable)
+  ; but realisitically they'd be in RAM when in practice.
+  ;dont forget to push called
+
+  disableToRestoreDataVmem r5, r4
+
+  ;pop  r7       ; get N pages to be freed
+  cmp  r7, r0
+  brc  c_eq, os.memory.paging.allocator.free.end ; skip if 0
+  
+  os.memory.paging.allocator.free.free_page_start:
+  sbi  r7, r7, 1
+
+  pop  r5     ; get page to be freed
+  shri 11, r6, r5  ; get 4msb of page to be freed
+  cmp r3, r6
+  brc c_eq os.memory.paging.allocator.free.free_page_translation_page_skip
+  ; check page is allocated
+  mov mol, r0
+  mov moh, r0 ; set memory offset to the translation table
+  mov r3, ctx 
+  shli 5, r3, r3
+  shli 1,  r6, r6
+  or r6, r3, r6    ; merge
+  lear2 r3, r6
+
+  os.memory.paging.allocator.free.free_page_translation_page_skip:
+
+  ; last freed page is a page index, which at offset 0 will contain the index for another feed page
+
+  ; write last freed to current pointed to page (if page != 0xffff)
+  mvptrtmo os.memory.paging.last_freed_page, r6
+  lea2  r6, 0       ; load last freed index into r6
+  push  r6 
+  stea2 r5, 0       ; stores new freed page into last freed page
+  shltmo 10, r6, r5
+  pop   r5
+  stea2 r5, 0      ; writes the OLD last freed page into the new freed page
+  
+
+  
+  cmp   r7, r0
+  brc   c_ne, os.memory.paging.allocator.free.free_page_start
+  os.memory.paging.allocator.free.end:
+  restoreVmem r4
+
+  return
+;}
+  
+
+os.memory.allocator:
+
+;*
+efwefwf
+*;

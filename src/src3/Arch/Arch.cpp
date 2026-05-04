@@ -65,7 +65,7 @@ void Architecture::consumeControlSignal(TokenHolder& sourceHolder) {
   const auto& identifierToken = sourceHolder.peek();
   const auto& bitIndexToken = sourceHolder.peek(1);
 
-  auto [num, errm] = std::safe_stoi((std::string)bitIndexToken.value);
+  auto [num, errm] = safe_stol((std::string)bitIndexToken.value);
   if (!errm.empty()) {
     logError(bitIndexToken, errm);
   }
@@ -81,12 +81,12 @@ void Architecture::consumeRegister(TokenHolder& sourceHolder) {
   const auto& bitwidthToken = sourceHolder.peek(1);
   const auto& minimumMachineOperandValueToken = sourceHolder.peek(2);
 
-  auto [bitwidth, errm] = std::safe_stoi((std::string)bitwidthToken.value);
+  auto [bitwidth, errm] = safe_stol((std::string)bitwidthToken.value);
   if (!errm.empty()) {
     logError(bitwidthToken, errm);
   }
 
-  auto [minimumMachineOperandValue, errmb] = std::safe_stoi((std::string)minimumMachineOperandValueToken.value);
+  auto [minimumMachineOperandValue, errmb] = safe_stol((std::string)minimumMachineOperandValueToken.value);
   if (!errmb.empty()) {
     logError(minimumMachineOperandValueToken, errmb);
   }
@@ -142,7 +142,7 @@ void Architecture::consumeFormat(TokenHolder& sourceHolder) {
   FormatDefinition format(std::string(identifierToken.value));
   while (sourceHolder.match(Token::Type::IDENTIFIER)) {
     const auto tk = sourceHolder.consume();
-    auto [opsize, errm] = std::safe_stoi((std::string)tk.value);
+    auto [opsize, errm] = safe_stol((std::string)tk.value);
     if (!errm.empty()) {
       logError(tk, errm);
     }
@@ -161,7 +161,7 @@ void Architecture::consumeBitwidth(TokenHolder& sourceHolder) {
   sourceHolder.skip(); //skip keyword
   const auto& bitwidthToken = sourceHolder.peek();
 
-  auto [bitwidth, errm] = std::safe_stoi((std::string)bitwidthToken.value);
+  auto [bitwidth, errm] = safe_stol((std::string)bitwidthToken.value);
   if (!errm.empty()) {
     logError(bitwidthToken, errm);
   }
@@ -183,11 +183,11 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
     logError(formatToken, std::format("Unknown format \"{}\" referenced.", formatToken.value));
     return;
   }
-  auto [opcodeNumber, errm] = std::safe_stoi((std::string)opcodeToken.value);
+  auto [opcodeNumber, errm] = safe_stol((std::string)opcodeToken.value);
   if (!errm.empty()) {
     logError(opcodeToken, errm);
   }
-  auto [byteLengthNumber, errmb] = std::safe_stoi((std::string)byteLengthToken.value);
+  auto [byteLengthNumber, errmb] = safe_stol((std::string)byteLengthToken.value);
   int remainingFreeBytesInInstruction = byteLengthNumber - 2;
   if (!errmb.empty()) {
     logError(byteLengthToken, errmb);
@@ -261,7 +261,7 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
       const auto immediateToken = sourceHolder.consume();
       
       if (immediateToken.value.size() > 0 && isdigit(immediateToken.value[0])) {
-        auto [opnum, errm] = std::safe_stoi((std::string)immediateToken.value);
+        auto [opnum, errm] = safe_stol((std::string)immediateToken.value);
         if (!errm.empty()) {
           logError(immediateToken, errm);
         }
@@ -286,7 +286,7 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
 
       const auto& immxByteLengthToken = sourceHolder.consume();
 
-      auto [immxByteLength, errm] = std::safe_stoi((std::string)immxByteLengthToken.value);
+      auto [immxByteLength, errm] = safe_stol((std::string)immxByteLengthToken.value);
       if (!errm.empty()) {
         logError(opcodeToken, errm);
       }
@@ -332,7 +332,7 @@ Architecture::RegisterRangeInfo Architecture::parseRegisterRange(const std::stri
       if (info.hasDash) {
         logError(errToken, "Register range has multiple dashes in definition.");
       } else {
-        auto [lowValue, errm] = std::safe_stoi(currentValue);
+        auto [lowValue, errm] = safe_stol(currentValue);
         if (!errm.empty()) {
           logError(errToken, errm);
         }
@@ -344,7 +344,7 @@ Architecture::RegisterRangeInfo Architecture::parseRegisterRange(const std::stri
       logError(errToken, "Got unexpected character in register range definition.");
     }
   }
-  auto [highValue, errm] = std::safe_stoi(currentValue);
+  auto [highValue, errm] = safe_stol(currentValue);
   if (!errm.empty() && info.hasDash) {
     logError(errToken, errm);
   }
@@ -384,7 +384,7 @@ std::pair<int,int> Arch::Architecture::parseImmediateRange(const Token& immediat
         return {0,0};
       }
       hasHalfed = true;
-      auto [minNum, errm] = std::safe_stoi(currentSlice);
+      auto [minNum, errm] = safe_stol(currentSlice);
       if (!errm.empty()) {
         logError(immediateToken, errm);
       }
@@ -395,7 +395,7 @@ std::pair<int,int> Arch::Architecture::parseImmediateRange(const Token& immediat
     }
     indx++;
   }
-  auto [maxNum, errm] = std::safe_stoi(currentSlice);
+  auto [maxNum, errm] = safe_stol(currentSlice);
   if (!errm.empty()) {
     logError(immediateToken, errm);
   }

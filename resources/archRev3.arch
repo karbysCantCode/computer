@@ -101,8 +101,8 @@ stear2  2 33 memtwo  CONST 1 REG rs r0-r15 REG rAddr r0-r15             ; stea r
 stolr2  2 48 memtwo  CONST 1 REG rs r0-r15 REG rAddr r0-r15<mo<sp<fp<gp ; store abs
 
 ; these are two bytes.
-push    2 34 normaug REG rs r0-r15 CONST 18 ;18 = 0b10010, so that i can use two field 2 to write (stack pointer) and then 3lsb immediate to dec/inc
-pop     2 35 normaug REG rd r0-r15 CONST 18
+push    2 34 two REG rs r0-r15<mol<moh<spl<sph<fpl<fph<ipl<iph CONST 18 ;18 = 0b10010, so that i can use two field 2 to write (stack pointer) and then 3lsb immediate to dec/inc
+pop     2 35 two REG rd r0-r15<mol<moh<spl<sph<fpl<fph<ipl<iph CONST 18
 
 
 

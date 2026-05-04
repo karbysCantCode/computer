@@ -1,8 +1,8 @@
-@define initStackPtr() {
-                   ; move 0x7fffffe into sp
-  movi r1, 65534   ; r1 = 0xfffe
-  movi r2, 2047    ; r2 = 0x07ff
-  mov  spl, r1     ; spl = 0xfffe
-  mov  sph, r2     ; sph = 0x07ff
-                   ; sp  = 0x07fffffe
+@define initStackPtr(LrA) {
+                   ; move 0x7ffeffe into sp ( not 0x7fffffe bc top page is constant map syscall page)
+  movi LrA, 0xeffe  ; LrA = 0xeffe
+  mov  spl, LrA     ; spl = 0xeffe
+  movi LrA, 0x07ff  ; LrA = 0x07ff
+  mov  sph, LrA     ; sph = 0x07ff
+                    ; sp  = 0x07ffeffe
 }

@@ -146,9 +146,6 @@ void OutputGenerator::fillInstruction(Linker::LinkedResult& linkedResult, Progra
   uint16_t mainInstructionBits = 0;
   mainInstructionBits |= instructionDefinition.m_opcode << 10; //place opcode in msb
   std::vector<uint8_t> extraData;
-  if (instructionDefinition.m_name == "stear2") {
-    int i2222 = 1;
-  }
   int fieldShiftAmount = 10;
   for (size_t operandIndex = 0; operandIndex < instructionDefinition.m_operands.size(); operandIndex++) {
     const size_t opPlusOne = operandIndex+1;

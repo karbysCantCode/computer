@@ -1,7 +1,7 @@
 .target project
 .flist main_files
 .search_add(main_files, all, ".spasm", "src/")
-.include_directory(project, "../lib", "../../generalLibraries")
+.include_directory(project, "../lib", "../../../generalLibraries")
 .add_target(project, main_files)
 .output(project, ".", "project.bin")
 .format(project, "bin")

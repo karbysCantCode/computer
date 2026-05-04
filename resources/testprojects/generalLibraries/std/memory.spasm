@@ -1,0 +1,17 @@
+@define mvptrtmo (ptrLabel, rT) {
+  ; move pointer to mo register
+  movi  rT, [ptrLabel & 0xffff]
+  mov   mol, rT
+  movi  rT, [(ptrLabel & 0xffff0000) >> 16]
+  mov   moh, rT
+}
+
+@define shltmo (shift, LrT, LrA) {
+  ; shift left into mo (extended shifting)
+  ; LrT = low register temporary
+  ; LrA = low register value to shift in
+  shri [16 - shift], LrT, LrA
+  mov moh, LrT
+  shli shift, LrT, LrA
+  mov moh, LrT
+}

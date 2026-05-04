@@ -13,80 +13,67 @@ TokenHolder Preprocessor::run(TokenHolder& tokenHolder, SMake::Target& target, S
   auto myIt = p_macroMap.emplace(translationUnit.m_sourcePath, InnerMacroMapType{});
   auto& myMacroMap = myIt.first->second;
 
-  std::stack<TokenHolder*> processStack;
-  processStack.push(&tokenHolder);
+  // std::stack<TokenHolder*> processStack;
+  // processStack.push(&tokenHolder);
 
   std::vector<std::unique_ptr<TokenHolder>> temporaryOwner;
 
-  std::unordered_set<std::string_view> invokedMacros;
-  std::stack<std::string_view> invokedMacroStack;
+  // std::unordered_set<std::string_view> invokedMacros;
+  // std::stack<std::string_view> invokedMacroStack;
 
-  while (!processStack.empty()) {
-    auto& currentHolder = *processStack.top();
+  while (tokenHolder.notAtEnd()) {
+    if (!tokenHolder.match(Token::Type::DIRECTIVE)) {
+      const auto token = tokenHolder.consume();
+      const auto it = myMacroMap.find(token.value);
+      if (it != myMacroMap.end()) {
+        std::cout << "MACRO \"" << it->second->name << "\" called at " << token.location.toString() << std::endl;
+        // if (invokedMacros.find(token.value) != invokedMacros.end()) {
+        //   logError(token, "Recursive macro use.");
+        //   tokenHolder.skipUntilAfterType(Token::Type::NEWLINE);
+        //   continue;
+        // }
 
-    bool exit = false;
-    while (!exit && currentHolder.notAtEnd()) {
-      if (!currentHolder.match(Token::Type::DIRECTIVE)) {
-        const auto token = currentHolder.consume();
-        const auto it = myMacroMap.find(token.value);
-        if (it != myMacroMap.end()) {
-          std::cout << "MACRO \"" << it->second->name << "\" called at " << token.location.toString() << std::endl;
-          if (invokedMacros.find(token.value) != invokedMacros.end()) {
-            logError(token, "Recursive macro use.");
-            continue;
-          }
+        // auto temporaryHolder = std::make_unique<TokenHolder>(processMacroInvocation(it->second.get(), tokenHolder));
+        // processStack.push(temporaryHolder.get());
+        // temporaryOwner.push_back(std::move(temporaryHolder));
 
-          // auto temporaryHolder = std::make_unique<TokenHolder>(processMacroInvocation(it->second.get(), currentHolder));
-          // processStack.push(temporaryHolder.get());
-          // temporaryOwner.push_back(std::move(temporaryHolder));
+        const auto temporaryHolder = processMacroInvocation(p_logger, translationUnit, it->second.get(), tokenHolder, myMacroMap);
+        newTokenHolder.m_tokens.insert(newTokenHolder.m_tokens.end(), temporaryHolder.m_tokens.begin(), temporaryHolder.m_tokens.end());
 
-          const auto temporaryHolder = processMacroInvocation(it->second.get(), currentHolder, myMacroMap);
-          newTokenHolder.m_tokens.insert(newTokenHolder.m_tokens.end(), temporaryHolder.m_tokens.begin(), temporaryHolder.m_tokens.end());
-
-          invokedMacros.insert(token.value);
-          invokedMacroStack.push(token.value);
-          break;
-        } else {
-          // if (!token.type == Token::Type::NEWLINE);
-          newTokenHolder.m_tokens.push_back(token);
-        }
-
-        continue;
+        //invokedMacros.insert(token.value);
+        //invokedMacroStack.push(token.value);
+      } else {
+        // if (!token.type == Token::Type::NEWLINE);
+        newTokenHolder.m_tokens.push_back(token);
       }
 
-      switch (currentHolder.peek().nicheType) {
-        using NT = Token::NicheType;
-        case NT::DIRECTIVE_DEFINE: 
-          processDefine(currentHolder, newTokenHolder, myMacroMap, target, translationUnit, targetProgram, dependantTranslationUnitMap);
-          exit = true;
-          break;
-        case NT::DIRECTIVE_ENTRY:
-          processEntry(currentHolder, target);
-        break;
-        case NT::DIRECTIVE_INCLUDE:
-          processInclude(currentHolder, target, translationUnit, targetProgram, myMacroMap, dependantTranslationUnitMap);
-        break;
-        default:
-        logError(currentHolder.consume(), "Unknown directive.");
-        break;
-      }
+      continue;
     }
 
-    if (currentHolder.isAtEnd()) {
-      processStack.pop();
-
-      if (!invokedMacroStack.empty()) {
-        invokedMacros.erase(invokedMacroStack.top());
-        invokedMacroStack.pop();
-      }
+    switch (tokenHolder.peek().nicheType) {
+      using NT = Token::NicheType;
+      case NT::DIRECTIVE_DEFINE: 
+        processDefine(tokenHolder, newTokenHolder, myMacroMap, target, translationUnit, targetProgram, dependantTranslationUnitMap);
+        break;
+      case NT::DIRECTIVE_ENTRY:
+        processEntry(tokenHolder, target);
+      break;
+      case NT::DIRECTIVE_INCLUDE:
+        processInclude(tokenHolder, target, translationUnit, targetProgram, myMacroMap, dependantTranslationUnitMap);
+      break;
+      default:
+      logError(tokenHolder.consume(), "Unknown directive.");
+      break;
     }
   }
+
 
   return newTokenHolder;
 }
 
-TokenHolder Preprocessor::processMacroInvocation(AbstractMacro* macro, TokenHolder& tokenHolder, InnerMacroMapType& macroMap) {
+TokenHolder Preprocessor::processMacroInvocation(Debug::FullLogger* logger, Program::TranslationUnit& translationUnit, AbstractMacro* macro, TokenHolder& tokenHolder, InnerMacroMapType& macroMap) {
   TokenHolder newTokenHolder;
+  macro->invokeCount++;
   switch (macro->getKind())
   {
   case AbstractMacro::Kind::FUNCTION:
@@ -101,11 +88,12 @@ TokenHolder Preprocessor::processMacroInvocation(AbstractMacro* macro, TokenHold
         const auto it = macroMap.find(token.value);
         if (it != macroMap.end()) {
           if (it->second->getKind() == AbstractMacro::Kind::REPLACEMENT) {
-            const TokenHolder replacementTokens = processMacroInvocation(it->second.get(), tokenHolder, macroMap);
+            const TokenHolder replacementTokens = processMacroInvocation(logger, translationUnit, it->second.get(), tokenHolder, macroMap);
             currentArgument.insert(currentArgument.end(), replacementTokens.m_tokens.begin(), replacementTokens.m_tokens.end());
             continue;
+          } else {
+            logError(logger, token, std::format("Function macros cannot be passed as arguments into function macros."));
           }
-          logError(token, std::format("Function macros cannot be passed as arguments into function macros."));
         }
         currentArgument.push_back(token);
       }
@@ -115,7 +103,7 @@ TokenHolder Preprocessor::processMacroInvocation(AbstractMacro* macro, TokenHold
       arguments.push_back(currentArgument);
     }
 
-    functionMacro->fillWithReplacedContents(newTokenHolder,arguments);
+    functionMacro->fillWithReplacedContents(logger, translationUnit, newTokenHolder, macroMap, arguments);
   }
   break;
   case AbstractMacro::Kind::REPLACEMENT:
@@ -137,7 +125,7 @@ TokenHolder Preprocessor::processMacroInvocation(AbstractMacro* macro, TokenHold
   return newTokenHolder;
 }
 
-void Preprocessor::recurseDefineContents(AbstractMacro* macro, InnerMacroMapType& macroMap, SMake::Target& target, Spasm::Program::TranslationUnit& translationUnit, Spasm::Program& targetProgram, std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>>& dependantTranslationUnitMap) {
+TokenHolder Preprocessor::recurseDefineContents(AbstractMacro* macro, InnerMacroMapType& macroMap, SMake::Target& target, Spasm::Program::TranslationUnit& translationUnit, Spasm::Program& targetProgram, std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>>& dependantTranslationUnitMap) {
   if (!macro) assert(false);
 
   TokenHolder newTokenHolder;
@@ -157,14 +145,6 @@ void Preprocessor::recurseDefineContents(AbstractMacro* macro, InnerMacroMapType
 
     while (currentHolder.notAtEnd()) {
       if (!currentHolder.match(Token::Type::DIRECTIVE)) {
-        if (currentHolder.matchNiche(Token::NicheType::MACRO_UNIQUE)) {
-          const auto token = currentHolder.consume();
-          auto str = std::make_unique<std::string>('.' + invokedMacroStack.top()->getMangledName() + std::string(token.value));
-          newTokenHolder.m_tokens.emplace_back(std::string_view(str->data(), str->size()), Token::Type::IDENTIFIER, token.location);
-          //newTokenHolder.m_tokens.emplace_back(std::string_view(str->data(), str->size()), Token::Type::PERIOD, token.location);
-          translationUnit.m_stringOwner.push_back(std::move(str));
-          continue;
-        }
         const auto token = currentHolder.consume();
         const auto it = macroMap.find(token.value);
         if (it != macroMap.end() && !currentHolder.match(Token::Type::PERIOD) && !currentHolder.match(Token::Type::PERIOD, -2) && !currentHolder.match(Token::Type::COLON)) {
@@ -173,7 +153,7 @@ void Preprocessor::recurseDefineContents(AbstractMacro* macro, InnerMacroMapType
             continue;
           }
 
-          auto temporaryHolder = std::make_unique<TokenHolder>(processMacroInvocation(it->second.get(), currentHolder, macroMap));
+          auto temporaryHolder = std::make_unique<TokenHolder>(processMacroInvocation(p_logger, translationUnit, it->second.get(), currentHolder, macroMap));
           processStack.push(temporaryHolder.get());
           temporaryOwner.push_back(std::move(temporaryHolder));
 
@@ -238,7 +218,7 @@ void Preprocessor::recurseDefineContents(AbstractMacro* macro, InnerMacroMapType
     }
   }
 
-  macro->contents = newTokenHolder;
+  return std::move(newTokenHolder);
 }
 
 void Preprocessor::processDefine(TokenHolder& tokenHolder, TokenHolder& newTokenHolder, InnerMacroMapType& myMacroMap, SMake::Target& target, Spasm::Program::TranslationUnit& translationUnit, Spasm::Program& targetProgram, std::unordered_map<std::filesystem::path, std::vector<Program::TranslationUnit*>>& dependantTranslationUnitMap) {
@@ -254,7 +234,7 @@ void Preprocessor::processDefine(TokenHolder& tokenHolder, TokenHolder& newToken
 
     auto [it, success] = myMacroMap.emplace(identifierToken.value, std::move(newMacro));
     if (success) {
-      recurseDefineContents(it->second.get(),myMacroMap,target,translationUnit,targetProgram,dependantTranslationUnitMap);
+      //recurseDefineContents(it->second.get(),myMacroMap,target,translationUnit,targetProgram,dependantTranslationUnitMap);
     }
   } else {
     auto newMacro = std::make_shared<ReplacementMacro>(parseReplacementMacroDefinition(tokenHolder, newTokenHolder));
@@ -264,7 +244,7 @@ void Preprocessor::processDefine(TokenHolder& tokenHolder, TokenHolder& newToken
 
     auto [it, success] = myMacroMap.emplace(identifierToken.value, std::move(newMacro));
     if (success) {
-      recurseDefineContents(it->second.get(),myMacroMap,target,translationUnit,targetProgram,dependantTranslationUnitMap);
+      //recurseDefineContents(it->second.get(),myMacroMap,target,translationUnit,targetProgram,dependantTranslationUnitMap);
     }
   }
 }
@@ -342,24 +322,48 @@ Preprocessor::ReplacementMacro Preprocessor::parseReplacementMacroDefinition(Tok
   return macro;
 }
 
-bool Preprocessor::FunctionMacro::fillWithReplacedContents(TokenHolder& tokenHolder, std::vector<std::vector<Token>> replacementArgs) {
+bool Preprocessor::FunctionMacro::fillWithReplacedContents(Debug::FullLogger* logger, Program::TranslationUnit& translationUnit, TokenHolder& tokenHolder, InnerMacroMapType& macroMap, std::vector<std::vector<Token>> replacementArgs) {
   if (replacementArgs.size() != arguments.size()) {
     return false;
   }
-
-  for (const auto& token : contents.m_tokens) {
+  TokenHolder fpass;
+  fpass.reset();
+  contents.reset();
+  while (!contents.isAtEnd()) {
+    const auto& token = contents.consume();
     const auto it = arguments.find(token.value);
     if (it != arguments.end()) {
       const auto& repl = replacementArgs[it->second];
-      tokenHolder.m_tokens.insert(
-        tokenHolder.m_tokens.end(),
+      fpass.m_tokens.insert(
+        fpass.m_tokens.end(),
         repl.begin(),
         repl.end()
+      );
+    } else if (token.nicheType == Token::NicheType::MACRO_UNIQUE) {
+      auto str = std::make_unique<std::string>('.' + getMangledName() + std::string(token.value));
+      fpass.m_tokens.emplace_back(std::string_view(str->data(), str->size()), Token::Type::IDENTIFIER, token.location);
+      translationUnit.m_stringOwner.push_back(std::move(str));
+    } else {
+      fpass.m_tokens.push_back(token);
+    }
+  }
+
+  while (!fpass.isAtEnd()) {
+    const auto& token = fpass.consume();
+    const auto it = macroMap.find(token.value);
+    if (it != macroMap.end()) {
+      const auto temporary = processMacroInvocation(logger, translationUnit,it->second.get(), fpass, macroMap);
+      tokenHolder.m_tokens.insert(
+        tokenHolder.m_tokens.end(),
+        temporary.m_tokens.begin(),
+        temporary.m_tokens.end()
       );
     } else {
       tokenHolder.m_tokens.push_back(token);
     }
   }
+
+  invokeCount++;
 
   return true;
 }
