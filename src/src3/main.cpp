@@ -4,6 +4,7 @@
 #include "Arch/Arch.hpp"
 #include "SMake/SMake.hpp"
 #include "Spasm/Spasm.hpp"
+#include "C/c.hpp"
 
 #define cachedArchFileName "__CACHED__ARCH__FILE__"
 
@@ -74,7 +75,11 @@ int main(int argc, char* argv[]) {
     SMake::printProject(project);
   }
 
-  Spasm::spasmPipeline(project, architecture, options);
+  //Spasm::spasmPipeline(project, architecture, options);
   
+  if (options.c) {
+    C::compileFile(options.cPath, options.cPath, options.cIncPaths);
+  }
+
   return 0;
 }

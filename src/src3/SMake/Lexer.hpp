@@ -46,7 +46,7 @@ struct Token : TokenBase {
 
 struct TokenHolder : TokenBaseHolder<Token> {
   public:
-  inline bool match(Token::Type type, size_t distance = 0) const {return peek(distance).type == type;}
+  inline bool match(Token::Type type, size_t distance = 0) {return peek(distance).type == type;}
 };
 
 class SMakeLexer : LexerBase {

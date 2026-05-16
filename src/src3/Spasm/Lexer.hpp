@@ -75,8 +75,8 @@ namespace Spasm {
   };
 
   struct TokenHolder : TokenBaseHolder<Token> {
-    inline bool match(Token::Type type, int distance = 0) const {return peek(distance).type == type;}
-    inline bool matchNiche(Token::NicheType type, int distance = 0) const {return peek(distance).nicheType == type;}
+    inline bool match(Token::Type type, int distance = 0) {return peek(distance).type == type;}
+    inline bool matchNiche(Token::NicheType type, int distance = 0) {return peek(distance).nicheType == type;}
     inline void skipUntilAfterType(Token::Type type) {while (!match(type)) {skip();} skip();}
   };
 

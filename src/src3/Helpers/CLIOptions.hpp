@@ -7,6 +7,7 @@ struct CLIOptions {
   bool smake = false;
   bool newArch = false;
   bool regexArchDump = false;
+  bool c = false;
 
   bool silent = false;
   bool warns = false;
@@ -15,6 +16,8 @@ struct CLIOptions {
   std::filesystem::path spasmPath;
   std::filesystem::path smakePath;
   std::filesystem::path newArchPath;
+  std::filesystem::path cPath;
+  std::vector<std::filesystem::path> cIncPaths;
 
   bool evaluate(int argc, char* argv[]);
 };

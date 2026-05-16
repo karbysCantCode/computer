@@ -47,7 +47,8 @@
     "editor.tabSize": 2,
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "cmake.debugConfig": {
-    "args": ["--smake", "../resources/testprojects/simpleProjectCollection/random/simple.smake", "-v", "--regex-arch", "--arch", "../resources/archRev3.arch"]
+    //"args": ["--smake", "../resources/testprojects/simpleProjectCollection/random/simple.smake", "-v", "--regex-arch", "--arch", "../resources/archRev3.arch"]
+    "args": ["--c", "-I\"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/src3\"", "-c", "\"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/src3/C/example.c\""]
     },
     "workbench.colorTheme": "Monokai",
     "workbench.iconTheme": "vs-seti",

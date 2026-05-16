@@ -21,13 +21,16 @@ size_t m_index = 0;
 
 inline bool isAtEnd() const {return m_index >= m_tokens.size();}
 inline bool notAtEnd() const {return m_index < m_tokens.size();}
-inline TokenT peek(int distance = 0) const {
+inline bool isAtEnd(int dist) const {return (m_index + dist) >= m_tokens.size();}
+inline bool notAtEnd(int dist) const {return (m_index + dist) < m_tokens.size();}
+inline size_t getIndex(int offset) const {return offset + m_index;}
+inline TokenT& peek(int distance = 0) {
   int pos = m_index + distance;
   pos = pos > m_tokens.size() ? m_tokens.size()-1 : pos;
   pos = pos < 0 ? 0 : pos;
   return m_tokens[pos];
 }
-inline TokenT consume() {
+inline TokenT& consume() {
   return notAtEnd() ? m_tokens[m_index++] : m_tokens[m_tokens.size()-1];
 }
 inline void skip(size_t distance = 1) {m_index += distance;}

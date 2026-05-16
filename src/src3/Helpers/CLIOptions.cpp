@@ -84,6 +84,28 @@ bool CLIOptions::evaluate(int argc, char* argv[]) {
         std::cerr << "Expected a filepath for --arch, got none. Aborted";
         return false;
       }
+    } else if (option.substr(0,2) == "-I") {
+      std::cout << option.substr(2) << std::endl;
+      cIncPaths.push_back(option.substr(2)) ;
+      
+    } else if (option == "-c") {
+      arg++;
+      if (!(arg < argc)) {
+        std::cerr << "No argument for flag '-c'." << std::endl;
+        continue;
+      }
+
+      if (!cPath.empty()) {
+        std::cerr << "Cannot compile multiple files at once." << std::endl;
+        continue;
+      }
+      std::string path = argv[arg];
+      if (path.size() >= 2 && path.front() == '"' && path.back() == '"') {
+        path = path.substr(1, path.size() - 2);
+      }
+      std::cout << path << std::endl;
+      cPath = std::filesystem::path(path);
+
     } else if (option == "-v") {
       warns = true;
     } else if (option == "-vv") {
@@ -92,6 +114,8 @@ bool CLIOptions::evaluate(int argc, char* argv[]) {
       silent = true;
     } else if (option == "--regex-arch") {
       regexArchDump = true;
+    } else if (option == "--c") {
+      c = true; 
     } else {
       std::cout << "Unknown arg \"" << option << "\", use --help for usage.\n";
     }

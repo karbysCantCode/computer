@@ -20,3 +20,13 @@ char LexerBase::peek(int distance) const {
 bool LexerBase::match(char c, int distance) const {
   return peek(distance) == c;
 }
+
+// does not eat final char
+void LexerBase::consumeString(const char exitChar) {
+  while (!match(exitChar) && notAtEnd()) {
+    const char c = consume();
+    if (c == '\\') {
+      consume();
+    }
+  }
+}
