@@ -66,6 +66,7 @@ struct ParenthesesDeclarator : AbstractDeclarator {
 };
 struct FunctionDeclarator : AbstractDeclarator {
   std::unique_ptr<AbstractDeclarator> declarator;
+  std::vector<AbstractType*> params;
   size_t argsBegin = 0;
   size_t argLength = 0;
   FunctionDeclarator(std::unique_ptr<AbstractDeclarator> decl, size_t argbegin, size_t arglength) : argsBegin(argbegin), argLength(arglength), declarator(std::move(decl)) {}
@@ -77,10 +78,10 @@ struct IdentifierDeclarator : AbstractDeclarator {
 
 TokenHolder collectDeclaratorsInPrecedence(TokenHolder& holder);
 
-std::unique_ptr<AbstractDeclarator> parseDeclarator(TokenHolder& holder);
-std::unique_ptr<AbstractDeclarator> parsePointerDeclarator(TokenHolder& holder, std::unique_ptr<ASTParser::AbstractDeclarator> inner);
-std::unique_ptr<AbstractDeclarator> parseDirectDeclarator(TokenHolder& holder);
-std::unique_ptr<AbstractDeclarator> parseSuffixDeclarator(TokenHolder& holder);
+std::unique_ptr<AbstractDeclarator> parseDeclarator(TokenHolder& holder, TranslationUnit& translationUnit);
+std::unique_ptr<AbstractDeclarator> parsePointerDeclarator(TokenHolder& holder, TranslationUnit& translationUnit, std::unique_ptr<ASTParser::AbstractDeclarator> inner);
+std::unique_ptr<AbstractDeclarator> parseDirectDeclarator(TokenHolder& holder, TranslationUnit& translationUnit);
+std::unique_ptr<AbstractDeclarator> parseSuffixDeclarator(TokenHolder& holder, TranslationUnit& translationUnit, std::unique_ptr<ASTParser::AbstractDeclarator> inner);
 
 bool isType(CompoundStatement& statement, Token& token) const;
 

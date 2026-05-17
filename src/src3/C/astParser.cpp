@@ -59,30 +59,62 @@ void ASTParser::parseDeclaration(const Token& firstToken, TokenHolder& holder, C
 
 }
 
-std::unique_ptr<ASTParser::AbstractDeclarator> ASTParser::parseDeclarator(TokenHolder& holder) {
-  auto ret = parseDirectDeclarator(holder);
-  return parsePointerDeclarator(holder, std::move(ret));
+std::unique_ptr<ASTParser::AbstractDeclarator> ASTParser::parseDeclarator(TokenHolder& holder, TranslationUnit& translationUnit) {
+  auto ret = parseDirectDeclarator(holder, translationUnit);
+  return parsePointerDeclarator(holder, translationUnit, std::move(ret));
 }
-std::unique_ptr<ASTParser::AbstractDeclarator> ASTParser::parsePointerDeclarator(TokenHolder& holder, std::unique_ptr<ASTParser::AbstractDeclarator> inner) {
+std::unique_ptr<ASTParser::AbstractDeclarator> ASTParser::parsePointerDeclarator(TokenHolder& holder, TranslationUnit& translationUnit, std::unique_ptr<ASTParser::AbstractDeclarator> inner) {
   while (holder.match(Token::Type::MU_ASTRIX)) {
+    holder.skip();
     inner = std::make_unique<PointerDeclarator>(std::move(inner));
   }
   return inner;
 }
-std::unique_ptr<ASTParser::AbstractDeclarator> ASTParser::parseDirectDeclarator(TokenHolder& holder) {
+std::unique_ptr<ASTParser::AbstractDeclarator> ASTParser::parseDirectDeclarator(TokenHolder& holder, TranslationUnit& translationUnit) {
   std::unique_ptr<ASTParser::AbstractDeclarator> ret;
-  switch (holder.peek().type)
+  const Token& tok = holder.peek();
+  switch (tok.type)
   {
-  case Token::Type::OT_OPENPAREN:
+  case Token::Type::OT_OPENPAREN: {
+    holder.skip();
+    auto inner = parseDeclarator(holder, translationUnit);
+
+    if (holder.peek().type != Token::Type::OT_CLOSEPAREN) {
+      logError(holder.peek(), "Expected ')'");
+      return inner;
+    }
+
+    holder.consume();
+    return parseSuffixDeclarator(holder, translationUnit, std::move(inner));
     break;
-  case Token::Type::MA_OPENSQUARE:
+  }
+  case Token::Type::IDENTIFIER: {
+    auto inner = std::make_unique<IdentifierDeclarator>(&tok);
+    return parseSuffixDeclarator(holder, translationUnit, std::move(inner));
     break;
-  case Token::Type::IDENTIFIER:
+
+  }
+  
+  default:
+    logError(tok, std::format("Expected ( or identifier. Got {}", tok.value));
+    return nullptr;
     break;
-  case Token::Type::OT_OPENPAREN:
+  }
+}
+
+std::unique_ptr<ASTParser::AbstractDeclarator> ASTParser::parseSuffixDeclarator(TokenHolder& holder, TranslationUnit& translationUnit, std::unique_ptr<ASTParser::AbstractDeclarator> inner) {
+  const Token& tok = holder.peek();
+  switch (tok.type)
+  {
+  case Token::Type::OT_OPENPAREN: 
+    
+    break;
+  case Token::Type::MA_OPENSQUARE: 
+    /* code */
     break;
   
   default:
+    return inner;
     break;
   }
 }
@@ -114,7 +146,7 @@ std::vector<std::unique_ptr<ASTParser::AbstractDeclarator>> ASTParser::parseDecl
       switch (holder.peek(right).type) {
         case Token::Type::OT_CLOSEPAREN: {
           if (holder.match(Token::Type::MU_ASTRIX, left)) {
-            currentTop = std::make_unique<PointerDeclarator>(&currentTop);
+            currentTop = std::make_unique<PointerDeclarator>(std::move(currentTop));
           }
           right++; // go over the ) and look at the next
           int pdepth = 0;
@@ -158,9 +190,9 @@ std::vector<std::unique_ptr<ASTParser::AbstractDeclarator>> ASTParser::parseDecl
             right++;
           }
           size_t length = right == begin ? 0 : right - begin;
-          currentTop = std::make_unique<FunctionDeclarator>(&currentTop, begin, length);
+          currentTop = std::make_unique<FunctionDeclarator>(std::move(currentTop), begin, length);
           if (holder.match(Token::Type::MU_ASTRIX, left)) {
-            currentTop = std::make_unique<PointerDeclarator>(&currentTop);
+            currentTop = std::make_unique<PointerDeclarator>(std::move(currentTop));
             left--;
           }
           break;
@@ -183,9 +215,9 @@ std::vector<std::unique_ptr<ASTParser::AbstractDeclarator>> ASTParser::parseDecl
             right++;
           }
           size_t length = right == begin ? 0 : right - begin;
-          currentTop = std::make_unique<ArrayDeclarator>(&currentTop, nullptr, begin, length);
+          currentTop = std::make_unique<ArrayDeclarator>(std::move(currentTop), nullptr, begin, length);
           if (holder.match(Token::Type::MU_ASTRIX, left)) {
-            currentTop = std::make_unique<PointerDeclarator>(&currentTop);
+            currentTop = std::make_unique<PointerDeclarator>(std::move(currentTop));
             left--;
           }
 
@@ -193,7 +225,7 @@ std::vector<std::unique_ptr<ASTParser::AbstractDeclarator>> ASTParser::parseDecl
         }
         default:
           if (holder.match(Token::Type::MU_ASTRIX, left)) {
-            currentTop = std::make_unique<PointerDeclarator>(&currentTop);
+            currentTop = std::make_unique<PointerDeclarator>(std::move(currentTop));
             left--;
           }
           innerend = true;

@@ -20,6 +20,7 @@ const int(* i())[10]{
   return &b;
 }
 
+
 //storage class lim 1
 //kw ty lim 1
 

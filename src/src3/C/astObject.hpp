@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <cassert>
+#include <unordered_map>
 
 namespace C {
 
@@ -73,29 +74,29 @@ public:
   virtual ~AbstractStatement() = default;
 };
 
-class DeclarationStatement : AbstractStatement {
+class AbstractIdentifier {
 public:
+  std::string name;
+  virtual ~AbstractIdentifier() = default;
+};
+
+class VariableIdentifier : AbstractIdentifier {
+public:
+  AbstractType* type;
+
+};
+
+
+class DeclarationStatement : AbstractStatement {
+  public:
   Kind getKind() const override {return Kind::DECLARATION;}
 };
 
 class AbstractDeclaration {
-public:
+  public:
   std::string name;
-
+  
   virtual ~AbstractDeclaration() = default;
-};
-
-class FunctionDeclaration : AbstractDeclaration {
-
-};
-class TypeDeclaration : AbstractDeclaration {
-
-};
-class StructDeclaration : AbstractDeclaration {
-
-};
-class VariableDeclaration : AbstractDeclaration {
-
 };
 
 class ExpressionStatement : AbstractStatement {
@@ -134,6 +135,62 @@ public:
 class LabelStatement : AbstractStatement {
 public:
   Kind getKind() const override {return Kind::LABEL;}
+};
+
+class FunctionDeclaration : AbstractDeclaration {
+public:
+  std::unique_ptr<CompoundStatement> body;
+};
+class FunctionIdentifier : AbstractIdentifier {
+public:
+  FunctionDeclaration* declaration;
+};
+class TypeDeclaration : AbstractDeclaration {
+public:
+
+};
+class StructDeclaration : AbstractDeclaration {
+public:
+
+};
+class VariableDeclaration : AbstractDeclaration {
+public:
+
+};
+
+class AbstractExpression {
+public:
+  virtual ~AbstractExpression() = default;
+};
+
+class BinaryExpression : AbstractExpression {
+public:
+
+};
+
+class UnaryExpression : AbstractExpression {
+public:
+
+};
+
+class AssignmentExpression : AbstractExpression {
+public:
+
+};
+
+class AccessExpression : AbstractExpression {
+public:
+
+};
+
+class FunctionExpression : AbstractExpression {
+public:
+
+};
+
+class PrimaryExpression : AbstractExpression {
+public:
+
 };
 
 /*
