@@ -85,7 +85,7 @@ std::unique_ptr<AbstractDeclarator> parseSuffixDeclarator(TokenHolder& holder, T
 
 bool isType(CompoundStatement& statement, Token& token) const;
 
-void parseDeclaration(const Token& firstToken, TokenHolder& holder, CompoundStatement& scope, AbstractDeclaration* declaration = nullptr);
+void parseDeclaration(TranslationUnit& translationUnit, const Token& firstToken, TokenHolder& holder, CompoundStatement& scope, AbstractDeclaration* declaration = nullptr);
 std::pair<bool,bool> parseDeclarationSpecifier(const Token& token, CompoundStatement& scope, DeclarationSpecifierHolder& specs);
 std::vector<std::unique_ptr<AbstractDeclarator>> parseDeclarators(TokenHolder& holder);
 };

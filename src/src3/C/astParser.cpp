@@ -3,7 +3,7 @@
 namespace C
 {
 
-ASTObject ASTParser::run(TokenHolder& holder, TranslationUnit& TranslationUnit) {
+ASTObject ASTParser::run(TokenHolder& holder, TranslationUnit& translationUnit) {
   ASTObject object;
 
   std::stack<CompoundStatement*> scopeStack;
@@ -14,12 +14,12 @@ ASTObject ASTParser::run(TokenHolder& holder, TranslationUnit& TranslationUnit) 
 
     if (topToken.isKeyword()) {
       if (topToken.isKWDS()) {
-        parseDeclaration(topToken, holder, *scopeStack.top());
+        parseDeclaration(translationUnit, topToken, holder, *scopeStack.top());
       } 
     } else if (topToken.type == Token::Type::IDENTIFIER) {
       AbstractDeclaration* declaration = scopeStack.top()->findDeclarationName(topToken.value);
       if (declaration != nullptr) {
-        parseDeclaration(topToken, holder, *scopeStack.top(), declaration);
+        parseDeclaration(translationUnit, topToken, holder, *scopeStack.top(), declaration);
       }
     }
   };
@@ -31,7 +31,7 @@ bool ASTParser::isType(CompoundStatement& scope, Token& token) const {
 
 }
 
-void ASTParser::parseDeclaration(const Token& firstToken, TokenHolder& holder, CompoundStatement& scope, AbstractDeclaration* declaration) {
+void ASTParser::parseDeclaration(TranslationUnit& translationUnit, const Token& firstToken, TokenHolder& holder, CompoundStatement& scope, AbstractDeclaration* declaration) {
   DeclarationSpecifierHolder specs(declaration);
 
   bool wasSpecErr = false;
@@ -54,8 +54,13 @@ void ASTParser::parseDeclaration(const Token& firstToken, TokenHolder& holder, C
       wasSpecErr = ierror;
     }
   }
-
-  auto declarators = parseDeclarators(holder);
+  std::vector<std::unique_ptr<AbstractDeclarator>> declared;
+  declared.push_back(std::move(parseDeclarator(holder, translationUnit)));
+  
+  
+  while (holder.match(Token::Type::OT_COMMA)) {
+    declared.push_back(std::move(parseDeclarator(holder, translationUnit)));
+  }
 
 }
 

@@ -17,8 +17,11 @@ unsigned r;
 
 const int(* i())[10]{
   int b[10];
+  int a,b,c = 5;
   return &b;
 }
+
+
 
 
 //storage class lim 1

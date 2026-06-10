@@ -4,6 +4,7 @@
 
 #include "lexer.hpp"
 #include "preprocessor.hpp"
+#include "astParser.hpp"
 #include "Helpers/FileHelper.hpp"
 
 namespace C {
@@ -24,6 +25,9 @@ void compileFile(std::filesystem::path& path, std::filesystem::path& output, std
   for (const auto& tok : preprocessed.m_tokens) {
     std::cout << tok.value << '\n';
   }
+
+ ASTParser parser;
+ ASTObject object = parser.run(preprocessed, translationUnit);
 }
 
 TokenHolder preprocessStage(TranslationUnit& translationUnit) {
