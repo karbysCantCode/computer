@@ -103,16 +103,37 @@ public:
   Kind getKind() const override {return Kind::EXPRESSION;}
 };
 
+struct AbstractIdentifier {
+
+};
+
+struct FunctionIdentifier : AbstractIdentifier {
+
+};
+
+struct VariableIdentifier : AbstractIdentifier {
+
+};
+
 class CompoundStatement : AbstractStatement {
 public:
   CompoundStatement* parent;
   std::vector<std::unique_ptr<AbstractStatement>> statements;
   std::unordered_map<std::string_view, AbstractDeclaration*> typenameMap;
+  std::unordered_map<std::string_view, AbstractIdentifier*> identifierMap;
+
 
 
   inline AbstractDeclaration* findDeclarationName(const std::string_view& str) const {
     const auto it = typenameMap.find(str);
     if (it == typenameMap.end()) {
+      return nullptr;
+    }
+    return it->second;
+  }
+  inline AbstractIdentifier* findIdentifierName(const std::string_view& str) const {
+    const auto it = identifierMap.find(str);
+    if (it == identifierMap.end()) {
       return nullptr;
     }
     return it->second;

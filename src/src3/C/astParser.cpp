@@ -20,7 +20,9 @@ ASTObject ASTParser::run(TokenHolder& holder, TranslationUnit& TranslationUnit) 
       AbstractDeclaration* declaration = scopeStack.top()->findDeclarationName(topToken.value);
       if (declaration != nullptr) {
         parseDeclaration(topToken, holder, *scopeStack.top(), declaration);
+        continue;
       }
+      
     }
   };
 
