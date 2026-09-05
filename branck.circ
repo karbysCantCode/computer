@@ -54893,15 +54893,15 @@
       <a name="spacing" val="4"/>
     </comp>
     <comp lib="0" loc="(860,1170)" name="Splitter">
+      <a name="fanout" val="16"/>
+      <a name="incoming" val="16"/>
+    </comp>
+    <comp lib="0" loc="(860,1170)" name="Splitter">
       <a name="appear" val="right"/>
       <a name="facing" val="west"/>
       <a name="fanout" val="16"/>
       <a name="incoming" val="16"/>
       <a name="spacing" val="4"/>
-    </comp>
-    <comp lib="0" loc="(860,1170)" name="Splitter">
-      <a name="fanout" val="16"/>
-      <a name="incoming" val="16"/>
     </comp>
     <comp lib="0" loc="(890,980)" name="Tunnel">
       <a name="label" val="Search_Enable"/>
@@ -77712,7 +77712,7 @@
     <comp lib="8" loc="(1720,120)" name="Text">
       <a name="text" val="(both latency + 2 and 2*latency + 2)"/>
     </comp>
-    <comp lib="8" loc="(2109,836)" name="Text">
+    <comp lib="8" loc="(2105,835)" name="Text">
       <a name="text" val="there are still enough here for 27 bits, but as you can see, they are not connected!, they are ready for removal, just left here for clarity just in case or som ethiing"/>
     </comp>
     <comp lib="8" loc="(2480,950)" name="Text">
@@ -83634,13 +83634,13 @@
       <a name="appearance" val="logisim_evolution"/>
       <a name="label" val="D_Resolving"/>
     </comp>
-    <comp lib="8" loc="(1003,921)" name="Text">
+    <comp lib="8" loc="(1000,920)" name="Text">
       <a name="text" val="P = present ( 1 = present)"/>
     </comp>
-    <comp lib="8" loc="(1003,939)" name="Text">
+    <comp lib="8" loc="(1000,935)" name="Text">
       <a name="text" val="w = write protected (1 = protected)"/>
     </comp>
-    <comp lib="8" loc="(1016,957)" name="Text">
+    <comp lib="8" loc="(1015,955)" name="Text">
       <a name="text" val="I = page index"/>
     </comp>
     <comp lib="8" loc="(1025,975)" name="Text">
@@ -83661,10 +83661,10 @@
     <comp lib="8" loc="(1630,1790)" name="Text">
       <a name="text" val="and I cache is only 2 byte aligned"/>
     </comp>
-    <comp lib="8" loc="(1976,481)" name="Text">
+    <comp lib="8" loc="(1975,480)" name="Text">
       <a name="text" val="0b00XX XXXX XXXX XXXX"/>
     </comp>
-    <comp lib="8" loc="(1976,510)" name="Text">
+    <comp lib="8" loc="(1975,510)" name="Text">
       <a name="text" val="so thus validity is ensured"/>
     </comp>
     <comp lib="8" loc="(2140,1520)" name="Text">
@@ -83676,19 +83676,19 @@
     <comp lib="8" loc="(2175,1555)" name="Text">
       <a name="text" val="with two page again,"/>
     </comp>
-    <comp lib="8" loc="(2183,454)" name="Text">
+    <comp lib="8" loc="(2180,450)" name="Text">
       <a name="text" val="but any translation page is"/>
     </comp>
     <comp lib="8" loc="(2185,1575)" name="Text">
       <a name="text" val="where HIT immediately"/>
     </comp>
-    <comp lib="8" loc="(2196,411)" name="Text">
+    <comp lib="8" loc="(2195,410)" name="Text">
       <a name="text" val="the reset on these buffers sets to:"/>
     </comp>
-    <comp lib="8" loc="(2203,568)" name="Text">
+    <comp lib="8" loc="(2200,565)" name="Text">
       <a name="text" val="via these 0 extenders..."/>
     </comp>
-    <comp lib="8" loc="(2208,428)" name="Text">
+    <comp lib="8" loc="(2205,425)" name="Text">
       <a name="text" val="0b1000 0000 0000 0000"/>
     </comp>
     <comp lib="8" loc="(2365,1815)" name="Text">
@@ -83709,10 +83709,10 @@
     <comp lib="8" loc="(600,890)" name="Text">
       <a name="text" val="0 = read, 1 = write"/>
     </comp>
-    <comp lib="8" loc="(652,950)" name="Text">
+    <comp lib="8" loc="(650,950)" name="Text">
       <a name="text" val="0bPWII IIII IIII IIII OOOO OOOO OOOO"/>
     </comp>
-    <comp lib="8" loc="(662,927)" name="Text">
+    <comp lib="8" loc="(660,925)" name="Text">
       <a name="text" val="memory addressing (26 bits, not the extended io inclusive part)"/>
     </comp>
     <comp loc="(2760,560)" name="Translation_Lookaside_Buffer"/>
@@ -97203,7 +97203,7 @@
     <comp lib="8" loc="(2190,3500)" name="Text">
       <a name="text" val="disable 6 msb to b 5 (NOTE 1.1)"/>
     </comp>
-    <comp lib="8" loc="(3601,4033)" name="Text">
+    <comp lib="8" loc="(3600,4030)" name="Text">
       <a name="text" val="0=m, 1=i"/>
     </comp>
     <comp lib="8" loc="(4325,4535)" name="Text">
@@ -97215,16 +97215,16 @@
     <comp lib="8" loc="(4330,4575)" name="Text">
       <a name="text" val="memory assert and instruction assert overrides"/>
     </comp>
-    <comp lib="8" loc="(4457,4515)" name="Text">
+    <comp lib="8" loc="(4455,4515)" name="Text">
       <a name="text" val="(add, avoiding bus contention)"/>
     </comp>
-    <comp lib="8" loc="(4460,4493)" name="Text">
+    <comp lib="8" loc="(4460,4490)" name="Text">
       <a name="text" val="note 1.X"/>
     </comp>
-    <comp lib="8" loc="(4528,4309)" name="Text">
+    <comp lib="8" loc="(4525,4305)" name="Text">
       <a name="text" val="IA  MA "/>
     </comp>
-    <comp lib="8" loc="(5026,3220)" name="Text">
+    <comp lib="8" loc="(5025,3220)" name="Text">
       <a name="text" val="remove bc of new 32 bit approach?"/>
     </comp>
     <comp lib="8" loc="(5310,3700)" name="Text">
@@ -98871,19 +98871,19 @@
     <comp lib="4" loc="(440,400)" name="D Flip-Flop">
       <a name="appearance" val="logisim_evolution"/>
     </comp>
-    <comp lib="8" loc="(317,392)" name="Text">
+    <comp lib="8" loc="(315,390)" name="Text">
       <a name="text" val="device IRQ (latch rising)"/>
     </comp>
-    <comp lib="8" loc="(544,275)" name="Text">
+    <comp lib="8" loc="(540,275)" name="Text">
       <a name="text" val="CDB"/>
     </comp>
-    <comp lib="8" loc="(657,361)" name="Text">
+    <comp lib="8" loc="(655,360)" name="Text">
       <a name="text" val="arbiter assert device"/>
     </comp>
-    <comp lib="8" loc="(674,466)" name="Text">
+    <comp lib="8" loc="(670,465)" name="Text">
       <a name="text" val="port IRQ reset"/>
     </comp>
-    <comp lib="8" loc="(677,399)" name="Text">
+    <comp lib="8" loc="(675,395)" name="Text">
       <a name="text" val="port IRQ"/>
     </comp>
     <wire from="(300,350)" to="(450,350)"/>
@@ -99700,14 +99700,14 @@
       <a name="fanout" val="4"/>
       <a name="incoming" val="4"/>
     </comp>
-    <comp lib="0" loc="(4590,2630)" name="Tunnel">
-      <a name="label" val="Forwarding_Control"/>
-      <a name="width" val="18"/>
-    </comp>
     <comp lib="0" loc="(4590,2640)" name="Splitter">
       <a name="facing" val="south"/>
       <a name="fanout" val="18"/>
       <a name="incoming" val="18"/>
+    </comp>
+    <comp lib="0" loc="(4600,2610)" name="Tunnel">
+      <a name="label" val="Forwarding_Control"/>
+      <a name="width" val="18"/>
     </comp>
     <comp lib="0" loc="(4840,4370)" name="Splitter">
       <a name="appear" val="right"/>
@@ -99977,7 +99977,7 @@
       <a name="incoming" val="4"/>
     </comp>
     <comp lib="0" loc="(6440,500)" name="Tunnel">
-      <a name="label" val="Forwarding_Control"/>
+      <a name="label" val="Forwarding_Control_OLD"/>
       <a name="width" val="16"/>
     </comp>
     <comp lib="0" loc="(6520,5310)" name="Splitter">
@@ -101328,7 +101328,7 @@
     </comp>
     <comp lib="4" loc="(6380,470)" name="Register">
       <a name="appearance" val="logisim_evolution"/>
-      <a name="label" val="Forwarding_Control"/>
+      <a name="label" val="Forwarding_Control_OLD"/>
       <a name="width" val="16"/>
     </comp>
     <comp lib="4" loc="(6450,5210)" name="Register">
@@ -101388,49 +101388,49 @@
     <comp lib="8" loc="(2190,3500)" name="Text">
       <a name="text" val="disable 6 msb to b 5 (NOTE 1.1)"/>
     </comp>
-    <comp lib="8" loc="(3557,4055)" name="Text">
+    <comp lib="8" loc="(3555,4055)" name="Text">
       <a name="text" val="0=m, 1=i"/>
     </comp>
-    <comp lib="8" loc="(4159,3362)" name="Text">
+    <comp lib="8" loc="(4155,3360)" name="Text">
       <a name="text" val="32 to 16"/>
     </comp>
-    <comp lib="8" loc="(4161,3268)" name="Text">
+    <comp lib="8" loc="(4160,3265)" name="Text">
       <a name="text" val="16 to 32"/>
     </comp>
-    <comp lib="8" loc="(4161,3623)" name="Text">
-      <a name="text" val="16 to a"/>
-    </comp>
-    <comp lib="8" loc="(4162,3545)" name="Text">
-      <a name="text" val="16 to b"/>
-    </comp>
-    <comp lib="8" loc="(4164,3458)" name="Text">
+    <comp lib="8" loc="(4160,3455)" name="Text">
       <a name="text" val="32 to 32"/>
     </comp>
-    <comp lib="8" loc="(4172,3395)" name="Text">
+    <comp lib="8" loc="(4160,3545)" name="Text">
+      <a name="text" val="16 to b"/>
+    </comp>
+    <comp lib="8" loc="(4160,3620)" name="Text">
+      <a name="text" val="16 to a"/>
+    </comp>
+    <comp lib="8" loc="(4170,3395)" name="Text">
       <a name="text" val="A or B (0 = A)"/>
     </comp>
     <comp lib="8" loc="(4210,3295)" name="Text">
       <a name="text" val="high or low (low = 0)"/>
     </comp>
-    <comp lib="8" loc="(4275,3512)" name="Text">
+    <comp lib="8" loc="(4275,3510)" name="Text">
       <a name="text" val="mem"/>
     </comp>
-    <comp lib="8" loc="(4289,2912)" name="Text">
+    <comp lib="8" loc="(4285,2910)" name="Text">
       <a name="text" val="32 to 16"/>
     </comp>
-    <comp lib="8" loc="(4291,2818)" name="Text">
+    <comp lib="8" loc="(4290,2815)" name="Text">
       <a name="text" val="16 to 32"/>
     </comp>
-    <comp lib="8" loc="(4291,3173)" name="Text">
-      <a name="text" val="16 to a"/>
-    </comp>
-    <comp lib="8" loc="(4292,3095)" name="Text">
-      <a name="text" val="16 to b"/>
-    </comp>
-    <comp lib="8" loc="(4294,3008)" name="Text">
+    <comp lib="8" loc="(4290,3005)" name="Text">
       <a name="text" val="32 to 32"/>
     </comp>
-    <comp lib="8" loc="(4302,2945)" name="Text">
+    <comp lib="8" loc="(4290,3095)" name="Text">
+      <a name="text" val="16 to b"/>
+    </comp>
+    <comp lib="8" loc="(4290,3170)" name="Text">
+      <a name="text" val="16 to a"/>
+    </comp>
+    <comp lib="8" loc="(4300,2945)" name="Text">
       <a name="text" val="A or B (0 = A)"/>
     </comp>
     <comp lib="8" loc="(4325,4535)" name="Text">
@@ -101445,28 +101445,28 @@
     <comp lib="8" loc="(4340,2845)" name="Text">
       <a name="text" val="high or low (low = 0)"/>
     </comp>
-    <comp lib="8" loc="(4418,3067)" name="Text">
+    <comp lib="8" loc="(4415,3065)" name="Text">
       <a name="text" val="wb"/>
     </comp>
-    <comp lib="8" loc="(4457,4515)" name="Text">
+    <comp lib="8" loc="(4455,4515)" name="Text">
       <a name="text" val="(add, avoiding bus contention)"/>
     </comp>
-    <comp lib="8" loc="(4460,4493)" name="Text">
+    <comp lib="8" loc="(4460,4490)" name="Text">
       <a name="text" val="note 1.X"/>
     </comp>
-    <comp lib="8" loc="(4528,4309)" name="Text">
+    <comp lib="8" loc="(4525,4305)" name="Text">
       <a name="text" val="IA  MA "/>
     </comp>
-    <comp lib="8" loc="(5260,4682)" name="Text">
+    <comp lib="8" loc="(5260,4680)" name="Text">
       <a name="text" val="maybe just disable all possible read triggers instead of intrudicng ajnother gate delay"/>
     </comp>
-    <comp lib="8" loc="(5336,548)" name="Text">
+    <comp lib="8" loc="(5335,545)" name="Text">
       <a name="text" val="actually just redo forwarding logic"/>
     </comp>
-    <comp lib="8" loc="(5372,5543)" name="Text">
+    <comp lib="8" loc="(5370,5540)" name="Text">
       <a name="text" val="wb"/>
     </comp>
-    <comp lib="8" loc="(5440,5562)" name="Text">
+    <comp lib="8" loc="(5440,5560)" name="Text">
       <a name="text" val="mem"/>
     </comp>
     <comp lib="8" loc="(5800,1275)" name="Text">
@@ -101511,7 +101511,7 @@
     <comp lib="8" loc="(6060,635)" name="Text">
       <a name="text" val="anot"/>
     </comp>
-    <comp lib="8" loc="(6096,4810)" name="Text">
+    <comp lib="8" loc="(6095,4810)" name="Text">
       <a name="text" val="remove bc of new 32 bit approach?"/>
     </comp>
     <comp lib="8" loc="(6175,655)" name="Text">
@@ -101550,14 +101550,14 @@
     <comp lib="8" loc="(6380,5290)" name="Text">
       <a name="text" val="?????????"/>
     </comp>
-    <comp lib="8" loc="(7051,5362)" name="Text">
-      <a name="text" val="32 bit result"/>
+    <comp lib="8" loc="(7050,5015)" name="Text">
+      <a name="text" val="16 bit result"/>
     </comp>
-    <comp lib="8" loc="(7053,5218)" name="Text">
+    <comp lib="8" loc="(7050,5215)" name="Text">
       <a name="text" val="32 bit memory"/>
     </comp>
-    <comp lib="8" loc="(7054,5017)" name="Text">
-      <a name="text" val="16 bit result"/>
+    <comp lib="8" loc="(7050,5360)" name="Text">
+      <a name="text" val="32 bit result"/>
     </comp>
     <comp lib="8" loc="(8320,4740)" name="Text">
       <a name="text" val="note 3.3"/>
@@ -102556,7 +102556,8 @@
     <wire from="(4580,2960)" to="(4580,3450)"/>
     <wire from="(4580,3450)" to="(4730,3450)"/>
     <wire from="(4580,4390)" to="(4580,4680)"/>
-    <wire from="(4590,2630)" to="(4590,2640)"/>
+    <wire from="(4590,2610)" to="(4590,2640)"/>
+    <wire from="(4590,2610)" to="(4600,2610)"/>
     <wire from="(4590,2890)" to="(4590,2920)"/>
     <wire from="(4590,2890)" to="(4650,2890)"/>
     <wire from="(4590,4390)" to="(4590,4930)"/>
