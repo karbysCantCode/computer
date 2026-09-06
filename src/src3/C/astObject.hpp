@@ -284,23 +284,75 @@ struct ASTScope : ASTNode {
   std::unordered_map<std::string, ASTDeclarationStatement*> symbolMap;
   ASTScope* parent = nullptr;
 
-  void addSymbol(const Token* token, ASTDeclarationStatement* statement) {
-    if (token == nullptr) return;
-    symbolMap.emplace(token->getString(), statement);
-  }
+class DeclarationStatement : AbstractStatement {
+  public:
+  Kind getKind() const override {return Kind::DECLARATION;}
+};
 
-  bool isTypename(const std::string& str) {
-    ASTScope* scope = this;
-    while (scope != nullptr) {
-      if (searchScope(scope, str)) return true;
-      scope = scope->parent;
+class AbstractDeclaration {
+  public:
+  std::string name;
+  
+  virtual ~AbstractDeclaration() = default;
+};
+
+class ExpressionStatement : AbstractStatement {
+public:
+  Kind getKind() const override {return Kind::EXPRESSION;}
+};
+
+struct AbstractIdentifier {
+
+};
+
+struct FunctionIdentifier : AbstractIdentifier {
+
+};
+
+struct VariableIdentifier : AbstractIdentifier {
+
+};
+
+class CompoundStatement : AbstractStatement {
+public:
+  CompoundStatement* parent;
+  std::vector<std::unique_ptr<AbstractStatement>> statements;
+  std::unordered_map<std::string_view, AbstractDeclaration*> typenameMap;
+  std::unordered_map<std::string_view, AbstractIdentifier*> identifierMap;
+
+
+
+  inline AbstractDeclaration* findDeclarationName(const std::string_view& str) const {
+    const auto it = typenameMap.find(str);
+    if (it == typenameMap.end()) {
+      return nullptr;
     }
-    return false;
+    return it->second;
   }
-  private:
-  bool searchScope(const ASTScope* scope, const std::string& str) {
-    return scope->symbolMap.end() != scope->symbolMap.find(str);
+  inline AbstractIdentifier* findIdentifierName(const std::string_view& str) const {
+    const auto it = identifierMap.find(str);
+    if (it == identifierMap.end()) {
+      return nullptr;
+    }
+    return it->second;
   }
+  Kind getKind() const override {return Kind::COMPOUND;}
+};
+class SelectionStatement : AbstractStatement {
+public:
+  Kind getKind() const override {return Kind::SELECTION;}
+};
+class IterationStatement : AbstractStatement {
+public:
+  Kind getKind() const override {return Kind::ITERATION;}
+};
+class JumpStatement : AbstractStatement {
+public:
+  Kind getKind() const override {return Kind::JUMP;}
+};
+class LabelStatement : AbstractStatement {
+public:
+  Kind getKind() const override {return Kind::LABEL;}
 };
 
 

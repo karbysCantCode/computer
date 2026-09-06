@@ -9,7 +9,19 @@ ASTObject ASTParser::run(TokenHolder& holder, TranslationUnit& translationUnit) 
   ASTScope& topScope = object.globalScope;
 
   while (holder.notAtEnd()) {
-    topScope.statements.push_back(std::move(parseNode(holder, topScope)));
+    const auto& topToken = holder.consume();
+
+    if (topToken.isKeyword()) {
+      if (topToken.isKWDS()) {
+        parseDeclaration(translationUnit, topToken, holder, *scopeStack.top());
+      } 
+    } else if (topToken.type == Token::Type::IDENTIFIER) {
+      AbstractDeclaration* declaration = scopeStack.top()->findDeclarationName(topToken.value);
+      if (declaration != nullptr) {
+        parseDeclaration(translationUnit, topToken, holder, *scopeStack.top(), declaration);
+      }
+      
+    }
   };
 
   return object;
