@@ -27,7 +27,13 @@ void compileFile(std::filesystem::path& path, std::filesystem::path& output, std
   }
 
  ASTParser parser;
+ Debug::FullLogger logger;
+ parser.setLogger(&logger);
  ASTObject object = parser.run(preprocessed, translationUnit);
+
+ logger.dumpToCout();
+
+
 }
 
 TokenHolder preprocessStage(TranslationUnit& translationUnit) {

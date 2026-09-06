@@ -8,56 +8,68 @@ namespace C {
 struct Token : TokenBase {
   enum class Type {
     KW_BEGIN,
+    KW_LBL_BEGIN = KW_BEGIN,
+    KW_LBL_CASE = KW_LBL_BEGIN,
+    KW_LBL_DEFAULT,
+    KW_LBL_END,
+    
+    KW_SEL_BEGIN,
+    KW_SEL_IF = KW_SEL_BEGIN,
+    KW_SEL_ELSE,
+    KW_SEL_SWITCH,
+    KW_SEL_END,
+    
+    KW_IT_BEGIN,
+    KW_IT_DO = KW_IT_BEGIN,
+    KW_IT_WHILE,
+    KW_IT_FOR,
+    KW_IT_END,
+    
+    KW_JMP_BEGIN,
+    KW_JMP_GOTO = KW_JMP_BEGIN,
+    KW_JMP_BREAK,
+    KW_JMP_CONTINUE,
+    KW_JMP_RETURN,
+    KW_JMP_END,
+    
+    
+    
     //KW_ALIGNAS,
-    KW_ALIGNOF = KW_BEGIN,
     //KW_AUTO,
     //KW_BOOL,
-    KW_BREAK,
-    KW_CASE,
     //KW_CHAR,
     //KW_CONST,
     //KW_CONSTEXPR, //unsopported
-    KW_CONTINUE,
-    KW_DEFAULT,
-    KW_DO,
     //KW_DOUBLE,
-    KW_ELSE,
     //KW_ENUM,
     //KW_EXTERN,
+    //KW_ALIGNOF,
     KW_FALSE,
     KW_FLOAT,
-    KW_FOR,
-    KW_FORTRAN, // unsupported
-    KW_GOTO,
-    KW_IF,
+    //KW_FORTRAN, // unsupported
     //KW_INLINE,
     //KW_INT,
     //KW_LONG,
-    KW_NULLPTR,
+    //KW_NULLPTR,
     //KW_REGISTER,
     //KW_RESTRICT,
-    KW_RETURN,
     //KW_SHORT,
     //KW_SIGNED,
     KW_SIZEOF,
     //KW_STATIC,
-    KW_STATIC_ASSERT,
+    //KW_STATIC_ASSERT,
     // KW_STRUCT,
-    KW_SWITCH,
     //KW_THREAD_LOCAL,
     KW_TRUE,
     //KW_TYPEDEF,
-    KW_TYPEOF,
-    KW_TYPEOF_UNQUAL,
+    //KW_TYPEOF,
+    //KW_TYPEOF_UNQUAL,
     // KW_UNION,
     //KW_UNSIGNED,
     //KW_VOID,
     //KW_VOLATILE,
-    KW_WHILE,
     KW_DS_BEGIN,
     KW_AS_BEGIN = KW_DS_BEGIN,
-    KW_AS_ALIGNAS = KW_AS_BEGIN,
-    KW_AS_END,
     KW_FS_BEGIN,
     KW_FS_INLINE = KW_FS_BEGIN,
     KW_FS_END,
@@ -78,17 +90,15 @@ struct Token : TokenBase {
     KW_TY_SIGNED,
     KW_TY_UNSIGNED,
     KW_TY_MULTI_END,
-    KW_TY_BOOL,
-    KW_TY_STRUCT,
-    KW_TY_UNION,
-    KW_TY_ENUM,
+    KW_TY_SU_STRUCT,
+    KW_TY_SU_UNION,
+    KW_TY_E_ENUM,
     KW_TY_END,
     KW_SCS_BEGIN,
     KW_SCS_AUTO = KW_SCS_BEGIN,
     KW_SCS_EXTERN,
     KW_SCS_REGISTER,
     KW_SCS_STATIC,
-    KW_SCS_THREAD_LOCAL,
     KW_SCS_TYPEDEF,
     KW_SCS_END,
     KW_DS_END,
@@ -103,8 +113,9 @@ struct Token : TokenBase {
     OP_DIV,
     OP_REM,
     OP_NOT,
+    OP_TILDE,
     //OP_AND,  multiuse
-    OP_OR,
+    OP_INCLUSIVE_OR,
     OP_XOR,
     OP_SHL,
     OP_SHR,
@@ -116,8 +127,8 @@ struct Token : TokenBase {
     OP_GREATERTHANOREQUAL,
     OP_EQUAL,
     OP_NOTEQUAL,
-    OP_COMPARISONAND,
-    OP_COMPARISONOR,
+    OP_LOGICAL_AND,
+    OP_LOGICAL_OR,
     OP_INC,
     OP_DEC,
     OP_END,
@@ -212,6 +223,8 @@ struct Token : TokenBase {
 
   Type type;
 
+  inline const std::string getString() const {return std::string(value);}
+
   Token(const SourceLocation& loc, const Type t, const std::string_view& val) : TokenBase(val, loc), type(t) {}
   Token() : TokenBase({}, {"NULL",0,0}) {}
   inline bool isKeyword() const {
@@ -253,8 +266,32 @@ struct Token : TokenBase {
   inline bool isKWTYMULTI() const {
     return type >= Type::KW_TY_MULTI_BEGIN && type < Type::KW_TY_MULTI_END;
   }
+  inline bool isKWLBL() const {
+    return type >= Type::KW_LBL_BEGIN && type < Type::KW_LBL_END;
+  }
+  inline bool isKWSEL() const {
+    return type >= Type::KW_SEL_BEGIN && type < Type::KW_SEL_END;
+  }
+  inline bool isKWIT() const {
+    return type >= Type::KW_IT_BEGIN && type < Type::KW_IT_END;
+  }
+  inline bool isKWJMP() const {
+    return type >= Type::KW_JMP_BEGIN && type < Type::KW_JMP_END;
+  }
   inline bool isKWTYMULTI(Token::Type t) const {
     return t >= Type::KW_TY_MULTI_BEGIN && t < Type::KW_TY_MULTI_END;
+  }
+  inline bool isKWLBL(Token::Type t) const {
+    return t >= Type::KW_LBL_BEGIN && t < Type::KW_LBL_END;
+  }
+  inline bool isKWSEL(Token::Type t) const {
+    return t >= Type::KW_SEL_BEGIN && t < Type::KW_SEL_END;
+  }
+  inline bool isKWIT(Token::Type t) const {
+    return t >= Type::KW_IT_BEGIN && t < Type::KW_IT_END;
+  }
+  inline bool isKWJMP(Token::Type t) const {
+    return t >= Type::KW_JMP_BEGIN && t < Type::KW_JMP_END;
   }
   inline bool isIdentifier() const {
     return type == Type::IDENTIFIER;

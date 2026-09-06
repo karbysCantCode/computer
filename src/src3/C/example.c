@@ -5,21 +5,26 @@ int main() {
   typedef char (*a)[10];
   hello(b);
   char* d = b[0];
-  a e, *f;
+  a **e, *f;
 };
 
 const volatile extern int e;
 struct r {
-  int b;
+  int bf;
 };
-const const int* const i;
+const const int* const ii = 0;
 unsigned r;
-
+typedef int ewf,egev,evw;
 const int(* i())[10]{
-  int b[10];
+  int f[10+39];
   int a,b,c = 5;
-  return &b;
+  //int (*d[10])() = 0;
+  int (*e)(int *(), char);
+  char ee = ~2;
+  return 0;
 }
+
+
 
 
 

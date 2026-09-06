@@ -121,14 +121,14 @@ TokenHolder CLexer::run() {
       switch (peek()) {
         case '|':
           consume();
-          SUBMITTOKENANDRESET(Token::Type::OP_COMPARISONOR);
+          SUBMITTOKENANDRESET(Token::Type::OP_LOGICAL_OR);
           break;
         case '=':
           consume();
           SUBMITTOKENANDRESET(Token::Type::AS_OR);
           break;
         default:
-          SUBMITTOKENANDRESET(Token::Type::OP_OR);
+          SUBMITTOKENANDRESET(Token::Type::OP_INCLUSIVE_OR);
           break;
       }
       break;
@@ -144,7 +144,7 @@ TokenHolder CLexer::run() {
       switch (peek()) {
         case '&':
           consume();
-          SUBMITTOKENANDRESET(Token::Type::OP_COMPARISONAND);
+          SUBMITTOKENANDRESET(Token::Type::OP_LOGICAL_AND);
           break;
         case '=':
           consume();
@@ -227,6 +227,9 @@ TokenHolder CLexer::run() {
     case '?':
       SUBMITTOKENANDRESET(Token::Type::OT_QUESTION);
       break;
+    case '~':
+      SUBMITTOKENANDRESET(Token::Type::OP_TILDE);
+      break;
     case ',':
       SUBMITTOKENANDRESET(Token::Type::OT_COMMA);
       break;
@@ -291,7 +294,12 @@ TokenHolder CLexer::run() {
         SUBMITTOKENANDRESET(Token::Type::NM_DEC);
       } else if (std::isalpha(c) || (c >= '_')) {
         while ((std::isalnum(peek()) || (c == '_')) && notAtEnd()) consume();
-        SUBMITTOKENANDRESET(Token::Type::IDENTIFIER);
+        const auto it = keywords.find(std::string_view(p_source.data() + sliceStart, p_index - sliceStart));
+        Token::Type type = Token::Type::IDENTIFIER;
+        if (it != keywords.end()) {
+          type = it->second;
+        }
+        SUBMITTOKENANDRESET(type);
       }
 
       break;
@@ -345,51 +353,46 @@ const std::unordered_map<std::string_view, Token::Type> CLexer::ppKeywords = {
 };
 
 const std::unordered_map<std::string_view, Token::Type> CLexer::keywords = {
-  {"alignas",        Token::Type::KW_AS_ALIGNAS},
-  {"alignof",        Token::Type::KW_ALIGNOF},
+  // {"alignof",        Token::Type::KW_ALIGNOF},
   {"auto",           Token::Type::KW_SCS_AUTO},
-  {"bool",           Token::Type::KW_TY_BOOL},
-  {"break",          Token::Type::KW_BREAK},
-  {"case",           Token::Type::KW_CASE},
+  {"break",          Token::Type::KW_JMP_BREAK},
+  {"case",           Token::Type::KW_LBL_CASE},
   {"char",           Token::Type::KW_TY_CHAR},
   {"const",          Token::Type::KW_TQ_CONST},
-  //{"constexpr",      Token::Type::KW_CONSTEXPR}, //from c23 ie unsupported
-  {"continue",       Token::Type::KW_CONTINUE},
-  {"default",        Token::Type::KW_DEFAULT},
-  {"do",             Token::Type::KW_DO},
+  {"continue",       Token::Type::KW_JMP_CONTINUE},
+  {"default",        Token::Type::KW_LBL_DEFAULT},
+  {"do",             Token::Type::KW_IT_DO},
   {"double",         Token::Type::KW_TY_DOUBLE},
-  {"else",           Token::Type::KW_ELSE},
-  {"enum",           Token::Type::KW_TY_ENUM},
+  {"else",           Token::Type::KW_SEL_ELSE},
+  {"enum",           Token::Type::KW_TY_E_ENUM},
   {"extern",         Token::Type::KW_SCS_EXTERN},
   {"false",          Token::Type::KW_FALSE},
   {"float",          Token::Type::KW_FLOAT},
-  {"for",            Token::Type::KW_FOR},
-  {"fortran",        Token::Type::KW_FORTRAN}, // unsupported
-  {"goto",           Token::Type::KW_GOTO},
-  {"if",             Token::Type::KW_IF},
+  {"for",            Token::Type::KW_IT_FOR},
+  {"goto",           Token::Type::KW_JMP_GOTO},
+  {"if",             Token::Type::KW_SEL_IF},
   {"inline",         Token::Type::KW_FS_INLINE},
   {"int",            Token::Type::KW_TY_INT},
   {"long",           Token::Type::KW_TY_LONG},
-  {"nullptr",        Token::Type::KW_NULLPTR},
+  // {"nullptr",        Token::Type::KW_NULLPTR},
   {"register",       Token::Type::KW_SCS_REGISTER},
   {"restrict",       Token::Type::KW_TQ_RESTRICT},
-  {"return",         Token::Type::KW_RETURN},
+  {"return",         Token::Type::KW_JMP_RETURN},
   {"short",          Token::Type::KW_TY_SHORT},
   {"signed",         Token::Type::KW_TY_SIGNED},
   {"sizeof",         Token::Type::KW_SIZEOF},
   {"static",         Token::Type::KW_SCS_STATIC},
-  {"static_assert",  Token::Type::KW_STATIC_ASSERT},
-  {"struct",         Token::Type::KW_TY_STRUCT},
-  {"switch",         Token::Type::KW_SWITCH},
-  {"thread_local",   Token::Type::KW_SCS_THREAD_LOCAL},
+  // {"static_assert",  Token::Type::KW_STATIC_ASSERT},
+  {"struct",         Token::Type::KW_TY_SU_STRUCT},
+  {"switch",         Token::Type::KW_SEL_SWITCH},
   {"true",           Token::Type::KW_TRUE},
   {"typedef",        Token::Type::KW_SCS_TYPEDEF},
-  {"typeof",         Token::Type::KW_TYPEOF},
-  {"typeof_unqual",  Token::Type::KW_TYPEOF_UNQUAL},
-  {"union",          Token::Type::KW_TY_UNION},
+  // {"typeof",         Token::Type::KW_TYPEOF},
+  // {"typeof_unqual",  Token::Type::KW_TYPEOF_UNQUAL},
+  {"union",          Token::Type::KW_TY_SU_UNION},
   {"unsigned",       Token::Type::KW_TY_UNSIGNED},
   {"void",           Token::Type::KW_TY_VOID},
   {"volatile",       Token::Type::KW_TQ_VOLATILE},
-  {"while",          Token::Type::KW_WHILE},
+  {"while",          Token::Type::KW_IT_WHILE},
 };
 }

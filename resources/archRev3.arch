@@ -13,10 +13,10 @@
 .reg gp     32 19 
 .reg gpl    16 27 
 .reg gph    16 31
-.reg ctx    8  20 
-.reg prv    2  21
-.reg mmio   8  22
-.reg vm     2  23
+.reg sreg1  16 20 
+.reg sreg2  16 21
+.reg sreg3  16 22
+.reg sreg4  16 23
 
 .format normal   6 4 3 3
 .format bitsel   6 1 1 1 1 1 5  ; uses the same idea as two, where last 5 bits are a full reg index

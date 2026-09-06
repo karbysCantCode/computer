@@ -162,7 +162,9 @@ TokenHolder Preprocessor::run(TranslationUnit& translationUnit, TokenHolder& hol
     default:
       const auto it = translationUnit.macros.find(token.value);
       if (it == translationUnit.macros.end()) {
-        returnHolder.m_tokens.push_back(token);
+        if (token.type != Token::Type::NEWLINE) {
+          returnHolder.m_tokens.push_back(token);
+        }
         break;
       }
       invokeMacro(it->second, translationUnit, holder, returnHolder);
@@ -259,6 +261,7 @@ std::unordered_map<std::string_view, std::vector<Token*>> Preprocessor:: parseMa
     //   logError(toParse.peek(), std::format("Expected an argument, got \"{}\"", toParse.peek().value));
     //   toParse.skipUntilAfterType(Token::Type::OT_CLOSEPAREN, true);
     // }
+    argc++;
   }
 
   if (!(macro.args.size() > 0)) {

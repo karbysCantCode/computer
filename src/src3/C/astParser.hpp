@@ -13,10 +13,7 @@ class ASTParser {
 public:
 
 ASTObject run(TokenHolder& holder, TranslationUnit& TranslationUnit); 
-
-struct AbstractExpression {
-
-};
+void setLogger(Debug::FullLogger* ptr) {p_logger = ptr;}
 private:
 
 Debug::FullLogger* p_logger;
@@ -24,70 +21,41 @@ inline void logError(const Token& errToken, const std::string& message) const{if
 inline void logWarning(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Warnings.logMessage(errToken.location.toString() + message);}}
 inline void logDebug(const Token& errToken, const std::string& message) const{if (p_logger != nullptr) {p_logger->Debugs.logMessage(errToken.location.toString() + message);}}
 
-struct DeclarationSpecifierHolder {
-  Token::Type alignmentSpecifier = Token::Type::INVALID;
-  Token::Type functionSpecifier = Token::Type::INVALID;
-  Token::Type typeSpecifier = Token::Type::INVALID;
-  Token::Type storageSpecifier = Token::Type::INVALID;
-  bool _signed = false;
-  bool _unsigned = false;
-  bool _short = false;
-  bool _longA = false;
-  bool _longB = false;
-  bool _volatile = false;
-  bool _const = false;
-  bool _union = false;
-  bool _struct = false;
-  AbstractDeclaration* decl = nullptr;
+std::unique_ptr<ASTDeclarationStatement> parseDeclaration(TokenHolder& holder, ASTScope& scope);
+ASTPrimitiveType ParsePrimitiveType(TokenHolder& holder, ASTScope& scope);
+bool ParsePrimitiveTypeInner(TokenHolder& holder, ASTScope& scope, ASTPrimitiveType& type);
+std::unique_ptr<ASTDeclarator> parseDeclarator(TokenHolder& holder,  ASTScope& scope);
+std::unique_ptr<ASTDeclarator> parsePointerDeclarator(TokenHolder& holder,  ASTScope& scope, std::unique_ptr<ASTDeclarator> inner);
+std::unique_ptr<ASTDeclarator> parseDirectDeclarator(TokenHolder& holder,  ASTScope& scope);
+std::unique_ptr<ASTDeclarator> parseSuffixDeclarator(TokenHolder& holder, ASTScope& scope, std::unique_ptr<ASTDeclarator> inner);
 
-  DeclarationSpecifierHolder() {}
-  DeclarationSpecifierHolder(AbstractDeclaration* declaration) : decl(declaration) {}
-};
+std::unique_ptr<ASTExpression> parseExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseAssignmentExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseConditionalExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseLogicalOrExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseLogicalAndExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseInclusiveOrExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseExclusiveOrExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseAndExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseEqualityExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseComparisonExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseShiftExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseAdditiveExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseMultiplicativeExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseCastExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parseUnaryExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parsePostfixExpression(TokenHolder& holder, ASTScope& scope, std::unique_ptr<ASTExpression> inner);
+std::unique_ptr<ASTExpression> parsePrepostExpression(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTExpression> parsePrimaryExpression(TokenHolder& holder, ASTScope& scope);
 
-struct AbstractDeclarator {
+std::unique_ptr<ASTNode> parseScopeUntilCloseBlock(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTNode> parseNode(TokenHolder& holder, ASTScope& scope);
 
-  virtual ~AbstractDeclarator() = default;
+std::unique_ptr<ASTNode> parseLabelStatement(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTNode> parseExpressionStatement(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTNode> parseCaseStatement(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTNode> parseSelectionStatement(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTNode> parseIterationStatement(TokenHolder& holder, ASTScope& scope);
+std::unique_ptr<ASTNode> parseJumpStatement(TokenHolder& holder, ASTScope& scope);
 };
-
-struct PointerDeclarator : AbstractDeclarator {
-  std::unique_ptr<AbstractDeclarator> declarator;
-  PointerDeclarator(std::unique_ptr<AbstractDeclarator> decl) : declarator(std::move(decl)) {}
-};
-struct ArrayDeclarator : AbstractDeclarator {
-  std::unique_ptr<AbstractDeclarator> declarator;
-  AbstractExpression* expression;
-  size_t argsBegin = 0;
-  size_t argLength = 0;
-  ArrayDeclarator(std::unique_ptr<AbstractDeclarator> decl, AbstractExpression* expr,size_t argbegin, size_t arglength) : argsBegin(argbegin), argLength(arglength), declarator(std::move(decl)), expression(expr) {}
-};
-struct ParenthesesDeclarator : AbstractDeclarator {
-  std::unique_ptr<AbstractDeclarator> declarator;
-  ParenthesesDeclarator(std::unique_ptr<AbstractDeclarator> decl) : declarator(std::move(decl)) {}
-};
-struct FunctionDeclarator : AbstractDeclarator {
-  std::unique_ptr<AbstractDeclarator> declarator;
-  std::vector<AbstractType*> params;
-  size_t argsBegin = 0;
-  size_t argLength = 0;
-  FunctionDeclarator(std::unique_ptr<AbstractDeclarator> decl, size_t argbegin, size_t arglength) : argsBegin(argbegin), argLength(arglength), declarator(std::move(decl)) {}
-};
-struct IdentifierDeclarator : AbstractDeclarator {
-  const Token* identifierToken;
-  IdentifierDeclarator(const Token* token) : identifierToken(token) {}
-};
-
-TokenHolder collectDeclaratorsInPrecedence(TokenHolder& holder);
-
-std::unique_ptr<AbstractDeclarator> parseDeclarator(TokenHolder& holder, TranslationUnit& translationUnit);
-std::unique_ptr<AbstractDeclarator> parsePointerDeclarator(TokenHolder& holder, TranslationUnit& translationUnit, std::unique_ptr<ASTParser::AbstractDeclarator> inner);
-std::unique_ptr<AbstractDeclarator> parseDirectDeclarator(TokenHolder& holder, TranslationUnit& translationUnit);
-std::unique_ptr<AbstractDeclarator> parseSuffixDeclarator(TokenHolder& holder, TranslationUnit& translationUnit, std::unique_ptr<ASTParser::AbstractDeclarator> inner);
-
-bool isType(CompoundStatement& statement, Token& token) const;
-
-void parseDeclaration(TranslationUnit& translationUnit, const Token& firstToken, TokenHolder& holder, CompoundStatement& scope, AbstractDeclaration* declaration = nullptr);
-std::pair<bool,bool> parseDeclarationSpecifier(const Token& token, CompoundStatement& scope, DeclarationSpecifierHolder& specs);
-std::vector<std::unique_ptr<AbstractDeclarator>> parseDeclarators(TokenHolder& holder);
-};
-  
 } // namespace C
