@@ -413,9 +413,24 @@ class PLA_GUI:
                     entry=pla.entries[val]
                     line=f"{entry.get_input_binary()} {entry.get_output_binary()}"
                     f.write(line+"\n")
+    def export_pla(self, pla):
+        file = filedialog.asksaveasfile(
+            mode="w",
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")]
+        )
 
+        if not file:
+            return
 
-
+        try:
+            for val in sorted(pla.entries.keys()):
+                entry = pla.entries[val]
+                line = f"{entry.get_input_binary()} {entry.get_output_binary()}"
+                file.write(line + "\n")
+        finally:
+            file.close()
+            
     def enable_trackpad_scrolling(self):
         # Only scroll when mouse is over the canvas
         self.canvas.bind("<Enter>", self._bind_scroll)
@@ -505,42 +520,41 @@ class PLA_GUI:
 # ===============================
 
 def build_alu_control_pla():
-    pla = PLA(input_width=6, output_width=14)
+    pla = PLA(input_width=4, output_width=20)
 
-    pla.register_bit("rotate_mode", 0)
-    pla.register_bit("cin_enable", 1)
-
-    pla.register_range("carry_flag_select", 2, 3, {
-        "ADDER_COUT": 0,
-        "NOT_USED": 1,
-        "SHIFT_R_OVERFLOW": 2,
-        "SHIFT_L_OVERFLOW": 3
+    pla.register_bit("Enable CIN to ADDER unit", 0)
+    pla.register_bit("Assert CIN to ADDER unit", 1)
+    pla.register_bit("Invert B to ADDER unit", 2)
+    pla.register_bit("Rotate Mode", 3)
+    pla.register_range("Bitwise Group Select",4,5, {
+        "OR" : 0,
+        "AND" : 1,
+        "XOR" : 2
     })
-
-    pla.register_bit("carry_flag_enable", 4)
-    pla.register_bit("overflow_flag_enable", 5)
-    pla.register_bit("negative_flag_enable", 6)
-
-    pla.register_range("overflow_flag_select", 7, 8, {
-        "ADDER_COUT": 0,
-        "COUT_XOR_MSB": 1,
-        "SIGNED_OVERFLOW": 2,
-        "MUL_UPPER_NOT_ZERO": 3
+    pla.register_bit("Bitwise Group Output Invert", 6)
+    pla.register_range("Output Select",7,9, {
+        "MULTIPLIER UPPER WORD" : 0,
+        "MULTIPLIER LOWER WORD" : 1,
+        "BITWISE GROUP" : 2,
+        "SHIFTER" : 3,
+        "ADDER" : 4,
     })
-
-    pla.register_range("result_select", 9, 11, {
-        "ADD": 0,
-        "RIGHT_SHIFT": 1,
-        "OR": 2,
-        "AND": 3,
-        "MUL_LOWER": 4,
-        "MUL_UPPER": 5,
-        "XOR": 6,
-        "LEFT_SHIFT": 7
+    pla.register_range("Carry Select",11,12, {
+        "ADDER" : 0,
+        "SUBTRACTOR (!ADDER)" : 1,
+        "SHIFTER" : 2
     })
-
-    pla.register_bit("adder_cin", 12)
-    pla.register_bit("invert_adder_b", 13)
+    pla.register_range("Overflow Select",13,14, {
+        "ADDER (CARRY)" : 0,
+        "ADDER (CARRY XOR NEGATIVE)" : 1,
+        "SIGN COMPARISON" : 2,
+        "MULTIPIER UPPER WORD ANY" : 3
+    })
+    pla.register_bit("Enable Negative", 15)
+    pla.register_bit("Enable Carry", 16)
+    pla.register_bit("Enable Overflow", 17)
+    pla.register_bit("Enable Right Shift Mode (otherwise shifter is left shift)", 18)
+    pla.register_bit("Enable Shifter Arithmetic Mode (only use in right shift... or ELSE)", 19)
 
     return pla
 
@@ -675,11 +689,15 @@ readpla = build_read_control_pla()
 exepla = build_execute_control_pla()
 mempla = build_memory_control_pla()
 wbpla = build_writeback_control_pla()
+# gui = PLA_GUI(root, {
+#     "Read and Decode control" : readpla,
+#     "Execute Control" : exepla,
+#     "Memory Control" : mempla,
+#     "Writeback Control" : wbpla
+# })
 gui = PLA_GUI(root, {
-    "Read and Decode control" : readpla,
-    "Execute Control" : exepla,
-    "Memory Control" : mempla,
-    "Writeback Control" : wbpla
+    "ALU control" : alupla
 })
+# root.after(2000, gui.export_pla, alupla)
 # gui2 = PLA_GUI(root, {"ALU Control":alupla})
 root.mainloop()
