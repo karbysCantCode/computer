@@ -1,0 +1,42 @@
+input exr[5];
+input exreI;
+input exreM;
+input mem[5];
+input memeI;
+input memeM;
+input rda[5];
+input rdb[5];
+
+exre = exreI & exreM;
+meme = memeI & memeM;
+
+m_16_t_a = exre & (exr[4:0] == rda[4:0]) & ( !exr[4] + (exr[4] & exr[2] & !exr[3]) );
+m_16_t_b = exre & (exr[4:0] == rdb[4:0]) & ( !exr[4] + (exr[4] & exr[2] & !exr[3]) );
+w_16_t_a = !m_16_t_a & meme & (mem[4:0] == rda[4:0]) & ( !mem[4] + (mem[4] & mem[2] & !mem[3]) );
+w_16_t_b = !m_16_t_b & meme & (mem[4:0] == rdb[4:0]) & ( !mem[4] + (mem[4] & mem[2] & !mem[3]) );
+
+m_32_t_32 = exre & ((exr[4:0] == rda[4:0]) + (exr[4:0] == rdb[4:0])) & (exr[4] & exr[3] + exr[4] & !exr[2]);
+w_32_t_32 = !m_32_t_32 & meme & ((mem[4:0] == rda[4:0]) + (mem[4:0] == rdb[4:0])) & (mem[4] & mem[3] + mem[4] & !mem[2]);
+
+w_or_m_32_t_16_a_or_b = ((exr[1:0] == rda[1:0]) + (exr[1:0] == rdb[1:0])) & exre & (exr[4] & exr[3] + exr[4] & !exr[2]);
+
+_32_t_16_a_l = (exre + meme) & ((exr[1:0] == rda[1:0]) + (mem[1:0] == rda[1:0])) & (rda[4] & rda[3] & !rda[2]) & ((exr[4] & exr[3] + exr[4] & !exr[2]) + (mem[4] & mem[3] + mem[4] & !mem[2]));
+_32_t_16_a_h = (exre + meme) & ((exr[1:0] == rda[1:0]) + (mem[1:0] == rda[1:0])) & (rda[4] & rda[3] & rda[2]) & ((exr[4] & exr[3] + exr[4] & !exr[2]) + (mem[4] & mem[3] + mem[4] & !mem[2])); 
+_32_t_16_b_l = (exre + meme) & ((exr[1:0] == rdb[1:0]) + (mem[1:0] == rdb[1:0])) & (rdb[4] & rdb[3] & !rdb[2]) & ((exr[4] & exr[3] + exr[4] & !exr[2]) + (mem[4] & mem[3] + mem[4] & !mem[2])); 
+_32_t_16_b_h = (exre + meme) & ((exr[1:0] == rdb[1:0]) + (mem[1:0] == rdb[1:0])) & (rdb[4] & rdb[3] & rdb[2]) & ((exr[4] & exr[3] + exr[4] & !exr[2]) + (mem[4] & mem[3] + mem[4] & !mem[2])); 
+
+_16_t_32 = (exre + meme) & ((rda[4] & rda[3]) + (rdb[4] & rdb[3])) & ((exr[1:0] == rda[1:0]) + (mem[1:0] == rda[1:0])) & ((exr[4] & exr[3]) + (mem[4] & mem[3]));
+_16_t_32_h_sl = exre & (exr[4] & exr[3] & exr[2]);
+_16_t_32_h_en = ((rda[4] & rda[3] & rda[2]) 
+                + (rdb[4] & rdb[3] & rdb[2])) 
+              &   (exre & (exr[1:0] == rda[1:0]) + meme & (mem[1:0] == rda[1:0]) 
+                + exre & (exr[1:0] == rdb[1:0]) + meme & (mem[1:0] == rdb[1:0]));
+_16_t_32_l_sl = exre & (exr[4] & exr[3] & !exr[2]);
+_16_t_32_l_en = ((rda[4] & rda[3] & !rda[2]) 
+                + (rdb[4] & rdb[3] & !rdb[2])) 
+              &   (exre & (exr[1:0] == rda[1:0]) + meme & (mem[1:0] == rda[1:0]) 
+                + exre & (exr[1:0] == rdb[1:0]) + meme & (mem[1:0] == rdb[1:0]));
+
+a_norm = !_32_t_16_a_l & !_32_t_16_a_h & !m_16_t_a & !w_16_t_a;
+b_norm = !_32_t_16_b_l & !_32_t_16_b_h & !m_16_t_b & !w_16_t_b;
+_32_norm = !_16_t_32 & !w_32_t_32 & !m_32_t_32;

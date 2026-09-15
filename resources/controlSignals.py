@@ -559,7 +559,7 @@ def build_alu_control_pla():
     return pla
 
 def build_read_control_pla():
-    pla = PLA(input_width=6, output_width=22)
+    pla = PLA(input_width=6, output_width=23)
 
     pla.register_bit("Mute memory forwarding on next clock", 0)
     pla.register_bit("Mute execute forwarding on next clock", 1)
@@ -571,6 +571,7 @@ def build_read_control_pla():
         "Registers" : 0,
         "Instruction Immediate" : 1,
         "Next Instruction" : 2,
+        "Instruction Immediate & Stack Pointer" : 3,
     })
     pla.register_range("Read Field A Select", 13,14, {
         "Normal 2" : 0,
@@ -605,6 +606,7 @@ def build_read_control_pla():
         "4 MSB of 10 LSB" : 3,
     })
     pla.register_bit("NOP Next cycle (PC still incs, used for next-word immediates)", 21)
+    pla.register_bit("Stack pointer full write enable", 22)
 
     return pla
 
@@ -653,7 +655,7 @@ def build_execute_control_pla():
         "and" : 8,
         "nand" : 9,
         "or" : 10,
-        "nor" : 11,
+        "clz" : 11,
         "xor" : 12,
         "sbc" : 13,
         "asr" : 14,
