@@ -559,103 +559,126 @@ def build_alu_control_pla():
     return pla
 
 def build_read_control_pla():
-    pla = PLA(input_width=6, output_width=23)
+    pla = PLA(input_width=6, output_width=22)
 
-    pla.register_bit("mute EXE forwarding", 0)
-    pla.register_bit("mute MEM forwarding", 1)
-    pla.register_bit("inject instruction", 2)
-    pla.register_bit("16bit path A allow data", 3)
-    pla.register_bit("16bit path A pull immediate from instruction stream", 4)
-    pla.register_bit("16bit path B allow data", 5)
-    pla.register_range("16 bit path B data select", 6, 7, {
-        "r0-r15" : 0,
-        "instruction stream immediate" : 1,
-        "intra-instruction immediate" : 2,
+    pla.register_bit("Mute memory forwarding on next clock", 0)
+    pla.register_bit("Mute execute forwarding on next clock", 1)
+    pla.register_bit("Inject instruction", 2)
+    pla.register_bit("Bit 32 Assert Enable", 3)
+    pla.register_bit("Bit 32 Assert Select (0 = memory region (MO), 1 = instruction pointer(IP))", 17)
+    pla.register_bit("Bit 16 Path A Enable", 4)
+    pla.register_range("Bit 16 Path A Select", 8,9, {
+        "Registers" : 0,
+        "Instruction Immediate" : 1,
+        "Next Instruction" : 2,
     })
-    pla.register_bit("two first field write select automatic mode enable", 8)
-    pla.register_range("field to path A register select", 9,10, {
-        "normal field 2" : 0,
-        "normal field 3" : 1,
-        "two field 2" : 2,
-        "normal field 1" : 3
+    pla.register_range("Read Field A Select", 13,14, {
+        "Normal 2" : 0,
+        "Normal 3" : 1,
+        "Two B" : 2,
+        "Normal 1" : 3,
     })
-    pla.register_range("r0-r15 write field select", 11, 12, {
-        "Normal field 1" : 0,
-        "Two field 1 (only r0-r15)" : 1,
-        "Normal field 2" : 2
+    pla.register_bit("Bit 16 Path B Enable", 5)
+    pla.register_range("Bit 16 Path B Select", 6,7, {
+        "Registers" : 0,
+        "Instruction Immediate" : 1,
+        "Next Instruction" : 2,
     })
-    pla.register_range("intra-instruction immediate range to data path B (intra-instruction has to be selected for this to work)", 13,14, {
-        "full 10 bit immediate" : 0,
-        "6lsb immediate" : 1,
-        "3lsb immediate" : 2,
-        "4msb immediate" : 3,
+    pla.register_range("Read Field B Select", 15,16, {
+        "Normal 3" : 0,
+        "Two B" : 1,
+        "Normal 1" : 2,
+        "Two A" : 3,
     })
-    pla.register_bit("disable msb of 6lsb immediate (effectively 5lsb)", 16)
-    pla.register_range("path B field", 17,18, {
-        "normal field 3" : 0,
-        "two field 2" : 1,
-        "normal field 1" : 2,
-        "two field 1" : 3
+    pla.register_bit("Write Enable", 10)
+    pla.register_range("Write Field Select", 11,12, {
+        "Normal 1" : 0,
+        "Two A" : 1,
+        "Normal 2" : 2,
+        "Two B" : 3,
     })
-    pla.register_bit("force assert memory or instruction 32 reg to 32 path via top half A (A path still accesible for r0-r15)",21)
-    pla.register_bit("make above force assert ONLY IF path A is selecting read from r0-r15",22)
-    pla.register_bit("instruction register instead of memory offset", 15)
-    pla.register_bit("Allow instruction immediate to A path (if A path is selecting from a FULL 32 bit register)", 19)
-    pla.register_bit("Use two field 2 for 32 and spec reg write selecting (auto doesn't work with this.)", 20)
+    pla.register_bit("Disable MSB (6th bit) of 6 to instruction immediate to create 5 lsb.", 18)
+    pla.register_range("Immediate Field Select", 19,20, {
+        "Full 10 LSB" : 0,
+        "6/5 LSB" : 1,
+        "3 LSB" : 2,
+        "4 MSB of 10 LSB" : 3,
+    })
+    pla.register_bit("NOP Next cycle (PC still incs, used for next-word immediates)", 21)
+
     return pla
 
 
 def build_execute_control_pla():
-    pla = PLA(input_width=6, output_width=24)
+    pla = PLA(input_width=6, output_width=25)
 
-    pla.register_onehot("32 bit Memory addrews Path assert", {
-        "32_BIT_AGU_ASSERT_MEMORY_PATH" : 0,
-        "32_BIT_PATH_ASSERT_MEMORY_PATH" : 1
+    pla.register_bit("Enable 32 Bit Memory Bus Output", 0)
+    pla.register_range("32 Bit Memory Bus Output", 1,1, {
+        "32 Bit Path" : 0,
+        "AGU result" : 1
     })
-    pla.register_onehot("32 bit main path assert", {
-        "16_BIT_PATH_A_ASSERT_HIGH_32_BIT_MAIN_PATH" : 2,
-        "32_BIT_AGU_ASSERT_MAIN_PATH" : 3,
-        "32_BIT_PATH_ASSERT_MAIN_PATH" : 4,
-        "16_BIT_PATH_A_ASSERT_LOW_32_BIT_MAIN_PATH" : 5,
-        "16_BIT_PATH_B_ASSERT_HIGH_32_BIT_MAIN_PATH" : 6,
-        "16_BIT_PATH_B_ASSERT_LOW_32_BIT_MAIN_PATH" : 7
+    pla.register_bit("Enable 16 bit result output", 2)
+    pla.register_range("16 Bit Result Bus Output", 3,4, {
+        "Path A" : 0,
+        "Path B" : 1,
+        "ALU Result" : 2,
+        "Flag Register" : 3,
+    })
+    pla.register_bit("16 to high 32 bit result output enable", 5)
+    pla.register_range("16 bit to high 32 bit result output select", 6,6, {
+        "Path A" : 0,
+        "Path B" : 1
+    })
+    pla.register_bit("16 to low 32 bit result output enable", 7)
+    pla.register_range("16 bit to low 32 bit result output select", 8,8, {
+        "Path A" : 0,
+        "Path B" : 1
+    })
+    pla.register_bit("32 Result Bus Output Enable", 9)
+    pla.register_range("32 Result Output Select", 10,11, {
+        "32 Bit Path" : 0,
+        "AGU result" : 1,
+        "16 bit split" : 2,
     })
 
-    pla.register_onehot("16 bit path assert", {
-        "FLAGS_ASSERT_16_BIT_RESULT" : 8,
-        "ALU_ASSERT_16_BIT_RESULT" : 9,
-        "16_BIT_PATH_B_ASSERT_16_BIT_RESULT" : 10,
-        "16_BIT_PATH_A_ASSERT_16_BIT_RESULT" : 11
+    pla.register_range("ALU Operation", 12,15, {
+        "add" : 0,
+        "sub" : 1,
+        "mull" : 2,
+        "mulh" : 3,
+        "lsh" : 4,
+        "rsh" : 5,
+        "ror" : 6,
+        "rol" : 7,
+        "and" : 8,
+        "nand" : 9,
+        "or" : 10,
+        "nor" : 11,
+        "xor" : 12,
+        "sbc" : 13,
+        "asr" : 14,
+        "adc" : 15
+    })
+    pla.register_bit("ALU flag write enable", 17)
+    pla.register_range("Flag register input", 24,24,{
+        "ALU" : 0,
+        "Path B 4LSB" : 1
     })
 
-    pla.register_range("ALU_CONTROL", 12, 15, {
-        "ADD" : 0,
-        "ADD with carry" : 1,
-        "SUB" : 2,
-        "SUB with carry" : 3,
-        "Multiply lower" : 4,
-        "Multiply upper" : 5,
-        "Shift left" : 6,
-        "Shift right" : 7,
-        "Rotate left" : 8,
-        "Rotate right" : 9,
-        "AND" : 10,
-        "OR" : 11,
-        "XOR" : 12,
-        "NOT" : 13,
+    pla.register_bit("16 Bit AGU subtraction mode", 16)
+    pla.register_bit("16 Bit path side select (high/low) to AGU B input", 18)
+    pla.register_range("16 bit path to AGU input select", 22,22,{
+        "Path A" : 0,
+        "Path B" : 1
     })
-    pla.register_bit("AGU_SUBTRACT_MODE", 16)
-    pla.register_bit("ALU_FLAGS_WRITE_ENABLE", 17)
-    pla.register_bit("Allow 16 bit path A to 32 bit memory path side flip opposite to automatic 32bit reg half", 18)
-    pla.register_bit("write enable fetch unit counter", 19)
-    pla.register_bit("make write enable dependant on condition eval (write enable fetch unit must be active for this to work)", 20)
-    pla.register_bit("make write to register signals dependant on condition eval", 21)
-    pla.register_bit("path B to AGU instead of path A", 22)
-    pla.register_bit("Shift 16 bit AGU input up by 1 (*2) to make an offset \"per instruction\"", 23)
-
+    pla.register_bit("16 bit path to AGU input left shift 1 place", 23)
+    pla.register_bit("Fetch Unit write enable (takes from memory bus)", 19)
+    pla.register_bit("Make fetch Unit write enable dependant on condition evaluation", 20)
+    pla.register_bit("Make write control signal propagation dependant on condition evaluator", 21)
 
     return pla
 
+#unused
 def build_writeback_control_pla():
     pla = PLA(input_width=6, output_width=3)
 
@@ -688,16 +711,16 @@ alupla = build_alu_control_pla()
 readpla = build_read_control_pla()
 exepla = build_execute_control_pla()
 mempla = build_memory_control_pla()
-wbpla = build_writeback_control_pla()
-# gui = PLA_GUI(root, {
-#     "Read and Decode control" : readpla,
-#     "Execute Control" : exepla,
-#     "Memory Control" : mempla,
-#     "Writeback Control" : wbpla
-# })
+# wbpla = build_writeback_control_pla()
 gui = PLA_GUI(root, {
-    "ALU control" : alupla
+    "Read and Decode control" : readpla,
+    "Execute Control" : exepla,
+    "Memory Control" : mempla,
+    # "Writeback Control" : wbpla
 })
+# gui = PLA_GUI(root, {
+#     "ALU control" : alupla
+# })
 # root.after(2000, gui.export_pla, alupla)
 # gui2 = PLA_GUI(root, {"ALU Control":alupla})
 root.mainloop()
