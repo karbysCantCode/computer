@@ -1,5 +1,2 @@
-_start:
-adi r1, r0, 2
-adi r2, r0, 3
-add r3, r1, r2
-stea2 r3, 0
+movi 
+
