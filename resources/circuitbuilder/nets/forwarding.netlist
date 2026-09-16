@@ -1,0 +1,153 @@
+// Auto-generated shared-gate netlist
+// (identical sub-expressions anywhere in the design share the same gate)
+
+// ---- inputs ----
+input exr[5];
+input exreI;
+input exreM;
+input mem[5];
+input memeI;
+input memeM;
+input rda[5];
+input rdb[5];
+
+// ---- gates (topological order) ----
+wire g4 = AND(exreI, exreM);  // 2-in
+wire g7 = AND(memeI, memeM);  // 2-in
+wire g18 = XNOR(exr[4], rda[4]);
+wire g19 = XNOR(exr[3], rda[3]);
+wire g20 = XNOR(exr[2], rda[2]);
+wire g21 = XNOR(exr[1], rda[1]);
+wire g22 = XNOR(exr[0], rda[0]);
+wire g24 = NOT(exr[4]);
+wire g25 = NOT(exr[3]);
+wire g26 = AND(exr[4], exr[2], g25);  // 3-in
+wire g27 = OR(g24, g26);  // 2-in
+wire g28 = AND(exreI, exreM, g18, g19, g20, g21, g22, g27);  // 8-in
+wire g34 = XNOR(exr[4], rdb[4]);
+wire g35 = XNOR(exr[3], rdb[3]);
+wire g36 = XNOR(exr[2], rdb[2]);
+wire g37 = XNOR(exr[1], rdb[1]);
+wire g38 = XNOR(exr[0], rdb[0]);
+wire g40 = AND(exreI, exreM, g27, g34, g35, g36, g37, g38);  // 8-in
+wire g41 = NOT(g28);
+wire g47 = XNOR(rda[4], mem[4]);
+wire g48 = XNOR(rda[3], mem[3]);
+wire g49 = XNOR(rda[2], mem[2]);
+wire g50 = XNOR(rda[1], mem[1]);
+wire g51 = XNOR(rda[0], mem[0]);
+wire g53 = NOT(mem[4]);
+wire g54 = NOT(mem[3]);
+wire g55 = AND(mem[4], mem[2], g54);  // 3-in
+wire g56 = OR(g53, g55);  // 2-in
+wire g57 = AND(memeI, memeM, g41, g47, g48, g49, g50, g51, g56);  // 9-in
+wire g58 = NOT(g40);
+wire g59 = XNOR(rdb[4], mem[4]);
+wire g60 = XNOR(rdb[3], mem[3]);
+wire g61 = XNOR(rdb[2], mem[2]);
+wire g62 = XNOR(rdb[1], mem[1]);
+wire g63 = XNOR(rdb[0], mem[0]);
+wire g65 = AND(memeI, memeM, g56, g58, g59, g60, g61, g62, g63);  // 9-in
+wire g23 = AND(g18, g19, g20, g21, g22);  // 5-in
+wire g39 = AND(g34, g35, g36, g37, g38);  // 5-in
+wire g66 = OR(g23, g39);  // 2-in
+wire g67 = AND(exr[4], exr[3]);  // 2-in
+wire g68 = NOT(exr[2]);
+wire g69 = AND(exr[4], g68);  // 2-in
+wire g70 = OR(g67, g69);  // 2-in
+wire g71 = AND(exreI, exreM, g66, g70);  // 4-in
+wire g72 = NOT(g71);
+wire g52 = AND(g47, g48, g49, g50, g51);  // 5-in
+wire g64 = AND(g59, g60, g61, g62, g63);  // 5-in
+wire g73 = OR(g52, g64);  // 2-in
+wire g74 = AND(mem[4], mem[3]);  // 2-in
+wire g75 = NOT(mem[2]);
+wire g76 = AND(mem[4], g75);  // 2-in
+wire g77 = OR(g74, g76);  // 2-in
+wire g78 = AND(memeI, memeM, g72, g73, g77);  // 5-in
+wire g79 = AND(g21, g22);  // 2-in
+wire g80 = AND(g37, g38);  // 2-in
+wire g81 = OR(g79, g80);  // 2-in
+wire g82 = AND(exreI, exreM, g70, g81);  // 4-in
+wire g83 = OR(g4, g7);  // 2-in
+wire g84 = AND(g50, g51);  // 2-in
+wire g85 = OR(g79, g84);  // 2-in
+wire g86 = NOT(rda[2]);
+wire g88 = OR(g67, g69, g74, g76);  // 4-in
+wire g89 = AND(rda[4], rda[3], g83, g85, g86, g88);  // 6-in
+wire g91 = AND(rda[4], rda[3], rda[2], g83, g85, g88);  // 6-in
+wire g92 = AND(g62, g63);  // 2-in
+wire g93 = OR(g80, g92);  // 2-in
+wire g94 = NOT(rdb[2]);
+wire g96 = AND(rdb[4], rdb[3], g83, g88, g93, g94);  // 6-in
+wire g98 = AND(rdb[4], rdb[3], rdb[2], g83, g88, g93);  // 6-in
+wire g99 = OR(rda[3], g86);  // 2-in
+wire g100 = AND(rda[4], g99);  // 2-in
+wire g101 = OR(rdb[3], g94);  // 2-in
+wire g102 = AND(rdb[4], g101);  // 2-in
+wire g103 = OR(g100, g102);  // 2-in
+wire g104 = OR(exr[3], g68);  // 2-in
+wire g105 = AND(exr[4], g104);  // 2-in
+wire g106 = OR(mem[3], g75);  // 2-in
+wire g107 = AND(mem[4], g106);  // 2-in
+wire g108 = OR(g105, g107);  // 2-in
+wire g109 = AND(g83, g85, g103, g108);  // 4-in
+wire g111 = AND(exreI, exreM, exr[4], exr[3], exr[2]);  // 5-in
+wire g90 = AND(rda[4], rda[3], rda[2]);  // 3-in
+wire g97 = AND(rdb[4], rdb[3], rdb[2]);  // 3-in
+wire g112 = OR(g90, g97);  // 2-in
+wire g113 = AND(exreI, exreM, g21, g22);  // 4-in
+wire g114 = AND(memeI, memeM, g50, g51);  // 4-in
+wire g115 = AND(exreI, exreM, g37, g38);  // 4-in
+wire g116 = AND(memeI, memeM, g62, g63);  // 4-in
+wire g117 = OR(g113, g114, g115, g116);  // 4-in
+wire g118 = AND(g112, g117);  // 2-in
+wire g120 = AND(exreI, exreM, exr[4], exr[3], g68);  // 5-in
+wire g87 = AND(rda[4], rda[3], g86);  // 3-in
+wire g95 = AND(rdb[4], rdb[3], g94);  // 3-in
+wire g121 = OR(g87, g95);  // 2-in
+wire g122 = AND(g117, g121);  // 2-in
+wire g123 = NOT(g89);
+wire g124 = NOT(g91);
+wire g125 = NOT(g57);
+wire g126 = AND(g41, g123, g124, g125);  // 4-in
+wire g127 = NOT(g96);
+wire g128 = NOT(g98);
+wire g129 = NOT(g65);
+wire g130 = AND(g58, g127, g128, g129);  // 4-in
+wire g131 = NOT(g109);
+wire g132 = NOT(g78);
+wire g133 = AND(g72, g131, g132);  // 3-in
+
+// ---- outputs ----
+output exre = g4;
+output meme = g7;
+output m_16_t_a = g28;
+output m_16_t_b = g40;
+output w_16_t_a = g57;
+output w_16_t_b = g65;
+output m_32_t_32 = g71;
+output w_32_t_32 = g78;
+output w_or_m_32_t_16_a_or_b = g82;
+output _32_t_16_a_l = g89;
+output _32_t_16_a_h = g91;
+output _32_t_16_b_l = g96;
+output _32_t_16_b_h = g98;
+output _16_t_32 = g109;
+output _16_t_32_h_sl = g111;
+output _16_t_32_h_en = g118;
+output _16_t_32_l_sl = g120;
+output _16_t_32_l_en = g122;
+output a_norm = g126;
+output b_norm = g130;
+output _32_norm = g133;
+
+// ---- stats (reachable nodes only) ----
+// distinct input bits used : 24
+// constants                : 0
+// NOT gates                : 19
+// AND gates                : 47
+// OR gates                 : 20
+// XNOR gates (bit compares): 20
+// TOTAL GATES              : 106
+// named output signals     : 21

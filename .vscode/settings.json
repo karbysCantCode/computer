@@ -47,7 +47,7 @@
     "editor.tabSize": 2,
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "cmake.debugConfig": {
-    "args": ["--smake", "D:/logisim prohects/16bit cpu/software2/resources/testprojects/simpleProjectCollection/random/basic2/basic2.smake", "-v", "--regex-arch", "--arch", "D:/logisim prohects/16bit cpu/software2/resources/archRev3.arch"]
+    "args": ["--smake", "D:/logisim prohects/16bit cpu/software2/spasm_projects/bootloader/bootloader.smake", "-v", "--regex-arch", "--arch", "D:/logisim prohects/16bit cpu/software2/resources/archRev3.arch"]
     // "args": ["--c", "-I\"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/src3\"", "-c", "\"/Users/karbys/logisim projects/16bitcomputer/CppCompiler/src/src3/C/example.c\""]
     },
     "workbench.colorTheme": "Monokai",

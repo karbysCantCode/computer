@@ -25,7 +25,7 @@ _32_t_16_a_h = (exre + meme) & ((exr[1:0] == rda[1:0]) + (mem[1:0] == rda[1:0]))
 _32_t_16_b_l = (exre + meme) & ((exr[1:0] == rdb[1:0]) + (mem[1:0] == rdb[1:0])) & (rdb[4] & rdb[3] & !rdb[2]) & ((exr[4] & exr[3] + exr[4] & !exr[2]) + (mem[4] & mem[3] + mem[4] & !mem[2])); 
 _32_t_16_b_h = (exre + meme) & ((exr[1:0] == rdb[1:0]) + (mem[1:0] == rdb[1:0])) & (rdb[4] & rdb[3] & rdb[2]) & ((exr[4] & exr[3] + exr[4] & !exr[2]) + (mem[4] & mem[3] + mem[4] & !mem[2])); 
 
-_16_t_32 = (exre + meme) & ((rda[4] & rda[3]) + (rdb[4] & rdb[3])) & ((exr[1:0] == rda[1:0]) + (mem[1:0] == rda[1:0])) & ((exr[4] & exr[3]) + (mem[4] & mem[3]));
+_16_t_32 = (exre + meme) & ((rda[4] & (rda[3] + !rda[2])) + (rdb[4] & (rdb[3] + !rdb[2]))) & ((exr[1:0] == rda[1:0]) + (mem[1:0] == rda[1:0])) & ((exr[4] & (exr[3] + !exr[2])) + (mem[4] & (mem[3] + !mem[2])));
 _16_t_32_h_sl = exre & (exr[4] & exr[3] & exr[2]);
 _16_t_32_h_en = ((rda[4] & rda[3] & rda[2]) 
                 + (rdb[4] & rdb[3] & rdb[2])) 

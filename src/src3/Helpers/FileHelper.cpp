@@ -66,7 +66,7 @@ void FileHelper::writeBytesToFile(const std::vector<uint8_t>& bytes, const std::
   namespace fs = std::filesystem;
   std::cout << "writing to: " << filepath.string() << '\n';
   std::error_code ec;
-  std::cout << "DB0\n";
+  // std::cout << "DB0\n";
   if (!fs::exists(filepath)) {
     fs::create_directories(filepath.parent_path(), ec);
 
@@ -76,12 +76,12 @@ void FileHelper::writeBytesToFile(const std::vector<uint8_t>& bytes, const std::
         "Failed to create directories for \"{}\": {}\n",
         filepath.string(), ec.message()
       ));
-      std::cout << "retdb01\n";
+      // std::cout << "retdb01\n";
       //return;
       }
     }
   }
-  std::cout << "DB1\n";
+  // std::cout << "DB1\n";
 
   std::ofstream out(filepath, std::ios::out | std::ios::trunc | std::ios::binary);
   if (!out) {
@@ -96,14 +96,14 @@ void FileHelper::writeBytesToFile(const std::vector<uint8_t>& bytes, const std::
     return;
   }
 
-  std::cout << "DB2\n";
+  // std::cout << "DB2\n";
 
   out.write(
     reinterpret_cast<const char*>(bytes.data()),
     static_cast<std::streamsize>(bytes.size())
   );
 
-  std::cout << "DB3\n";
+  // std::cout << "DB3\n";
 
   if (!out) {
     if (logger) {
@@ -114,3 +114,68 @@ void FileHelper::writeBytesToFile(const std::vector<uint8_t>& bytes, const std::
   std::cout << "\nsuccess write\n";
 }
 
+
+#include <filesystem>
+#include <stdexcept>
+
+#ifdef _WIN32
+  #include <windows.h>
+#elif defined(__APPLE__)
+  #include <mach-o/dyld.h>
+#elif defined(__linux__)
+  #include <unistd.h>
+#endif
+
+std::filesystem::path FileHelper::getExecutableDirectory() {
+#ifdef _WIN32
+
+  wchar_t buffer[MAX_PATH];
+  DWORD length = GetModuleFileNameW(
+    nullptr,
+    buffer,
+    MAX_PATH
+  );
+
+  if (length == 0) {
+    throw std::runtime_error("Failed to get executable path");
+  }
+
+  return std::filesystem::path(buffer, buffer + length).parent_path();
+
+#elif defined(__APPLE__)
+
+  uint32_t size = 0;
+  _NSGetExecutablePath(nullptr, &size);
+
+  std::string buffer(size, '\0');
+
+  if (_NSGetExecutablePath(buffer.data(), &size) != 0) {
+    throw std::runtime_error("Failed to get executable path");
+  }
+
+  return std::filesystem::canonical(buffer).parent_path();
+
+#elif defined(__linux__)
+
+  std::array<char, 4096> buffer;
+
+  const ssize_t length = readlink(
+    "/proc/self/exe",
+    buffer.data(),
+    buffer.size() - 1
+  );
+
+  if (length == -1) {
+    throw std::runtime_error("Failed to get executable path");
+  }
+
+  buffer[length] = '\0';
+
+  return std::filesystem::path(buffer.data()).parent_path();
+
+#else
+
+  #error "Unsupported platform"
+
+#endif
+}

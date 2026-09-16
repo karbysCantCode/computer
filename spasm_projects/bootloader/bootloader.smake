@@ -1,0 +1,8 @@
+.target bootloader
+.flist main_files
+.search_add(main_files, all, ".spasm", "src/")
+.include_directory(bootloader, "../std/")
+.add_target(bootloader, main_files)
+.output(bootloader, ".", "bootloader.bin")
+.format(bootloader, "bin")
+.entry(bootloader, "__start")

@@ -26,6 +26,10 @@
 bool CLIOptions::evaluate(int argc, char* argv[]) {
   size_t arg = 1;
 
+  if (argc <= 1) {
+    helpCommand();
+  }
+
   while (arg < argc) {
     std::string option = argv[arg];
     if (option == "--smake") {
@@ -47,6 +51,8 @@ bool CLIOptions::evaluate(int argc, char* argv[]) {
         std::cerr << "Expected a filepath got none. Aborted";
         return false;
       }
+    } else if (option == "help" || option == "--help" || option == "-help") {
+      helpCommand();
     } else if (option == "--asm") {
       arg++;
       spasm = true;
@@ -127,4 +133,30 @@ bool CLIOptions::evaluate(int argc, char* argv[]) {
     return false;
   }
   return true;
+}
+
+void CLIOptions::helpCommand() const {
+  std::cout << "Spasm: a compiler pipeline for... spasm\n"
+    << '\n'
+    << '\n'
+    << "Commands"
+    << '\n'
+    << "--smake <smake project filepath>\n"
+    << "    Compiles an SMAKE project,\n"
+    << "    mutually exclusive to --asm.\n"
+    << "--arch <architecture filepath>\n"
+    << "    Copies & updates the stored architecture.\n"
+    << "--asm <spasm filepath>\n"
+    << "    Compiles a spasm file,\n"
+    << "    mutually exclusive to --smake.\n"
+    << "-v\n"
+    << "    Enables warnings.\n"
+    << "-vv\n"
+    << "    Enables debugging information.\n"
+    << "-s\n"
+    << "    Mutes errors.\n"
+    << "--regex-arch\n"
+    << "    Something something... prints the arch parsed.\n"
+
+    ;
 }

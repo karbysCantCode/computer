@@ -4,6 +4,7 @@
 
 //namespace std {
   std::pair<long, std::string> safe_stol(const std::string& str) {
+    if (str.length() < 1) return {0,""};
     try
     {
       return {std::stol(str), ""};

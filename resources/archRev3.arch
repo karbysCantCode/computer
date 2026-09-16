@@ -18,6 +18,12 @@
 .reg sreg3  16 22
 .reg sreg4  16 23
 
+; 00000 - 01111 - r0-r15
+; 10000 - 10011 - 32
+; 10100 - 10111 - spec
+; 11000 - 11011 - 32 low
+; 11100 - 11111 - 32 high
+
 .format normal   6 4 3 3
 .format bitsel   6 1 1 1 1 1 5  ; uses the same idea as two, where last 5 bits are a full reg index
 .format normaug  6 4 6

@@ -616,9 +616,9 @@ std::filesystem::path Project::parsePath(const std::string_view& p, TokenHolder&
         return path;
       }
       if (m_makefilePath.is_absolute()) {
-        std::filesystem::path fullpath = (m_makefilePath / path).lexically_normal();
+        std::filesystem::path fullpath = (m_makefilePath.parent_path() / path).lexically_normal();
         if (!std::filesystem::exists(fullpath)) {
-          logWarning(tokenHolder.peek(), "Path \"" + path.string() + "\" is not absolute and could not be resolved by concatenation \"" + fullpath.string() + '"');
+          logError(tokenHolder.peek(), "Path \"" + path.string() + "\" is not absolute and could not be resolved by concatenation \"" + fullpath.string() + '"');
           return std::filesystem::path();
         }
         return fullpath;

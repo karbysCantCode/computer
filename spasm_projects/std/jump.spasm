@@ -2,9 +2,9 @@
   ; destroys mo, r14, r15
   movi r14, [label & 0xffff]         ; low half
   movi r15, [(label << 16) & 0xffff] ; high half
-  mov  mol, r14
-  mov  moh, r15
-  jmpr mo
+  mov  gpl, r14
+  mov  gph, r15
+  jmpr gp
 }
 ;*
 @define jmps(label) {
@@ -57,4 +57,3 @@
     pop r14
   }
 }
-

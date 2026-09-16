@@ -192,7 +192,7 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
   if (!errmb.empty()) {
     logError(byteLengthToken, errmb);
   }
-  std::cout << "Adding instruction: " << identifierToken.value << "\n";
+  // std::cout << "Adding instruction: " << identifierToken.value << "\n";
   InstructionDefinition instruction(std::string(identifierToken.value), 
                                     opcodeNumber,
                                     byteLengthNumber,
@@ -344,6 +344,10 @@ Architecture::RegisterRangeInfo Architecture::parseRegisterRange(const std::stri
       logError(errToken, "Got unexpected character in register range definition.");
     }
   }
+  // if (currentValue.size() < 1) {
+  //   logError(errToken, "no length argument");
+  //   return info;
+  // }
   auto [highValue, errm] = safe_stol(currentValue);
   if (!errm.empty() && info.hasDash) {
     logError(errToken, errm);

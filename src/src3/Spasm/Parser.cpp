@@ -606,7 +606,7 @@ bool Parser::getOrCreatePartialIdentifier(
     if (creating) {
       logError(identifierToken, std::format("Identifier \"{}\" already exists.", identifierToken.value));
       for (const auto& t : tokenHolder.m_tokens) {
-        std::cout << t.value;
+        // std::cout << t.value;
       }
       return false;
     }  
@@ -682,7 +682,7 @@ bool Parser::getOrCreatePartialIdentifier(
   reference->nameSegments = nameSegments; //copy
   auto uniquePtr = std::make_unique<Program::IdentifierObject*>(reference.get());
   pool->emplace(name, uniquePtr.get());
-  std::cout << "reference ptr = " << reference << "\n";
+  // std::cout << "reference ptr = " << reference << "\n";
   const auto nme = reference->fullName();
   translationUnit.m_identifierFullNameMap.emplace(
     nme, 
@@ -1043,7 +1043,7 @@ void Parser::parseRelaxorCondition(TokenHolder& tokenHolder, Program::RelaxorDef
   option.conditionExpr = parseSquareExpression(tokenHolder, addressIndex, 0, &translationUnit.m_identifierMap);
   // std::ostringstream ss;
   // option.conditionExpr->print(ss);
-  std::cout << "EXPR:" << option.conditionExpr->toString() << std::endl;
+  // std::cout << "EXPR:" << option.conditionExpr->toString() << std::endl;
   translationUnit.m_unresolvedExpressions.push(option.conditionExpr.get());
   if (!tokenHolder.match(Token::Type::CLOSEPAREN)) {
     logError(tokenHolder.peek(), std::format("Expected ')', got \"{}\"", tokenHolder.peek().value));

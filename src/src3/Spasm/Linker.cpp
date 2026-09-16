@@ -63,7 +63,7 @@ void Linker::linkDefinitionSymbols(
   LinkedResult& linkedResult,
   ExpressionsByLabelHelper& labelHelper
 ) {
-  resolveExpressions(translationUnit, linkedResult, labelHelper);
+  gentlyResolveExpressions(translationUnit, linkedResult, labelHelper);
   placeDefinitionSymbols(linkedResult, translationUnit);
 }
 void Linker::linkTU(
@@ -83,7 +83,7 @@ void Linker::linkTU(
   //check all identifiers have definitions
   checkForUndefinedIdentifiers(translationUnit);
   //resolve expressions
-  resolveExpressions(translationUnit, linkedResult, labelHelper);
+  gentlyResolveExpressions(translationUnit, linkedResult, labelHelper);
 
   //all linked!
   linkedResult.translationUnitQueue.push(&translationUnit);
@@ -380,7 +380,28 @@ void Linker::resolveExpressions(Program::TranslationUnit& translationUnit, Linke
   }
 }
 
+void Linker::gentlyResolveExpressions(Program::TranslationUnit& translationUnit, LinkedResult& linked, ExpressionsByLabelHelper& labelHelper) {
+  auto copy = translationUnit.m_unresolvedExpressions;
+  while (!copy.empty()) {
+    auto& expr = *copy.front();
+    copy.pop();
+
+    // std::cout << expr << '\n';
+    auto eval = expr.evaluate(linked.addressHolder, true);
+    expr.setValue(eval.value);
+    std::cout << expr.toString() << " value: " << eval.value << std::endl;
+    labelHelper.registerExpression(&expr, eval.mentionedLabels);
+    expr.mentionedLabels = std::move(eval.mentionedLabels);
+
+    if (!eval.error.empty()) {
+      logError(expr.location, eval.error);
+      continue;
+    }
+  }
+}
+
 void Linker::ExpressionsByLabelHelper::registerExpression(Program::Expr* expr, const std::unordered_set<std::string>& mentionedLabels) {
+  p_allExpressions.emplace(expr);
   for (const auto& fullName : mentionedLabels) {
     p_labelByExpressionMap[fullName].insert(expr);
   }
@@ -433,9 +454,12 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
     int original = thisRelaxor.optionIndex;
     thisRelaxor.optionIndex = 0;
     while (
-      thisRelaxor.relaxor.options.size() > thisRelaxor.optionIndex &&
-      thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->value == 0) {
-        thisRelaxor.optionIndex++;
+      (int)thisRelaxor.relaxor.options.size() > thisRelaxor.optionIndex
+      ) {
+        thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->evaluate(linked.addressHolder);
+        if (thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->value == 0)
+          thisRelaxor.optionIndex++;
+        else break;
       }
       
       const size_t nextAddressIndex = thisRelaxor.addressIndex + 1;
@@ -445,13 +469,15 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
         continue;
       } else if (thisRelaxor.optionIndex == original) {
         continue;
-      } else if (linked.addressHolder.size() <= nextAddressIndex) {
-        continue;
-      }
+      } 
       
       
       const int sizeChange = (original >= 0 ? thisRelaxor.relaxor.options[original].sumByteSizeOfOption() : thisRelaxor.relaxor.worstCaseSize) - thisRelaxor.relaxor.options[thisRelaxor.optionIndex].sumByteSizeOfOption();
-      
+      linked.maxAddress -= sizeChange;
+
+      if (linked.addressHolder.size() <= nextAddressIndex) {
+        continue;
+      }
       //did change, updating required
       auto it = std::lower_bound(linked.addressHolder.begin(), linked.addressHolder.end(), linked.addressHolder[nextAddressIndex]);
       
@@ -474,6 +500,7 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
             linked.addressHolder[i] -= sizeChange;
           }
         }
+
         
         std::vector<std::string> labelNames;
         labelNames.resize(labelIt - linked.addressLabelHolder.begin());

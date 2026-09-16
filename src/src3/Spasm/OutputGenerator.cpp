@@ -33,15 +33,13 @@ void OutputGenerator::run(
   if (foundIt) {
     size_t address = linkedResult.addressHolder[(*it->second)->addressIndex];
     const uint8_t header[] = { 
-      0x40, 0x6C, 
+      0x00, 0x6F, 
         static_cast<uint8_t>( address        & 0xff ),
         static_cast<uint8_t>((address >> 8 ) & 0xff ),
-      0x80, 0x6C, 
+      0x80, 0x6F, 
         static_cast<uint8_t>((address >> 16) & 0xff ),
         static_cast<uint8_t>((address >> 24) & 0xff ),
-      0x01, 0x6B,
-      0x82, 0x6B,
-      0x10, 0xA8
+      0x10, 0xa8,
     };
     std::memcpy(binaryData.data(), header, entrySymbolJumpByteLength);
   }

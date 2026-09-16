@@ -1,7 +1,0 @@
-.target project
-.flist main_files
-.search_add(main_files, all, ".spasm", "../basic2/")
-.add_target(project, main_files)
-.output(project, ".", "project.bin")
-.format(project, "bin")
-.entry(project, "__start")

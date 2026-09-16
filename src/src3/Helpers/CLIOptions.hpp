@@ -19,5 +19,6 @@ struct CLIOptions {
   std::filesystem::path cPath;
   std::vector<std::filesystem::path> cIncPaths;
 
+  void helpCommand() const;
   bool evaluate(int argc, char* argv[]);
 };

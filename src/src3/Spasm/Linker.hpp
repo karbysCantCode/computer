@@ -42,6 +42,7 @@ public:
   std::set<Program::RelaxorSymbol*> getRelaxorsReferencingTheseLabels(const std::vector<std::string>& fullNameList) const;
 
 private:
+  std::unordered_set<Program::Expr*> p_allExpressions;
   std::unordered_map<std::string, std::unordered_set<Program::Expr*>> p_labelByExpressionMap;
   std::unordered_map<std::string, std::set<Program::RelaxorSymbol*>> p_relaxorByExpressionMap;
 };
@@ -101,6 +102,8 @@ private:
   void resolveRelaxors(Program& program, LinkedResult& linked, ExpressionsByLabelHelper& expressionHelper);
   void createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::TranslationUnit&, Program::IdentifierObject* identifierObject);
   void fillDataStructures();
+  void gentlyResolveExpressions(Program::TranslationUnit& translationUnit, LinkedResult& linked, ExpressionsByLabelHelper& labelHelper);
+
 };
 
 }

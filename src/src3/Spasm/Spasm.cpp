@@ -64,7 +64,7 @@ namespace Spasm {
       }
 
       // update here and generator.run
-      const size_t entrySymbolJumpByteLength = target.second.m_entrySymbol.empty() ? 0 : 14;
+      const size_t entrySymbolJumpByteLength = target.second.m_entrySymbol.empty() ? 0 : 10;
       
       Linker::LinkedResult linkedResult = linker.run(entrySymbolJumpByteLength, program, &logger);
       
