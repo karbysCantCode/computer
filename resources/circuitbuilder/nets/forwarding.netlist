@@ -10,6 +10,7 @@ input memeI;
 input memeM;
 input rda[5];
 input rdb[5];
+input exememop;
 
 // ---- gates (topological order) ----
 wire g4 = AND(exreI, exreM);  // 2-in
@@ -107,17 +108,21 @@ wire g87 = AND(rda[4], rda[3], g86);  // 3-in
 wire g95 = AND(rdb[4], rdb[3], g94);  // 3-in
 wire g121 = OR(g87, g95);  // 2-in
 wire g122 = AND(g117, g121);  // 2-in
-wire g123 = NOT(g89);
-wire g124 = NOT(g91);
-wire g125 = NOT(g57);
-wire g126 = AND(g41, g123, g124, g125);  // 4-in
-wire g127 = NOT(g96);
-wire g128 = NOT(g98);
-wire g129 = NOT(g65);
-wire g130 = AND(g58, g127, g128, g129);  // 4-in
-wire g131 = NOT(g109);
-wire g132 = NOT(g78);
-wire g133 = AND(g72, g131, g132);  // 3-in
+wire g125 = OR(g111, g120);  // 2-in
+wire g126 = AND(g83, g85, g103, g108, g125);  // 5-in
+wire g127 = OR(g28, g40, g126);  // 3-in
+wire g128 = AND(exememop, g127);  // 2-in
+wire g129 = NOT(g89);
+wire g130 = NOT(g91);
+wire g131 = NOT(g57);
+wire g132 = AND(g41, g129, g130, g131);  // 4-in
+wire g133 = NOT(g96);
+wire g134 = NOT(g98);
+wire g135 = NOT(g65);
+wire g136 = AND(g58, g133, g134, g135);  // 4-in
+wire g137 = NOT(g109);
+wire g138 = NOT(g78);
+wire g139 = AND(g72, g137, g138);  // 3-in
 
 // ---- outputs ----
 output exre = g4;
@@ -138,16 +143,17 @@ output _16_t_32_h_sl = g111;
 output _16_t_32_h_en = g118;
 output _16_t_32_l_sl = g120;
 output _16_t_32_l_en = g122;
-output a_norm = g126;
-output b_norm = g130;
-output _32_norm = g133;
+output bubblemem = g128;
+output a_norm = g132;
+output b_norm = g136;
+output _32_norm = g139;
 
 // ---- stats (reachable nodes only) ----
-// distinct input bits used : 24
+// distinct input bits used : 25
 // constants                : 0
 // NOT gates                : 19
-// AND gates                : 47
-// OR gates                 : 20
+// AND gates                : 49
+// OR gates                 : 22
 // XNOR gates (bit compares): 20
-// TOTAL GATES              : 106
-// named output signals     : 21
+// TOTAL GATES              : 110
+// named output signals     : 22

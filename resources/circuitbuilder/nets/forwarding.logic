@@ -6,6 +6,7 @@ input memeI;
 input memeM;
 input rda[5];
 input rdb[5];
+input exememop;
 
 exre = exreI & exreM;
 meme = memeI & memeM;
@@ -36,6 +37,8 @@ _16_t_32_l_en = ((rda[4] & rda[3] & !rda[2])
                 + (rdb[4] & rdb[3] & !rdb[2])) 
               &   (exre & (exr[1:0] == rda[1:0]) + meme & (mem[1:0] == rda[1:0]) 
                 + exre & (exr[1:0] == rdb[1:0]) + meme & (mem[1:0] == rdb[1:0]));
+
+bubblemem = exememop & ((m_16_t_a + m_16_t_b) + (_16_t_32 & (_16_t_32_l_sl + _16_t_32_h_sl)));
 
 a_norm = !_32_t_16_a_l & !_32_t_16_a_h & !m_16_t_a & !w_16_t_a;
 b_norm = !_32_t_16_b_l & !_32_t_16_b_h & !m_16_t_b & !w_16_t_b;

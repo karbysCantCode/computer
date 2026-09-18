@@ -211,7 +211,7 @@ namespace Spasm {
       std::unique_ptr<std::string> m_source;
       std::filesystem::path m_sourcePath;
       std::vector<std::unique_ptr<StatementSymbol>> m_statementVector;
-      std::vector<std::unique_ptr<DefinitionSymbol>> m_definitionVector;
+      // std::vector<std::unique_ptr<DefinitionSymbol>> m_definitionVector;
       std::unordered_set<std::filesystem::path> m_includedFiles;
       IdentifierMapType m_identifierMap;
       IdentifierMapStringType m_identifierFullNameMap;

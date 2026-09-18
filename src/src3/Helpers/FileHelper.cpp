@@ -179,3 +179,49 @@ std::filesystem::path FileHelper::getExecutableDirectory() {
 
 #endif
 }
+
+#include <iostream>
+#include <filesystem>
+#include <system_error>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shellapi.h>
+#endif
+
+void FileHelper::copyWithUacElevation(const CLIOptions& options, const std::filesystem::path& cachedArchPath) {
+    std::error_code ec;
+    
+    std::filesystem::copy(options.newArchPath, cachedArchPath, std::filesystem::copy_options::overwrite_existing, ec);
+
+    if (ec) {
+        if (ec == std::errc::permission_denied) {
+            std::cout << "[!] Access denied. Requesting administrator privileges..." << std::endl;
+
+#ifdef _WIN32
+            wchar_t modulePath[MAX_PATH];
+            GetModuleFileNameW(nullptr, modulePath, MAX_PATH);
+
+            SHELLEXECUTEINFOW sei = { sizeof(sei) };
+            sei.lpVerb = L"runas"; 
+            sei.lpFile = modulePath;
+            sei.lpParameters = GetCommandLineW(); // Captures your current runtime arguments
+            sei.nShow = SW_SHOWNORMAL;
+
+            if (ShellExecuteExW(&sei)) {
+                std::cout << "[+] Architecture files copied successfully." << std::endl;
+                std::cout << "[!] This elevation process doesn't mirror prints, if you were expecting output and didn't recieve it, it will be for this reason - the program still may (should) have functioned." << std::endl;
+                std::exit(0);
+              } else {
+                std::cerr << "[-] User cancelled the Administrator prompt or an error occurred." << std::endl;
+            }
+#else
+            std::cerr << "[-] Permission denied. Please re-run this tool with sudo." << std::endl;
+#endif
+        } else {
+            std::cerr << "[-] Copy failed with error: " << ec.message() << std::endl;
+        }
+    } else {
+        std::cout << "[+] Architecture files copied successfully." << std::endl;
+    }
+}

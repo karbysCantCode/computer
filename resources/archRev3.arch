@@ -157,3 +157,6 @@ invaldchclinb  2 45 bitsel CONST 0 CONST 1 CONST 0 CONST 0 CONST 0 REG rs r0-r15
 mmuf 2 45 bitsel CONST 1 CONST 0 CONST 0 CONST 0 CONST 1 IMM flagmask 0:8
 ;10XX1 turns the 2nd into flagmask
 ; instruction with -> bits lower flag mask en, ival targ page en, ival trans page en
+
+interrupt 2 49 two NON NON
+iret 2 51 two NON NON

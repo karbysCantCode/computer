@@ -205,7 +205,7 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
   m_keywordByTypeMap.emplace(instruction.m_name, KeywordType::INSTRUCTION);
   
   //get arguments
-  while (sourceHolder.match(Token::Type::ARGUMENTTYPE)) {
+  while (sourceHolder.match(Token::Type::ARGUMENTTYPE) && sourceHolder.notAtEnd()) {
     if (sourceHolder.peek().value == "REG") {
       sourceHolder.skip();
       const auto& aliasToken = sourceHolder.consume();
@@ -278,7 +278,7 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
       
       ConstantIntOperand operand(0); //i guess just fill the field with 0 probably.
       
-      instruction.m_operands.push_back(std::move(operand));
+      instruction.m_operands.emplace_back(std::move(operand));
       
    
     } else if (sourceHolder.peek().value == "IMMX") {

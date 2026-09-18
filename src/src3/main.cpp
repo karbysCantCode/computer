@@ -19,7 +19,9 @@ int main(int argc, char* argv[]) {
   
 
   if (options.newArch) {
-    std::filesystem::copy(options.newArchPath, cachedArchPath, std::filesystem::copy_options::overwrite_existing);
+    std::cout << exeDir.string() << "::" << cachedArchPath.string() << "::" << options.newArchPath.string() << std::endl;
+    FileHelper::copyWithUacElevation(options, cachedArchPath);
+    // std::filesystem::copy(options.newArchPath, cachedArchPath, std::filesystem::copy_options::overwrite_existing);
   }
 
   Debug::FullLogger archLogger;

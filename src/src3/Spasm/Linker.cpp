@@ -13,7 +13,7 @@ Linker::LinkedResult Linker::run(
   ExpressionsByLabelHelper expressionHelper;
 
   // JUMP TO ENTRY SYM BYTES SETUP
-  linked.maxAddress = entrySymbolSetupByteLength;
+  // linked.maxAddress = entrySymbolSetupByteLength;
   
 
   for (auto& translationUnitElement : program.m_translationUnits) {

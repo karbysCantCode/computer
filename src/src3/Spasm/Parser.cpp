@@ -760,7 +760,7 @@ void Parser::parseNonArrayDataType(TokenHolder& tokenHolder, Program::Translatio
   }
   translationUnit.m_unresolvedExpressions.push(expr.get());
   dataPtr->dataObject->exprData.push_back(std::move(expr));
-  translationUnit.m_definitionVector.emplace_back(static_cast<Program::DefinitionSymbol*>(dataStatement.release()));
+  translationUnit.m_statementVector.emplace_back(static_cast<Program::DefinitionSymbol*>(dataStatement.release()));
 }
 //if not array, is text
 void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUnit& translationUnit, Program& program, bool isArray) {
@@ -783,7 +783,7 @@ void Parser::parseArrayDataType(TokenHolder& tokenHolder, Program::TranslationUn
   auto dataPtr = dataStatPtr->dataObject.get();
   dataPtr->symbolObject = dataStatPtr;
 
-  translationUnit.m_definitionVector.emplace_back(dynamic_cast<Program::DefinitionSymbol*>(dataStatement.release()));
+  translationUnit.m_statementVector.emplace_back(dynamic_cast<Program::DefinitionSymbol*>(dataStatement.release()));
 
   if (!tokenHolder.match(Token::Type::COMMA)) {
     logError(tokenHolder.peek(), std::format("Expected ',', got \"{}\"", tokenHolder.peek().value));

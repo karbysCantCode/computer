@@ -1,16 +1,39 @@
 @include "jump.spasm"
+; __start:
+; movi r1, 0xdead
+; movi mol, 0
+; movi moh, 0
+; adi r3, r0, 0
+; adi r4, r0, 0
+
+; loop:
+; stolr2 r1, mo
+
+; adi r3, r3, 2
+; adc r4, r0, r4
+; mov mol, r3
+; mov moh, r4
+; jmp loop
+; adi r1, r1, 2
 __start:
-movi r1, 0xdead
-movi mol, 0
-movi moh, 0
-adi r3, r0, 0
-adi r4, r0, 0
-
-loop:
-stolr2 r1, mo
-
-adi r3, r3, 2
-adc r4, r0, r4
-mov mol, r3
-mov moh, r4
-jmp loop
+adi r1, r1, 2
+adi r1, r1, 2
+adi r1, r1, 2
+adi r1, r1, 2
+adi r1, r1, 2
+adi r1, r1, 2
+adi r1, r1, 2
+adi r1, r1, 2
+adi r1, r1, 2
+adi r1, r1, 2
+adi r1, r1, 2
+interrupt
+adi r2, r2, 2
+adi r2, r2, 2
+adi r2, r2, 2
+adi r2, r2, 2
+adi r2, r2, 2
+adi r2, r2, 2
+adi r2, r2, 2
+iret
+jmp __start

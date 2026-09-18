@@ -46,6 +46,8 @@ namespace Spasm {
       NOTEQUAL,
       COMPARISONAND,
       COMPARISONOR,
+
+      ORG,
       
       NEWLINE,
       MACRONEWLINE

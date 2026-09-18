@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include "Debug.hpp"
+#include "CLIOptions.hpp"
 
 
 namespace FileHelper {
@@ -9,4 +10,5 @@ namespace FileHelper {
   void writeBytesToFile(const std::vector<uint8_t>& bytes, const std::filesystem::path& filepath);
   void writeBytesToFile(const std::vector<uint8_t>& bytes, const std::filesystem::path& filepath, Debug::FullLogger* logger);
   std::filesystem::path getExecutableDirectory();
+  void copyWithUacElevation(const CLIOptions& options, const std::filesystem::path& cachedArchPath);
 }
