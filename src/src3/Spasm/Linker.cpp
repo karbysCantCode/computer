@@ -3,7 +3,6 @@
 namespace Spasm {
 
 Linker::LinkedResult Linker::run(
-  size_t entrySymbolSetupByteLength,
   Program &program,
   Debug::FullLogger* logger
 ) {
@@ -19,20 +18,33 @@ Linker::LinkedResult Linker::run(
   for (auto& translationUnitElement : program.m_translationUnits) {
     auto& translationUnit = *translationUnitElement.second.get();
     m_allTranslationUnits.push_back(&translationUnit);
+    size_t i = 0;
+    for (auto& wrap : translationUnit.getStatementMap()) {
+      wrap.stmt->address += linked.currentHighestAddress;
+      linked.statementMap.insert(&wrap);
+      i++;
+    }
+
+    auto lastit = translationUnit.getStatementMap().last();
+    if (lastit == translationUnit.getStatementMap().end()) {
+      continue;
+    }
+    // auto& lastStmt = (*translationUnit.getStatementMap().last()).stmt;
+    linked.currentHighestAddress = lastit->stmt->address+lastit->stmt->getByteSize();
     //address holder overhead
-    linked.addressHolder.resize(
-      linked.addressHolder.size() 
-      + translationUnit.m_statementVector.size() 
-      + translationUnit.m_definitionVector.size()
-    );
-    std::cout << translationUnit.m_statementVector.size() << '\n';
-    std::cout << translationUnit.m_definitionVector.size() << '\n';
-    linked.statementHolder.resize(linked.addressHolder.size());
+    // linked.addressHolder.resize(
+    //   linked.addressHolder.size() 
+    //   + translationUnit.m_statementVector.size() 
+    //   + translationUnit.m_definitionVector.size()
+    // );
+    // std::cout << translationUnit.m_statementVector.size() << '\n';
+    // std::cout << translationUnit.m_definitionVector.size() << '\n';
+    // linked.statementHolder.resize(linked.addressHolder.size());
   
-    linkDefinitionSymbols(translationUnit, linked, expressionHelper);
+    // linkDefinitionSymbols(translationUnit, linked, expressionHelper);
   }
-  
-  linked.programDataStartAddress = linked.maxAddress;
+  linked.statementMap.rebalance();
+  // linked.programDataStartAddress = linked.maxAddress;
 
   while (areUnlinkedIndependentTranslationUnits()) {
     auto& translationUnit = *consumeIndependentTranslationUnitFromStack();
@@ -58,14 +70,15 @@ Linker::LinkedResult Linker::run(
   return linked;
 }
 
-void Linker::linkDefinitionSymbols(
-  Program::TranslationUnit& translationUnit, 
-  LinkedResult& linkedResult,
-  ExpressionsByLabelHelper& labelHelper
-) {
-  gentlyResolveExpressions(translationUnit, linkedResult, labelHelper);
-  placeDefinitionSymbols(linkedResult, translationUnit);
-}
+// void Linker::linkDefinitionSymbols(
+//   Program::TranslationUnit& translationUnit, 
+//   LinkedResult& linkedResult,
+//   ExpressionsByLabelHelper& labelHelper
+// ) {
+//   gentlyResolveExpressions(translationUnit, linkedResult, labelHelper);
+//   placeDefinitionSymbols(linkedResult, translationUnit);
+// }
+
 void Linker::linkTU(
   Program& program,
   Program::TranslationUnit& translationUnit, 
@@ -79,7 +92,8 @@ void Linker::linkTU(
   //get identifiers from included
   inheritIncludedIdentifers(program, translationUnit);
   //placeDefinitionSymbols(linkedResult, translationUnit);
-  placeOtherSymbols(linkedResult, translationUnit, labelHelper);
+  // placeOtherSymbols(linkedResult, translationUnit, labelHelper);
+  placeSymbols(linkedResult, translationUnit, labelHelper);
   //check all identifiers have definitions
   checkForUndefinedIdentifiers(translationUnit);
   //resolve expressions
@@ -153,12 +167,85 @@ void Linker::createTemporaryLabelObjectsToConstructSymbolFamilyTree(Program::Tra
   }
 }
 
-void Linker::placeDefinitionSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit) {
-  for (auto& definitionSymbol : translationUnit.m_definitionVector) {
-    assert(definitionSymbol->getKind() == Program::StatementSymbol::Kind::DEFINITION);
-  
-    auto& definitionObject = *definitionSymbol->dataObject;
-    auto& definitionObjectPtr = definitionSymbol->dataObject;
+void Linker::placeSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit, ExpressionsByLabelHelper& labelHelper) {
+  for (auto& sym : translationUnit.getStatementMap())
+  switch (sym.stmt.get()->getKind())
+  {
+  using KIND = Program::StatementSymbol::Kind;
+  case KIND::LABEL:
+  {
+    auto& labelSymbol = *static_cast<Program::LabelSymbol*>(sym.stmt.get());
+    auto& labelObject = *labelSymbol.labelObject;
+    auto& labelObjectPtr = labelSymbol.labelObject;
+    if (!labelObjectPtr) return; //should already habve an error?
+
+    //surely i dont need any of this anymore...
+    
+    // const auto it = translationUnit.m_identifierFullNameMap.find(labelObject.fullName());
+
+    // if (iteratorAlreadyInFullNameMap(translationUnit, it)) {
+    //   if (auto ptr = dynamic_cast<Spasm::Program::LabelObject*>(*it->second)) {
+    //     if (ptr->symbolObject) {
+    //       logError(labelSymbol.location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
+    //     } else {
+    //       //is a temporary, is okay!! just like switch urself into it
+    //       //labelObject.children.merge(ptr->children);
+    //       //labelObject.parent = ptr->parent; // not sure???
+    //       // ???? wtf is this line V
+    //       //translationUnit.m_identifierFullNameMap[labelObject.fullName()].get() = labelObjectPtr;
+
+    //       if (ptr->parent && labelObjectPtr->parent) {
+    //         std::cout << "POTENTIAL ERR 1\n"; 
+    //         //ptr->parent->children[ptr->fullName()] = std::move(labelObject.parent->children[labelObject.fullName()]);
+    //       }
+    //       if (labelObject.nameSegments.size() == 1) {
+    //         std::cout << "POTENTIAL ERR 2\n"; //if trugger, below line needs to be implemented
+    //         //translationUnit.m_identifierMap[labelObject.fullName()] = labelObjectPtr;
+    //       }
+    //       //HUH???
+    //       //m_temporaryIdentifierOwner.erase(ptr->fullName());
+    //     }
+    //   } else if (auto ptr = dynamic_cast<Spasm::Program::DataObject*>(*it->second)) {
+    //     logError(labelSymbol.location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
+    //   } else {
+    //     logError(labelSymbol.location, "Identifier is already defined with unknown type so no location is provided.");
+    //   }
+
+    //   continue;
+    // }
+    // //if it doesnt already exist ie, no fullname found
+    // if (!labelObject.parent) {
+    //   if (!nameAlreadyInGlobalMap(translationUnit, labelObject.fullName())) {
+    //     std::cout << "POTENTIAL ERR 3\n";
+    //     //m_globalIdentifierMap.emplace(labelObject.name(), &labelObject); 
+    //   } else {
+    //     logError(labelSymbol.location, "somehow there is a parent-less identifier object in the linkers map, without an entry in the fullname, in the globalmap, this just shouldnt happen...");
+    //     continue;
+    //   }
+    // } else {
+    //   const auto parentIt = translationUnit.m_identifierFullNameMap.find(labelObject.parent->fullName());
+    //   if (iteratorAlreadyInFullNameMap(translationUnit, parentIt)) {
+    //     const auto& lblSharedPtr = parentIt->second->children.find(labelObject.name())->second;
+    //     parentIt->second->children.emplace(labelObject.name(), lblSharedPtr);
+    //   }
+    // }
+
+    // m_fullNameCollatedIdentifierMap.emplace(labelObject.fullName(), labelObjectPtr);
+    
+    // labelSymbol.addressIndex = linkedResult.nAddressesEntered++; 
+    // labelObject.addressIndex = labelSymbol.addressIndex;
+    // linkedResult.addressHolder[labelSymbol.addressIndex] = linkedResult.maxAddress;
+    // linkedResult.statementHolder[labelSymbol.addressIndex] = &labelSymbol;
+    // cant reallty do this because it gets reallocated every TU
+    //labelSymbol.address = linkedResult.addressHolder.data() + labelSymbol.addressIndex * sizeof(size_t);
+
+    //labelSymbol.addressResolved = true;
+    break;
+  }
+  case KIND::DEFINITION: {
+    auto& definitionSymbol = *static_cast<Program::DefinitionSymbol*>(sym.stmt.get());
+    auto& definitionObject = *definitionSymbol.dataObject.get();
+    auto& definitionObjectPtr = definitionSymbol.dataObject;
 
     //surely i dont need any of this anymore
 
@@ -201,10 +288,10 @@ void Linker::placeDefinitionSymbols(LinkedResult& linkedResult, Program::Transla
     // }
 
     //translationUnit.m_identifierFullNameMap.emplace(definitionObject.fullName(), definitionObjectPtr);
-    definitionSymbol->addressIndex = linkedResult.nAddressesEntered++; 
-    definitionObject.addressIndex = definitionSymbol->addressIndex;
-    linkedResult.addressHolder[definitionSymbol->addressIndex] = linkedResult.maxAddress;
-    linkedResult.statementHolder[definitionSymbol->addressIndex] = definitionSymbol.get();
+    // definitionSymbol->addressIndex = linkedResult.nAddressesEntered++; 
+    definitionObject.addressPtr = &definitionSymbol.address;
+    // linkedResult.addressHolder[definitionSymbol->addressIndex] = linkedResult.maxAddress;
+    // linkedResult.statementHolder[definitionSymbol->addressIndex] = definitionSymbol.get();
     // cant reallty do this because it gets reallocated every TU
     //definitionSymbol->address = linkedResult.addressHolder.data() + definitionSymbol->addressIndex * sizeof(size_t);
     // definitionSymbol->addressResolved = true;
@@ -214,138 +301,74 @@ void Linker::placeDefinitionSymbols(LinkedResult& linkedResult, Program::Transla
     if (definitionObjectPtr->elementSizeExpression) {
       definitionObjectPtr->elementSize = definitionObjectPtr->elementSizeExpression->value;
     }
-    linkedResult.maxAddress += 
-      definitionObjectPtr->elementCount * 
-      definitionObjectPtr->elementSize;
-    linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
+    // linkedResult.maxAddress += 
+    //   definitionObjectPtr->elementCount * 
+    //   definitionObjectPtr->elementSize;
+    // linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
+    break;
   }
-}
+  case KIND::INSTRUCTION:
+  {
+    auto& instructionSymbol = *static_cast<Program::InstructionSymbol*>(sym.stmt.get());
+    // instructionSymbol.addressIndex = linkedResult.nAddressesEntered++; 
+    // linkedResult.addressHolder[instructionSymbol.addressIndex] = linkedResult.maxAddress;
+    // linkedResult.statementHolder[instructionSymbol.addressIndex] = &instructionSymbol;
+    // cant reallty do this because it gets reallocated every TU
+    //instructionSymbol.address = linkedResult.addressHolder.data() + instructionSymbol.addressIndex * sizeof(size_t);
+    // linkedResult.maxAddress += instructionSymbol.instruction.m_byteLength;
+    // instructionSymbol.byteSize = instructionSymbol.instruction.m_byteLength;
+    // linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
+    break;
+  }
+  case KIND::RELAXOR:
+  {
+    auto& relaxorSymbol = *static_cast<Program::RelaxorSymbol*>(sym.stmt.get());
+    labelHelper.registerRelaxor(&relaxorSymbol, relaxorSymbol.relaxor.getLabelsReferencedFromConditionsInAllOptions()); //expression mentioned set, add KEEPING that to the expr class (base)
+    
+    // relaxorSymbol.addressIndex = linkedResult.nAddressesEntered++; 
 
-void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit, ExpressionsByLabelHelper& labelHelper) {
-  for (auto& statementSymbol : translationUnit.m_statementVector) {
-    switch (statementSymbol.get()->getKind())
-    {
-    using KIND = Program::StatementSymbol::Kind;
-    case KIND::LABEL:
-    {
-      auto& labelSymbol = *static_cast<Program::LabelSymbol*>(statementSymbol.get());
-      auto& labelObject = *labelSymbol.labelObject;
-      auto& labelObjectPtr = labelSymbol.labelObject;
-      if (!labelObjectPtr) return; //should already habve an error?
-
-      //surely i dont need any of this anymore...
-      
-      // const auto it = translationUnit.m_identifierFullNameMap.find(labelObject.fullName());
-
-      // if (iteratorAlreadyInFullNameMap(translationUnit, it)) {
-      //   if (auto ptr = dynamic_cast<Spasm::Program::LabelObject*>(*it->second)) {
-      //     if (ptr->symbolObject) {
-      //       logError(labelSymbol.location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
-      //     } else {
-      //       //is a temporary, is okay!! just like switch urself into it
-      //       //labelObject.children.merge(ptr->children);
-      //       //labelObject.parent = ptr->parent; // not sure???
-      //       // ???? wtf is this line V
-      //       //translationUnit.m_identifierFullNameMap[labelObject.fullName()].get() = labelObjectPtr;
-
-      //       if (ptr->parent && labelObjectPtr->parent) {
-      //         std::cout << "POTENTIAL ERR 1\n"; 
-      //         //ptr->parent->children[ptr->fullName()] = std::move(labelObject.parent->children[labelObject.fullName()]);
-      //       }
-      //       if (labelObject.nameSegments.size() == 1) {
-      //         std::cout << "POTENTIAL ERR 2\n"; //if trugger, below line needs to be implemented
-      //         //translationUnit.m_identifierMap[labelObject.fullName()] = labelObjectPtr;
-      //       }
-      //       //HUH???
-      //       //m_temporaryIdentifierOwner.erase(ptr->fullName());
-      //     }
-      //   } else if (auto ptr = dynamic_cast<Spasm::Program::DataObject*>(*it->second)) {
-      //     logError(labelSymbol.location, std::format("Identifier is already defined at \"{}\"", ptr->symbolObject->location.toString()));
-      //   } else {
-      //     logError(labelSymbol.location, "Identifier is already defined with unknown type so no location is provided.");
-      //   }
-
-      //   continue;
-      // }
-      // //if it doesnt already exist ie, no fullname found
-      // if (!labelObject.parent) {
-      //   if (!nameAlreadyInGlobalMap(translationUnit, labelObject.fullName())) {
-      //     std::cout << "POTENTIAL ERR 3\n";
-      //     //m_globalIdentifierMap.emplace(labelObject.name(), &labelObject); 
-      //   } else {
-      //     logError(labelSymbol.location, "somehow there is a parent-less identifier object in the linkers map, without an entry in the fullname, in the globalmap, this just shouldnt happen...");
-      //     continue;
-      //   }
-      // } else {
-      //   const auto parentIt = translationUnit.m_identifierFullNameMap.find(labelObject.parent->fullName());
-      //   if (iteratorAlreadyInFullNameMap(translationUnit, parentIt)) {
-      //     const auto& lblSharedPtr = parentIt->second->children.find(labelObject.name())->second;
-      //     parentIt->second->children.emplace(labelObject.name(), lblSharedPtr);
-      //   }
-      // }
-
-      // m_fullNameCollatedIdentifierMap.emplace(labelObject.fullName(), labelObjectPtr);
-      
-      labelSymbol.addressIndex = linkedResult.nAddressesEntered++; 
-      labelObject.addressIndex = labelSymbol.addressIndex;
-      linkedResult.addressHolder[labelSymbol.addressIndex] = linkedResult.maxAddress;
-      linkedResult.statementHolder[labelSymbol.addressIndex] = &labelSymbol;
-      // cant reallty do this because it gets reallocated every TU
-      //labelSymbol.address = linkedResult.addressHolder.data() + labelSymbol.addressIndex * sizeof(size_t);
-
-      //labelSymbol.addressResolved = true;
-      break;
-    }
-    case KIND::DEFINITION:
-      assert(false);
-      break;
-    case KIND::INSTRUCTION:
-    {
-      auto& instructionSymbol = *static_cast<Program::InstructionSymbol*>(statementSymbol.get());
-      instructionSymbol.addressIndex = linkedResult.nAddressesEntered++; 
-      linkedResult.addressHolder[instructionSymbol.addressIndex] = linkedResult.maxAddress;
-      linkedResult.statementHolder[instructionSymbol.addressIndex] = &instructionSymbol;
-      // cant reallty do this because it gets reallocated every TU
-      //instructionSymbol.address = linkedResult.addressHolder.data() + instructionSymbol.addressIndex * sizeof(size_t);
-      linkedResult.maxAddress += instructionSymbol.instruction.m_byteLength;
-      instructionSymbol.byteSize = instructionSymbol.instruction.m_byteLength;
-      linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
-      break;
-    }
-    case KIND::RELAXOR:
-    {
-      auto& relaxorSymbol = *static_cast<Program::RelaxorSymbol*>(statementSymbol.get());
-      labelHelper.registerRelaxor(&relaxorSymbol, relaxorSymbol.relaxor.getLabelsReferencedFromConditionsInAllOptions()); //expression mentioned set, add KEEPING that to the expr class (base)
-      
-      relaxorSymbol.addressIndex = linkedResult.nAddressesEntered++; 
-
-      //for
-      for (const auto& option : relaxorSymbol.relaxor.options) {
-        for (auto& statement : option.optionStatements) {
-          statement->addressIndex = relaxorSymbol.addressIndex;
-        }
+    //for
+    for (const auto& option : relaxorSymbol.relaxor.options) {
+      size_t offset = relaxorSymbol.address;
+      for (auto& statement : option.optionStatements) {
+        statement->address = offset;
+        offset += statement->getByteSize();
       }
-
-      linkedResult.addressHolder[relaxorSymbol.addressIndex] = linkedResult.maxAddress;
-      linkedResult.statementHolder[relaxorSymbol.addressIndex] = &relaxorSymbol;
-
-      // relaxorSymbol.relaxor.worstCaseSize = 0;
-      // for (auto& option : relaxorSymbol.relaxor.options) {
-      //   relaxorSymbol.relaxor.worstCaseSize = std::max(option.sumByteSizeOfOption(), largest);
-      // }
-      // cant reallty do this because it gets reallocated every TU
-      //relaxorSymbol.address = linkedResult.addressHolder.data() + relaxorSymbol.addressIndex * sizeof(size_t);
-      linkedResult.maxAddress += relaxorSymbol.relaxor.worstCaseSize;
-      linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
-      break;
     }
-    default:
-      assert(false);
-      //just shouldnt happen and i raely cba to implement this error
-      break;
-    }
+
+    // linkedResult.addressHolder[relaxorSymbol.addressIndex] = linkedResult.maxAddress;
+    // linkedResult.statementHolder[relaxorSymbol.addressIndex] = &relaxorSymbol;
+
+    // relaxorSymbol.relaxor.worstCaseSize = 0;
+    // for (auto& option : relaxorSymbol.relaxor.options) {
+    //   relaxorSymbol.relaxor.worstCaseSize = std::max(option.sumByteSizeOfOption(), largest);
+    // }
+    // cant reallty do this because it gets reallocated every TU
+    //relaxorSymbol.address = linkedResult.addressHolder.data() + relaxorSymbol.addressIndex * sizeof(size_t);
+    // linkedResult.maxAddress += relaxorSymbol.relaxor.worstCaseSize;
+    // linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
+    break;
+  }
+  default:
+    assert(false);
+    //just shouldnt happen and i raely cba to implement this error
+    break;
   }
 }
+
+// void Linker::placeDefinitionSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit) {
+//   for (auto& definitionSymbol : translationUnit.m_definitionVector) {
+//     assert(definitionSymbol->getKind() == Program::StatementSymbol::Kind::DEFINITION);
+  
+    
+//   }
+// }
+
+// void Linker::placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit, ExpressionsByLabelHelper& labelHelper) {
+//   for (auto& statementSymbol : translationUnit.m_statementVector) {
+    
+//   }
+// }
 
 void Linker::checkForUndefinedIdentifiers(Program::TranslationUnit& translationUnit) {
   for (const auto& it : translationUnit.m_identifierFullNameMap) {
@@ -367,7 +390,7 @@ void Linker::resolveExpressions(Program::TranslationUnit& translationUnit, Linke
     translationUnit.m_unresolvedExpressions.pop();
 
     // std::cout << expr << '\n';
-    auto eval = expr.evaluate(linked.addressHolder, true);
+    auto eval = expr.evaluate(true);
     expr.setValue(eval.value);
     std::cout << expr.toString() << " value: " << eval.value << std::endl;
     labelHelper.registerExpression(&expr, eval.mentionedLabels);
@@ -387,7 +410,7 @@ void Linker::gentlyResolveExpressions(Program::TranslationUnit& translationUnit,
     copy.pop();
 
     // std::cout << expr << '\n';
-    auto eval = expr.evaluate(linked.addressHolder, true);
+    auto eval = expr.evaluate(true);
     expr.setValue(eval.value);
     std::cout << expr.toString() << " value: " << eval.value << std::endl;
     labelHelper.registerExpression(&expr, eval.mentionedLabels);
@@ -455,83 +478,114 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
     thisRelaxor.optionIndex = 0;
     while (
       (int)thisRelaxor.relaxor.options.size() > thisRelaxor.optionIndex
-      ) {
-        thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->evaluate(linked.addressHolder);
-        if (thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->value == 0)
-          thisRelaxor.optionIndex++;
-        else break;
-      }
-      
-      const size_t nextAddressIndex = thisRelaxor.addressIndex + 1;
-      
-      if (thisRelaxor.relaxor.options.size() <= thisRelaxor.optionIndex) {
-        thisRelaxor.optionIndex = -1;
-        continue;
-      } else if (thisRelaxor.optionIndex == original) {
-        continue;
-      } 
-      
-      
-      const int sizeChange = (original >= 0 ? thisRelaxor.relaxor.options[original].sumByteSizeOfOption() : thisRelaxor.relaxor.worstCaseSize) - thisRelaxor.relaxor.options[thisRelaxor.optionIndex].sumByteSizeOfOption();
-      linked.maxAddress -= sizeChange;
-
-      if (linked.addressHolder.size() <= nextAddressIndex) {
-        continue;
-      }
-      //did change, updating required
-      auto it = std::lower_bound(linked.addressHolder.begin(), linked.addressHolder.end(), linked.addressHolder[nextAddressIndex]);
-      
-      if (it != linked.addressHolder.end()) {
-        size_t index = it - linked.addressHolder.begin();
-        
-        // get all labels beyond the address of relaxor, 
-        auto labelIt = std::lower_bound(
-          linked.addressLabelHolder.begin(), 
-          linked.addressLabelHolder.end(), 
-          linked.addressHolder[nextAddressIndex],
-          [](const addressLabelPointerPair& item, int value) {
-            return *item.addressPtr < value;
-          }
-        );
-        
-        // mass increment
-        if (sizeChange != 0) {
-          for (size_t i = index; i < linked.addressHolder.size(); i++) {
-            linked.addressHolder[i] -= sizeChange;
-          }
-        }
-
-        
-        std::vector<std::string> labelNames;
-        labelNames.resize(labelIt - linked.addressLabelHolder.begin());
-        
-        size_t labelIndex = 0;
-        for (auto it2 = labelIt; it2 != linked.addressLabelHolder.end(); ++it2) {
-          labelNames[labelIndex++] = it2->labelPtr->labelObject->fullName();
-        }
-        //then evaluate dependant exprs
-        auto exprs = expressionHelper.getExpressionsReferencingTheseLabels(labelNames);
-        for (auto expr : exprs) {
-          expr->evaluate(linked.addressHolder, false);
-        }
-        // and add relaxors dependant to changed labels back to the start of the q
-        auto relaxors = expressionHelper.getRelaxorsReferencingTheseLabels(labelNames);
-        for (const auto relaxor : relaxors) {
-          if (relaxorQueueSet.find(relaxor) == relaxorQueueSet.end()) {
-            relaxorQueueSet.emplace(relaxor);
-            relaxorQueue.push_front(relaxor);
-          }
-        }
-      }
-      
+    ) {
+      thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->evaluate();
+      if (thisRelaxor.relaxor.options[thisRelaxor.optionIndex].conditionExpr->value == 0)
+        thisRelaxor.optionIndex++;
+      else break;
     }
+      
+      
+    if (thisRelaxor.relaxor.options.size() <= thisRelaxor.optionIndex) {
+      thisRelaxor.optionIndex = -1;
+      continue;
+    } else if (thisRelaxor.optionIndex == original) {
+      continue;
+    } 
     
+    
+    const int sizeChange = (original >= 0 ? thisRelaxor.relaxor.options[original].sumByteSizeOfOption() : thisRelaxor.relaxor.worstCaseSize) - thisRelaxor.relaxor.options[thisRelaxor.optionIndex].sumByteSizeOfOption();
+    // linked.maxAddress -= sizeChange;]
+    linked.currentHighestAddress -= sizeChange;
+
+    // for (auto it = linked.statementMap.begin();
+    //     it != linked.statementMap.end();
+    //     ++it) {
+    //   std::cout << it->stmt->address << '\n';
+    // }
+    
+    auto nextAddressIterator = linked.statementMap.find(thisRelaxor.address);
+    
+    // auto copy = nextAddressIterator.getStack();
+
+    // while (!copy.empty()) {
+    //   std::cout << copy.top()->value->stmt->address << ' ';
+    //   copy.pop();
+    // }
+
+    // std::cout << '\n';
+    
+    if (nextAddressIterator == linked.statementMap.end()) {
+      continue;
+    }
+
+    ++nextAddressIterator;
+
+    // if (nextAddressIterator != linked.statementMap.end()) {
+    //   std::cout << "NEXT = " << nextAddressIterator->stmt->address << '\n';
+    // }
+    
+
+    if (nextAddressIterator == linked.statementMap.end()) {
+      continue;
+    }
+
+    size_t nextAddress = nextAddressIterator->stmt->address;
+    //did change, updating required
+    // auto it = std::lower_bound(linked.addressHolder.begin(), linked.addressHolder.end(), linked.addressHolder[nextAddressIndex]);
+    
+    // if (it != linked.addressHolder.end()) {
+    //   size_t index = it - linked.addressHolder.begin();
+      
+      // get all labels beyond the address of relaxor, 
+
+    auto labelIt = std::lower_bound(
+      linked.addressLabelHolder.begin(), 
+      linked.addressLabelHolder.end(), 
+      nextAddress,
+      [](const addressLabelPointerPair& item, int value) {
+        return *item.addressPtr < value;
+      }
+    );
+    
+    // mass increment
+    if (sizeChange != 0) {
+      for (; nextAddressIterator != linked.statementMap.end(); ++nextAddressIterator) {
+        // linked.addressHolder[i] -= sizeChange;
+        nextAddressIterator->stmt->address -= sizeChange;
+      }
+    }
+
+    
+    std::vector<std::string> labelNames;
+    labelNames.resize(labelIt - linked.addressLabelHolder.begin());
+    
+    size_t labelIndex = 0;
+    for (auto it2 = labelIt; it2 != linked.addressLabelHolder.end(); ++it2) {
+      labelNames[labelIndex++] = it2->labelPtr->labelObject->fullName();
+    }
+    //then evaluate dependant exprs
+    auto exprs = expressionHelper.getExpressionsReferencingTheseLabels(labelNames);
+    for (auto expr : exprs) {
+      expr->evaluate(false);
+    }
+    // and add relaxors dependant to changed labels back to the start of the q
+    auto relaxors = expressionHelper.getRelaxorsReferencingTheseLabels(labelNames);
+    for (const auto relaxor : relaxors) {
+      if (relaxorQueueSet.find(relaxor) == relaxorQueueSet.end()) {
+        relaxorQueueSet.emplace(relaxor);
+        relaxorQueue.push_front(relaxor);
+      }
+    }
+      
   }
+    
+}
 
 
 void Linker::fillDataStructures() {
   for (const auto& translationUnit : m_allTranslationUnits) {
-  for (auto& definitionSymbol : translationUnit->m_definitionVector) {
+  for (auto& definitionSymbol : translationUnit->m_definitionSymbols) {
     Program::DataObject* dataPtr = definitionSymbol->dataObject.get();
     if (dataPtr->rawDataValid) continue;
     if (dataPtr->elementCountExpression) {

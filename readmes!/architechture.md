@@ -38,8 +38,23 @@ I'm pretty sure this is because RWDS should only be asserted by the data cache w
 
 I think this is only as an optimisation for startup performance, where translation and passthrough are disabled so that the instruction cache doesn't stall the system trying to fetch data it won't even use (because instructions are being read from the startup cache). So this may not actually be needed, and could be a point for saving components, just at the cost of slower startup. (but it's startup, it's literally negligible.)
 
-
-
 ## 4.X - Writeback
 
 ## 5.X - DMA and Devices
+
+### 5.1 - Memory Regions
+
+Raw Allocations:
+- System Memory [0x00000000 - 0x03ffffff] 
+- Boot ROM [0x04000000 - 0x04001fff] 
+
+Hardware Allocations:
+- Context Page Translation Index [0x00000000 - 0x00000fff]
+  > Access by: ContextId << 4 + MemoryAddress[24:26] << 1  
+  > Each entry contains a page index, where that page contains 2048 more page indexes where each page ACTUALLY is located.  
+  > (26 bit memory addresses are split as follows)
+  > (MSB) 000 00000000000 000000000000  
+  > (MSB TO LSB)
+  > - This page translation table.  
+  > - The index in the page from this page table.  
+  > - Page offset.  

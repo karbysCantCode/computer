@@ -2,6 +2,7 @@
 
 #include "Spasm/Spasm.hpp"
 #include "Spasm/Lexer.hpp"
+#include "Helpers/BinaryTree.hpp"
 #include <filesystem>
 #include <set>
 
@@ -24,10 +25,11 @@ struct addressLabelPointerPair {
 
 struct LinkedResult {
   std::queue<Program::TranslationUnit*> translationUnitQueue;
-  size_t maxAddress = 0;
-  size_t programDataStartAddress = 0;
-  size_t nAddressesEntered = 0;
-  std::vector<size_t> addressHolder;
+  size_t currentHighestAddress = 0;
+  BinarySearchTree<Program::TranslationUnit::SymbolWrapper, size_t, Program::TranslationUnit::CompareSymbolAddress> statementMap;
+  // size_t programDataStartAddress = 0;
+  // size_t nAddressesEntered = 0;
+  // std::vector<size_t> addressHolder;
   std::vector<addressLabelPointerPair> addressLabelHolder;
   // same index as address is the corresponding statement symnol
   std::vector<Program::StatementSymbol*> statementHolder;
@@ -48,15 +50,20 @@ private:
 };
 
   LinkedResult run(
-    size_t entrySymbolSetupByteLength,
     Program &program,
     Debug::FullLogger* logger
   );
 
-  void linkDefinitionSymbols(
-    Program::TranslationUnit&, 
-    LinkedResult&,
-    ExpressionsByLabelHelper&
+  // void linkDefinitionSymbols(
+  //   Program::TranslationUnit&, 
+  //   LinkedResult&,
+  //   ExpressionsByLabelHelper&
+  // );
+
+  void placeSymbols(
+    LinkedResult& linkedResult, 
+    Program::TranslationUnit& translationUnit,
+    ExpressionsByLabelHelper& labelHelper
   );
 
   void inheritIncludedIdentifers(
@@ -94,9 +101,9 @@ private:
   bool iteratorAlreadyInFullNameMap(const Program::TranslationUnit& translationUnit, Program::IdentifierMapStringType::iterator iterator) const {return iterator != translationUnit.m_identifierFullNameMap.end();}
   bool nameAlreadyInGlobalMap(const Program::TranslationUnit& translationUnit, const std::string_view& fullname) const {return translationUnit.m_identifierMap.find(fullname) != translationUnit.m_identifierMap.end();}
 
-  void placeDefinitionSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit);
+  // void placeDefinitionSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit);
 
-  void placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit, ExpressionsByLabelHelper& labelHelper);
+  // void placeOtherSymbols(LinkedResult& linkedResult, Program::TranslationUnit& translationUnit, ExpressionsByLabelHelper& labelHelper);
   void checkForUndefinedIdentifiers(Program::TranslationUnit& translationUnit);
   void resolveExpressions(Program::TranslationUnit& translationUnit,  LinkedResult& , ExpressionsByLabelHelper& labelHelper);
   void resolveRelaxors(Program& program, LinkedResult& linked, ExpressionsByLabelHelper& expressionHelper);

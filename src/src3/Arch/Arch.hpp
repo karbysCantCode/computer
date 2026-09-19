@@ -104,6 +104,7 @@ class Architecture {
   enum class KeywordType {
     INSTRUCTION,
     REGISTER,
+    ORG,
     FORMAT,
     DATATYPE,
     NONE
@@ -115,7 +116,8 @@ class Architecture {
     {"ARRAY", KeywordType::DATATYPE},
     {"BYTE", KeywordType::DATATYPE},
     {"WORD", KeywordType::DATATYPE},
-    {"DWORD", KeywordType::DATATYPE}
+    {"DWORD", KeywordType::DATATYPE},
+    {"org", KeywordType::ORG}
   };
 
   KeywordType getKeywordTypeOfWord(const std::string_view& word);

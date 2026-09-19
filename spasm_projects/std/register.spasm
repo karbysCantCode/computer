@@ -1,0 +1,6 @@
+std_init_stack_pointer() {
+  movi r15, 0x03fff ; std_init_stack_pointer destroys r15.
+  mov sph, r15
+  movi r15, 0xfffe
+  mov spl, r15
+}

@@ -58,19 +58,21 @@ namespace Spasm {
         Parser parser;
         parser.ParseTokens(translationUnit.processedTokens, arch, translationUnit, program, &logger);
         
+        translationUnit.getStatementMap().rebalance();
+
         if (translationUnit.m_includedFiles.size() == 0) {
           linker.addIndependentTranslationUnits(&translationUnit);
         }
       }
 
       // update here and generator.run
-      const size_t entrySymbolJumpByteLength = target.second.m_entrySymbol.empty() ? 0 : 10;
+      // const size_t entrySymbolJumpByteLength = target.second.m_entrySymbol.empty() ? 0 : 10;
       
-      Linker::LinkedResult linkedResult = linker.run(entrySymbolJumpByteLength, program, &logger);
+      Linker::LinkedResult linkedResult = linker.run(program, &logger);
       
       OutputGenerator generator;
 
-      generator.run(target.second, linker, linkedResult, entrySymbolJumpByteLength, &logger);
+      generator.run(target.second, linker, linkedResult, &logger);
 
       if (!logger.Errors.isEmpty()) {
         logger.Errors.logMessage("Compilation aborted after linking due to error(s) in compilation pipeline. (not exclusively linker)");
@@ -99,7 +101,7 @@ namespace Spasm {
     }
   }
 
-Program::EvaluateTriple Program::IdentifierExpr::evaluate(std::vector<size_t>& addressHolder, bool getMentionedLabels) {
+Program::EvaluateTriple Program::IdentifierExpr::evaluate(bool getMentionedLabels) {
   std::string constructedName;
   Program::IdentifierObject* lastIdentifierObject;
   auto pathCopy = identifierPath;
@@ -127,19 +129,19 @@ Program::EvaluateTriple Program::IdentifierExpr::evaluate(std::vector<size_t>& a
   //   return {0, std::format("Identifier \"{}\" is not resolved before it is referenced here. (potentially partial identifier path)", constructedName)};
   // }
 
-  value = addressHolder[lastIdentifierObject->addressIndex];
+  value = *lastIdentifierObject->addressPtr;
   setEvaluated();
   return {value, "", {constructedName}};
 }
 
-Program::EvaluateTriple Program::UnaryExpr::evaluate(std::vector<size_t>& addressHolder, bool getMentionedLabels) {
+Program::EvaluateTriple Program::UnaryExpr::evaluate(bool getMentionedLabels) {
   if (!right) {
     return {0, "Expression argument doesn't exist.", {}};
   }
 
   EvaluateTriple triple;
 
-  const auto eval = right->evaluate(addressHolder, getMentionedLabels);
+  const auto eval = right->evaluate(getMentionedLabels);
   switch (op) {
     case Token::Type::SUBTRACT:
       triple = {-eval.value, eval.error, eval.mentionedLabels};
@@ -148,7 +150,7 @@ Program::EvaluateTriple Program::UnaryExpr::evaluate(std::vector<size_t>& addres
       triple = {~eval.value, eval.error, eval.mentionedLabels};
       break;
     case Token::Type::RELATIVEOPERATOR:
-      triple = {eval.value - ((int)addressHolder[*addressIndexPtr] + (int)relativeAddressOffset), eval.error, eval.mentionedLabels};
+      triple = {eval.value - ((int)*addressPtr + (int)relativeAddressOffset), eval.error, eval.mentionedLabels};
       break;
     case Token::Type::ABSOLUTE:
       triple = {std::abs(eval.value), eval.error, eval.mentionedLabels};
@@ -162,7 +164,7 @@ Program::EvaluateTriple Program::UnaryExpr::evaluate(std::vector<size_t>& addres
   return triple;
 }
 
-Program::EvaluateTriple Program::BinaryExpr::evaluate(std::vector<size_t>& addressHolder, bool getMentionedLabels) {
+Program::EvaluateTriple Program::BinaryExpr::evaluate(bool getMentionedLabels) {
   if (!right) {
     return {0, "Expression right argument doesn't exist.", {}};
   }
@@ -172,8 +174,8 @@ Program::EvaluateTriple Program::BinaryExpr::evaluate(std::vector<size_t>& addre
   
   EvaluateTriple triple;
 
-  const auto evalLeft = left->evaluate(addressHolder, getMentionedLabels);
-  const auto evalRight = right->evaluate(addressHolder, getMentionedLabels);
+  const auto evalLeft = left->evaluate(getMentionedLabels);
+  const auto evalRight = right->evaluate(getMentionedLabels);
 
   //merge label set
   auto labels = std::move(evalLeft.mentionedLabels);
@@ -291,6 +293,45 @@ std::string Program::IdentifierObject::getNDepthName(size_t depth) const {
   // return std::string_view(start, end - start);
 }
 
+size_t Program::RelaxorSymbol::getByteSize() {
+  if (optionIndex < 0)
+    return relaxor.worstCaseSize;
+  return relaxor.options[optionIndex].sumByteSizeOfOption();
+}
+
+size_t Program::DefinitionSymbol::getByteSize() {
+  if (!dataObject) return 0;
+  if (dataObject->elementCountExpression->containsLabels() || dataObject->elementSizeExpression->containsLabels())  {
+    return 0;
+    //error
+  }
+  auto ceval = dataObject->elementCountExpression->evaluate();
+  if (ceval.error.length()) {
+    //bad
+  }
+
+  dataObject->elementCount = ceval.value;
+
+  auto seval = dataObject->elementSizeExpression->evaluate();
+  if (seval.error.length()) {
+    //bad
+  }
+
+  dataObject->elementSize = seval.value;
+
+  return dataObject->elementCount * dataObject->elementSize + dataObject->elementCount * dataObject->elementSize % 2;
+}
+
+void Program::TranslationUnit::addStatementToUnit(std::unique_ptr<StatementSymbol> stmt) {
+  SymbolWrapper* symbol = new SymbolWrapper;
+  stmt->address = currentAddress;
+  currentAddress += stmt->getByteSize();
+  symbol->stmt = std::move(stmt);
+  // m_statementMap.emplace(currentAddress,std::move(stmt));
+  
+  m_statementMap.insert(symbol);
+}
+
 std::vector<std::string_view> Program::IdentifierObject::getNDepthNameVector(size_t depth) const {
   depth = depth == 0 ? 1 : depth;
   depth = depth > nameSegments.size() ? nameSegments.size() : depth;
@@ -302,9 +343,8 @@ std::string_view Program::IdentifierObject::name() const {
 }
 
 void Program::IdentifierObject::assimilate(IdentifierObject& identifier) {
-  addressIndex = identifier.addressIndex;
+  addressPtr   = identifier.addressPtr;
   nameSegments = identifier.nameSegments;
-  addressIndex = identifier.addressIndex;
   parent       = identifier.parent;
   children.merge(identifier.children);
 }
@@ -325,10 +365,10 @@ void Spasm::Program::debugPrint() const {
 
     const TranslationUnit& tu = *tuPtr;
 
-    std::cout << "\n  Statements:\n";
-    for (const auto& stmt : tu.m_statementVector) {
-      debugPrintStatement(stmt.get(), 2);
-    }
+    // std::cout << "\n  Statements:\n";
+    // for (const auto& stmt : tu.m_statementVector) {
+    //   debugPrintStatement(stmt.get(), 2);
+    // }
 
     std::cout << "\n  Identifiers:\n";
     for (const auto& [name, obj] : tu.m_identifierMap) {
@@ -377,7 +417,7 @@ void Spasm::Program::debugPrintStatement(const StatementSymbol* stmt, int indent
 void Spasm::Program::debugPrintIdentifier(const IdentifierObject* obj, int indentLevel) const {
   indent(indentLevel);
   std::cout << "Name: " << obj->name()
-            << " Address: " << obj->addressIndex
+            << " Address: " << *obj->addressPtr
             //<< " Resolved: " << obj->addressResolved
             << "\n";
 

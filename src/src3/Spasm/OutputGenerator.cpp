@@ -7,51 +7,52 @@ void OutputGenerator::run(
   SMake::Target& target,
   Linker& linker,
   Linker::LinkedResult& linkedResult,
-  size_t entrySymbolJumpByteLength,
+  // size_t entrySymbolJumpByteLength,
   Debug::FullLogger* logger
 ) {
   p_logger = logger;
 
-  if (linkedResult.maxAddress == 0) {
-    return;
-  }
+  // if (linkedResult.currentHighestAddress == 0) {
+  //   return;
+  // }
 
   std::vector<uint8_t> binaryData;
-  binaryData.resize(linkedResult.maxAddress);
+  binaryData.resize(linkedResult.currentHighestAddress);
 
   // jump to entry symbol bytes
-  Spasm::Program::IdentifierMapStringType::iterator it;
-  bool foundIt = false;
-  for (const auto& translationUnit : linker.m_allTranslationUnits) {
-    auto localIt = translationUnit->m_identifierFullNameMap.find(std::string(target.m_entrySymbol + '.'));
-    if (localIt != translationUnit->m_identifierFullNameMap.end()) {
-      it = localIt;
-      foundIt = true;
-      break;
-    }
-  }
-  if (foundIt) {
-    size_t address = linkedResult.addressHolder[(*it->second)->addressIndex];
-    const uint8_t header[] = { 
-      0x00, 0x6F, 
-        static_cast<uint8_t>( address        & 0xff ),
-        static_cast<uint8_t>((address >> 8 ) & 0xff ),
-      0x80, 0x6F, 
-        static_cast<uint8_t>((address >> 16) & 0xff ),
-        static_cast<uint8_t>((address >> 24) & 0xff ),
-      0x10, 0xa8,
-    };
-    std::memcpy(binaryData.data(), header, entrySymbolJumpByteLength);
-  }
+  // Spasm::Program::IdentifierMapStringType::iterator it;
+  // bool foundIt = false;
+  // for (const auto& translationUnit : linker.m_allTranslationUnits) {
+  //   auto localIt = translationUnit->m_identifierFullNameMap.find(std::string(target.m_entrySymbol + '.'));
+  //   if (localIt != translationUnit->m_identifierFullNameMap.end()) {
+  //     it = localIt;
+  //     foundIt = true;
+  //     break;
+  //   }
+  // }
+  // if (foundIt) {
+  //   size_t address = linkedResult.addressHolder[(*it->second)->addressIndex];
+  //   const uint8_t header[] = { 
+  //     0x00, 0x6F, 
+  //       static_cast<uint8_t>( address        & 0xff ),
+  //       static_cast<uint8_t>((address >> 8 ) & 0xff ),
+  //     0x80, 0x6F, 
+  //       static_cast<uint8_t>((address >> 16) & 0xff ),
+  //       static_cast<uint8_t>((address >> 24) & 0xff ),
+  //     0x10, 0xa8,
+  //   };
+  //   std::memcpy(binaryData.data(), header, entrySymbolJumpByteLength);
+  // }
 
 
   while (!linkedResult.translationUnitQueue.empty()) {
-    const auto& translationUnit = *linkedResult.translationUnitQueue.front();
+    auto& translationUnit = *linkedResult.translationUnitQueue.front();
     linkedResult.translationUnitQueue.pop();
 
     fillBytesFromDataDeclarations(linkedResult, translationUnit, binaryData);
 
-    for (const auto& statement : translationUnit.m_statementVector) {
+    for (auto& wrap : translationUnit.getStatementMap()) {
+      auto& statement = wrap.stmt;
       switch (statement->getKind())
       {
       case Program::StatementSymbol::Kind::INSTRUCTION: {
@@ -61,7 +62,8 @@ void OutputGenerator::run(
       }
       case Program::StatementSymbol::Kind::RELAXOR: {
         auto& relaxorStatement = *static_cast<Program::RelaxorSymbol*>(statement.get());
-        size_t instructionByteOffset = linkedResult.addressHolder[relaxorStatement.addressIndex];
+        // size_t instructionByteOffset = 
+        // size_t instructionByteOffset = linkedResult.addressHolder[relaxorStatement.addressIndex];
         while (!p_logger->Errors.isEmpty()) {
           std::cout << p_logger->Errors.consumeMessage() << std::endl;
         }
@@ -73,10 +75,11 @@ void OutputGenerator::run(
           }
 
           auto& instructionStatement = *static_cast<Program::InstructionSymbol*>(instruction.get());
-          fillInstruction(linkedResult, instructionStatement, binaryData, instructionByteOffset);
-          instructionByteOffset += instructionStatement.byteSize;
-          //align if not aligned
-          instructionByteOffset += (instructionByteOffset % 2) == 1;
+          fillInstruction(linkedResult, instructionStatement, binaryData);
+          // fillInstruction(linkedResult, instructionStatement, binaryData, instructionByteOffset);
+          // instructionByteOffset += instructionStatement.byteSize;
+          // //align if not aligned
+          // instructionByteOffset += (instructionByteOffset % 2) == 1;
         }
         
         break;
@@ -109,11 +112,19 @@ void OutputGenerator::run(
  
   std::cout << std::dec << std::endl;
   
-  FileHelper::writeBytesToFile(binaryData, std::filesystem::weakly_canonical(std::filesystem::path(target.m_outputDirectory) / std::filesystem::path(target.m_outputName)), p_logger);
+  std::filesystem::path outputPath =
+    std::filesystem::path(target.m_outputDirectory) /
+    target.m_outputName;
+
+  outputPath = std::filesystem::weakly_canonical(outputPath);
+
+  // logWarning(std::format("Writing binary to: {}", outputPath.string()));
+
+  FileHelper::writeBytesToFile(binaryData, outputPath, p_logger);
 }
 
 void OutputGenerator::fillBytesFromDataDeclarations(const Linker::LinkedResult& linkedResult, const Program::TranslationUnit& translationUnit, std::vector<uint8_t>& binaryData) {
-  for (const auto& statement : translationUnit.m_definitionVector) {
+  for (const auto& statement : translationUnit.m_definitionSymbols) {
     auto& dataObject = *statement->dataObject;
     if (!dataObject.rawDataValid) {
       //make raw data valid
@@ -133,7 +144,8 @@ void OutputGenerator::fillBytesFromDataDeclarations(const Linker::LinkedResult& 
     }
     //raw data now valid
     //pack binary
-    std::memcpy(binaryData.data() + linkedResult.addressHolder[dataObject.addressIndex], dataObject.data.data(), dataObject.data.size());
+    std::memcpy(binaryData.data() + statement->address, dataObject.data.data(), dataObject.data.size());
+    // std::memcpy(binaryData.data() + linkedResult.addressHolder[dataObject.addressIndex], dataObject.data.data(), dataObject.data.size());
   }
     
 }
@@ -213,7 +225,8 @@ void OutputGenerator::fillInstruction(Linker::LinkedResult& linkedResult, Progra
     }
   }
 
-  const size_t& address = -1 < addressOverride ? addressOverride : linkedResult.addressHolder[instructionStatement.addressIndex];
+  const size_t& address = -1 < addressOverride ? addressOverride : instructionStatement.address;
+  // const size_t& address = -1 < addressOverride ? addressOverride : linkedResult.addressHolder[instructionStatement.addressIndex];
 
   std::string extraString = " ";
   extraString.reserve(extraData.size() * 2);

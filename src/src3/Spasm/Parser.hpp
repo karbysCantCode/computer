@@ -51,9 +51,9 @@ class Parser {
   std::unique_ptr<Program::Operand> parseExpectImmediate(TokenHolder&,Program::TranslationUnit&, size_t*, size_t);
   std::unique_ptr<Program::Operand> convertConstantStringToOperand(const Arch::Architecture&, const Arch::Architecture::ConstantStringOperand&);
 
-  #define ExpressionParserArgumentTypes TokenHolder& tokenHolder, size_t* addressIndex, size_t expressionOffset, Program::IdentifierMapType* identifierMap
-  #define ExpressionParserArguments tokenHolder, addressIndex, expressionOffset, identifierMap
-  #define ExpressionParserConstructorArguments addressIndex, expressionOffset, identifierMap
+  #define ExpressionParserArgumentTypes TokenHolder& tokenHolder, size_t* addressPtr, size_t expressionOffset, Program::IdentifierMapType* identifierMap
+  #define ExpressionParserArguments tokenHolder, addressPtr, expressionOffset, identifierMap
+  #define ExpressionParserConstructorArguments addressPtr, expressionOffset, identifierMap
   std::unique_ptr<Program::Expr> makeErrorExpression(const Token&, const std::string&, ExpressionParserArgumentTypes);
   std::unique_ptr<Program::Operand> makeErrorOperand(const Token&, const std::string&, size_t*, size_t, Program::IdentifierMapType*);
   
@@ -95,5 +95,6 @@ class Parser {
   bool isRelaxorConditional(Token::NicheType type);
   void parseRelaxorCondition(TokenHolder&, Program::RelaxorDefinition::RelaxorOptionPair&, size_t*, Program::TranslationUnit&);
   void parseRelaxorCodeBlock(TokenHolder&,  Program::RelaxorSymbol&, Program::RelaxorDefinition::RelaxorOptionPair&, Arch::Architecture&, Program::TranslationUnit&, Program&);
+  void parseOrg(TokenHolder&, Arch::Architecture&, Program::TranslationUnit&, Program&);
 };
 }
