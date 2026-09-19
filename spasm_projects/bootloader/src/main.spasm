@@ -20,7 +20,7 @@ adi   r1, r1, 1          ; increment counter
 shli  4, r3, r1          ; extended shifting with r3 lowbyte
 mov   mol, r3            ; increment 
 cmp   r1, r2              
-brcis c_lo, cache_init_loop ; branch if r1 < r2
+brcis c_lo, $$$cache_init_loop ; branch if r1 < r2
 
 
 copy_to_ram:
@@ -28,13 +28,13 @@ copy_to_ram:
 movi r1, bootLength    ; should be less than 65535
 mov r2, r0
 copy_to_ram.loop:
-mvptrtmo [boot + ROM_START_ADDRESS]  ; move boot to MO
+mvptrtmo boot + ROM_START_ADDRESS  ; move boot to MO
 lear2 r3, r2
 mvptrtmo BOOT_PROGRAM_RAM_DESTINATION
 stear2 r3, r2
 adi r2, r2, 2
 cmp r2, r1
-brcis c_lo, copy_to_ram.loop ; branch if r2 < r1
+brcis c_lo, $$$copy_to_ram.loop ; branch if r2 < r1
 
 switch_to_ram_execution:
 @define RAISE_FLAG_USE_RAM 0b0001000000000000

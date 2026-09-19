@@ -37,7 +37,7 @@ TokenHolder Preprocessor::run(TokenHolder& tokenHolder, SMake::Target& target, S
         // processStack.push(temporaryHolder.get());
         // temporaryOwner.push_back(std::move(temporaryHolder));
 
-        const auto temporaryHolder = processMacroInvocation(p_logger, translationUnit, it->second.get(), tokenHolder, myMacroMap);
+        const auto temporaryHolder = processMacroInvocation(p_logger, translationUnit, it->second.get(), tokenHolder, myMacroMap, token.location);
         newTokenHolder.m_tokens.insert(newTokenHolder.m_tokens.end(), temporaryHolder.m_tokens.begin(), temporaryHolder.m_tokens.end());
 
         //invokedMacros.insert(token.value);
@@ -71,7 +71,7 @@ TokenHolder Preprocessor::run(TokenHolder& tokenHolder, SMake::Target& target, S
   return newTokenHolder;
 }
 
-TokenHolder Preprocessor::processMacroInvocation(Debug::FullLogger* logger, Program::TranslationUnit& translationUnit, AbstractMacro* macro, TokenHolder& tokenHolder, InnerMacroMapType& macroMap) {
+TokenHolder Preprocessor::processMacroInvocation(Debug::FullLogger* logger, Program::TranslationUnit& translationUnit, AbstractMacro* macro, TokenHolder& tokenHolder, InnerMacroMapType& macroMap, const SourceLocation& invocationLoc) {
   TokenHolder newTokenHolder;
   macro->invokeCount++;
   switch (macro->getKind())
@@ -88,14 +88,15 @@ TokenHolder Preprocessor::processMacroInvocation(Debug::FullLogger* logger, Prog
         const auto it = macroMap.find(token.value);
         if (it != macroMap.end()) {
           if (it->second->getKind() == AbstractMacro::Kind::REPLACEMENT) {
-            const TokenHolder replacementTokens = processMacroInvocation(logger, translationUnit, it->second.get(), tokenHolder, macroMap);
+            const TokenHolder replacementTokens = processMacroInvocation(logger, translationUnit, it->second.get(), tokenHolder, macroMap, token.location);
             currentArgument.insert(currentArgument.end(), replacementTokens.m_tokens.begin(), replacementTokens.m_tokens.end());
             continue;
           } else {
             logError(logger, token, std::format("Function macros cannot be passed as arguments into function macros."));
           }
+        } else {
+          currentArgument.push_back(token);
         }
-        currentArgument.push_back(token);
       }
       if (tokenHolder.match(Token::Type::COMMA)) {
         tokenHolder.skip();
@@ -103,18 +104,19 @@ TokenHolder Preprocessor::processMacroInvocation(Debug::FullLogger* logger, Prog
       arguments.push_back(currentArgument);
     }
 
-    functionMacro->fillWithReplacedContents(logger, translationUnit, newTokenHolder, macroMap, arguments);
+    functionMacro->fillWithReplacedContents(logger, translationUnit, newTokenHolder, macroMap, arguments, invocationLoc);
   }
   break;
   case AbstractMacro::Kind::REPLACEMENT:
     {
       //auto replacementMacro = static_cast<ReplacementMacro*>(macro);
       // handle replacement macro
-      newTokenHolder.m_tokens.insert(
-        newTokenHolder.m_tokens.end(),
-        macro->contents.m_tokens.begin(),
-        macro->contents.m_tokens.end()
-      );
+      newTokenHolder.m_tokens.reserve(newTokenHolder.m_tokens.size() + macro->contents.m_tokens.size());
+      for (const auto& token : macro->contents.m_tokens) {
+        Token inheritedToken = token;
+        inheritedToken.location = invocationLoc;
+        newTokenHolder.m_tokens.push_back(inheritedToken);
+      }
     }
     break;
   
@@ -153,7 +155,7 @@ TokenHolder Preprocessor::recurseDefineContents(AbstractMacro* macro, InnerMacro
             continue;
           }
 
-          auto temporaryHolder = std::make_unique<TokenHolder>(processMacroInvocation(p_logger, translationUnit, it->second.get(), currentHolder, macroMap));
+          auto temporaryHolder = std::make_unique<TokenHolder>(processMacroInvocation(p_logger, translationUnit, it->second.get(), currentHolder, macroMap, token.location));
           processStack.push(temporaryHolder.get());
           temporaryOwner.push_back(std::move(temporaryHolder));
 
@@ -322,7 +324,7 @@ Preprocessor::ReplacementMacro Preprocessor::parseReplacementMacroDefinition(Tok
   return macro;
 }
 
-bool Preprocessor::FunctionMacro::fillWithReplacedContents(Debug::FullLogger* logger, Program::TranslationUnit& translationUnit, TokenHolder& tokenHolder, InnerMacroMapType& macroMap, std::vector<std::vector<Token>> replacementArgs) {
+bool Preprocessor::FunctionMacro::fillWithReplacedContents(Debug::FullLogger* logger, Program::TranslationUnit& translationUnit, TokenHolder& tokenHolder, InnerMacroMapType& macroMap, std::vector<std::vector<Token>> replacementArgs, const SourceLocation& invocationLoc) {
   if (replacementArgs.size() != arguments.size()) {
     return false;
   }
@@ -341,10 +343,12 @@ bool Preprocessor::FunctionMacro::fillWithReplacedContents(Debug::FullLogger* lo
       );
     } else if (token.nicheType == Token::NicheType::MACRO_UNIQUE) {
       auto str = std::make_unique<std::string>('.' + getMangledName() + std::string(token.value));
-      fpass.m_tokens.emplace_back(std::string_view(str->data(), str->size()), Token::Type::IDENTIFIER, token.location);
+      fpass.m_tokens.emplace_back(std::string_view(str->data(), str->size()), Token::Type::IDENTIFIER, invocationLoc);
       translationUnit.m_stringOwner.push_back(std::move(str));
     } else {
-      fpass.m_tokens.push_back(token);
+      Token inheritedToken = token;
+      inheritedToken.location = invocationLoc;
+      fpass.m_tokens.push_back(inheritedToken);
     }
   }
 
@@ -352,7 +356,7 @@ bool Preprocessor::FunctionMacro::fillWithReplacedContents(Debug::FullLogger* lo
     const auto& token = fpass.consume();
     const auto it = macroMap.find(token.value);
     if (it != macroMap.end()) {
-      const auto temporary = processMacroInvocation(logger, translationUnit,it->second.get(), fpass, macroMap);
+      const auto temporary = processMacroInvocation(logger, translationUnit,it->second.get(), fpass, macroMap, token.location);
       tokenHolder.m_tokens.insert(
         tokenHolder.m_tokens.end(),
         temporary.m_tokens.begin(),

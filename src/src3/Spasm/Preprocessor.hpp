@@ -49,7 +49,7 @@ class Preprocessor {
     std::map<std::string_view, size_t> arguments;
 
     virtual Kind getKind() const override {return Kind::FUNCTION;}
-    bool fillWithReplacedContents(Debug::FullLogger* logger, Program::TranslationUnit&, TokenHolder& tokenHolder, InnerMacroMapType& macroMap, std::vector<std::vector<Token>> replacementArgs);
+    bool fillWithReplacedContents(Debug::FullLogger* logger, Program::TranslationUnit&, TokenHolder& tokenHolder, InnerMacroMapType& macroMap, std::vector<std::vector<Token>> replacementArgs, const SourceLocation& invocationLoc);
     void addArgument(const std::string_view arg) {arguments.emplace(arg, arguments.size());}
     
     FunctionMacro(const Token& defTok) : AbstractMacro(defTok) {}
@@ -100,7 +100,7 @@ class Preprocessor {
 
   FunctionMacro parseFunctionMacroDefinition(TokenHolder&, TokenHolder&);
   ReplacementMacro parseReplacementMacroDefinition(TokenHolder&, TokenHolder&);
-  static TokenHolder processMacroInvocation(Debug::FullLogger* logger, Program::TranslationUnit&, AbstractMacro*, TokenHolder&, InnerMacroMapType&);
+  static TokenHolder processMacroInvocation(Debug::FullLogger* logger, Program::TranslationUnit&, AbstractMacro*, TokenHolder&, InnerMacroMapType&, const SourceLocation& invocationLoc);
   TokenHolder recurseDefineContents(
     AbstractMacro* macro,
     InnerMacroMapType& macroMap, 

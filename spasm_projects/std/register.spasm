@@ -29,6 +29,6 @@
 
 @define mvptrtmo (ptrLabel) {
   ; move pointer to mo register
-  movi  mol, [ptrLabel & 0xffff]
-  movi  moh, [(ptrLabel & 0xffff0000) >> 16]
+  movi  mol, [(ptrLabel) & 0xffff]
+  movi  moh, [((ptrLabel) & 0xffff0000) >> 16]
 }

@@ -83,10 +83,10 @@ clz  2 24 two   REG rd r0-r15 REG ra r0-r15
 ; data flow
 ; #######
 
-mov  2 26 two    REG rd r0-r15<mo<sp<fp<gp<ctx<prv<mmio<vm<mol<spl<fpl<gpl<moh<sph<fph<gph REG rs r0-r15<mo<sp<fp<gp<ctx<prv<mmio<vm<mol<spl<fpl<gpl<moh<sph<fph<gph
-movi 4 27 two    REG rd r0-r15<ctx<prv<mmio<vm<mol<spl<fpl<gpl<moh<sph<fph<gph CONST 0 IMMX 2 immediate 0:65535
+mov  2 26 two    REG rd r0-r15<mo<sp<fp<gp<sreg1<sreg2<sreg3<sreg4<mol<spl<fpl<gpl<moh<sph<fph<gph REG rs r0-r15<mo<sp<fp<gp<sreg1<sreg2<sreg3<sreg4<mol<spl<fpl<gpl<moh<sph<fph<gph
+movi 4 27 two    REG rd r0-r15<sreg1<sreg2<sreg3<sreg4<mol<spl<fpl<gpl<moh<sph<fph<gph CONST 0 IMMX 2 immediate 0:65535
 cmov 2 36 normal IMM condition 0:15 REG rd r0-r7 REG rs r0-r7 ;maybe expand into seperate instr
-swap 2 37 two    REG ra r0-r15<mo<sp<fp<gp<ctx<prv<mmio<vm REG rb r0-r15<mo<sp<fp<gp<ctx<prv<mmio<vm
+swap 2 37 two    REG ra r0-r15<mo<sp<fp<gp<sreg1<sreg2<sreg3<sreg4 REG rb r0-r15<mo<sp<fp<gp<sreg1<sreg2<sreg3<sreg4
 
 ; non '2' memory ops just put 1 byte
 ; 'ea' instrs operate as offsets to MO
