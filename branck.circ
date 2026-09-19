@@ -55750,15 +55750,15 @@
       <a name="spacing" val="4"/>
     </comp>
     <comp lib="0" loc="(860,1170)" name="Splitter">
+      <a name="fanout" val="16"/>
+      <a name="incoming" val="16"/>
+    </comp>
+    <comp lib="0" loc="(860,1170)" name="Splitter">
       <a name="appear" val="right"/>
       <a name="facing" val="west"/>
       <a name="fanout" val="16"/>
       <a name="incoming" val="16"/>
       <a name="spacing" val="4"/>
-    </comp>
-    <comp lib="0" loc="(860,1170)" name="Splitter">
-      <a name="fanout" val="16"/>
-      <a name="incoming" val="16"/>
     </comp>
     <comp lib="0" loc="(890,980)" name="Tunnel">
       <a name="label" val="Search_Enable"/>
@@ -102044,8 +102044,8 @@
 100101 0000000000000001000000100
 100110 0100010010000000000000011
 100111 0100010000000000000000001
-101000 0100110010000000000000001
-101001 0100110000000000000000001
+101000 0100110010000000000000011
+101001 0100110000000000000000011
 101010 0100010000000000000000011
 101011 0100110000000000000000011
 101100 0000000101001000000010100
@@ -103168,7 +103168,14 @@
       <a name="addrWidth" val="12"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="contents">addr/data: 12 16
-11*4a2c c4 7*922c cc 1498
+2068 4068 6068 8068 a068 c068 e068 69
+2069 4069 6069 8069 a069 c069 e069 206b
+a06b 606b e06b 6b 806b c06f ff03 406f
+feff 406c 3200 50b7 10b7 50b5 10b5 492c
+1955 36b 110c c8a1 206c 1000 4068 6f
+8000 806f 4 e278 6f 10 806f 0
+e284 922c a0c cca1 3468 2140 10 816a
+0 79c
 </a>
       <a name="dataWidth" val="16"/>
     </comp>
@@ -103313,7 +103320,7 @@
     <comp lib="8" loc="(8760,4780)" name="Text">
       <a name="text" val="note 3.3"/>
     </comp>
-    <comp lib="8" loc="(9190,5386)" name="Text">
+    <comp lib="8" loc="(9190,5385)" name="Text">
       <a name="text" val="5.1"/>
     </comp>
     <comp loc="(10170,5730)" name="Bit3_Latching_Arbiter"/>
