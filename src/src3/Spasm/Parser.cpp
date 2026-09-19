@@ -179,7 +179,13 @@ std::unique_ptr<Program::InstructionSymbol> Parser::parseInstruction(TokenHolder
   }
 
   const auto initPtr = instrToken.value.data();
-  const auto& endStrView = tokenHolder.peek().value;
+  size_t i = 0;
+  while (tokenHolder.peek(i).type != Token::Type::NEWLINE &&tokenHolder.notAtEnd()) {
+    i++;
+  }
+  const auto& endStrView = tokenHolder.peek(i).value;
+  // assert(instrToken.value != "movi");
+
   instructionSymbol->source = {initPtr, static_cast<size_t>(endStrView.data() + endStrView.size() - initPtr)};
   return instructionSymbol;
 }
@@ -1016,8 +1022,19 @@ void Parser::parseTextData(Program::TranslationUnit& translationUnit, TokenHolde
 }
 
 void Parser::parseOrg(TokenHolder& tokenHolder, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {
-  tokenHolder.skip(2);
-  // translationUnit.
+  tokenHolder.skip();
+  auto btok = tokenHolder.consume();
+  auto expr = parseSquareExpression(tokenHolder,nullptr,0,&translationUnit.m_identifierMap);
+  auto eval = expr->evaluate();
+  if (eval.mentionedLabels.size()) {
+    logError(btok, "Labels cannot be used in .org constant.");
+    return;
+  }
+  if (eval.error.length()) {
+    logError(btok, eval.error);
+    return;
+  }
+  translationUnit.setCurrentAddress(eval.value);
 }
 
 void Parser::parseRelaxor(TokenHolder& tokenHolder, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {

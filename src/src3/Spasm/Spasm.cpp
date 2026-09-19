@@ -129,7 +129,11 @@ Program::EvaluateTriple Program::IdentifierExpr::evaluate(bool getMentionedLabel
   //   return {0, std::format("Identifier \"{}\" is not resolved before it is referenced here. (potentially partial identifier path)", constructedName)};
   // }
 
-  value = *lastIdentifierObject->addressPtr;
+  if (!lastIdentifierObject->addressPtr) 
+    value = 0;
+  else 
+    value = *lastIdentifierObject->addressPtr;
+
   setEvaluated();
   return {value, "", {constructedName}};
 }
@@ -150,7 +154,8 @@ Program::EvaluateTriple Program::UnaryExpr::evaluate(bool getMentionedLabels) {
       triple = {~eval.value, eval.error, eval.mentionedLabels};
       break;
     case Token::Type::RELATIVEOPERATOR:
-      triple = {eval.value - ((int)*addressPtr + (int)relativeAddressOffset), eval.error, eval.mentionedLabels};
+      if (!addressPtr) triple = {eval.value - (int)relativeAddressOffset, eval.error, eval.mentionedLabels};
+      else triple = {eval.value - ((int)*addressPtr + (int)relativeAddressOffset), eval.error, eval.mentionedLabels};
       break;
     case Token::Type::ABSOLUTE:
       triple = {std::abs(eval.value), eval.error, eval.mentionedLabels};
@@ -416,8 +421,14 @@ void Spasm::Program::debugPrintStatement(const StatementSymbol* stmt, int indent
 
 void Spasm::Program::debugPrintIdentifier(const IdentifierObject* obj, int indentLevel) const {
   indent(indentLevel);
+  if (obj->addressPtr)
+    std::cout << "Name: " << obj->name()
+              << " Address: " << *obj->addressPtr
+              //<< " Resolved: " << obj->addressResolved
+              << "\n";
+  else
   std::cout << "Name: " << obj->name()
-            << " Address: " << *obj->addressPtr
+            << " Address: " << 0
             //<< " Resolved: " << obj->addressResolved
             << "\n";
 

@@ -249,7 +249,8 @@ namespace Spasm {
       void addStatementToUnit(std::unique_ptr<StatementSymbol> stmt);
       BinarySearchTree<SymbolWrapper, size_t, CompareSymbolAddress>& getStatementMap() {return m_statementMap;}
 
-
+      size_t getCurrentAddress() const {return currentAddress;}
+      void setCurrentAddress(size_t v) {currentAddress = v;}
 
       private:
       size_t currentAddress = 0;

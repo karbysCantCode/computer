@@ -1,6 +1,34 @@
-std_init_stack_pointer() {
-  movi r15, 0x03fff ; std_init_stack_pointer destroys r15.
-  mov sph, r15
-  movi r15, 0xfffe
-  mov spl, r15
+@define std_init_stack_pointer() {
+  movi sph, 0x03ff ; std_init_stack_pointer destroys r15.
+  movi spl, 0xfffe
+}
+@define std_init_all_registers() {
+  mov r1, r0 ; doesnt effect special registers
+  mov r2, r0
+  mov r3, r0
+  mov r4, r0
+  mov r5, r0
+  mov r6, r0
+  mov r7, r0
+  mov r8, r0
+  mov r9, r0
+  mov r10, r0
+  mov r11, r0
+  mov r12, r0
+  mov r13, r0
+  mov r14, r0
+  mov r15, r0
+  mov fpl, r0
+  mov fph, r0
+  mov gpl, r0
+  mov gph, r0
+  mov mol, r0
+  mov moh, r0
+  std_init_stack_pointer
+}
+
+@define mvptrtmo (ptrLabel) {
+  ; move pointer to mo register
+  movi  mol, [ptrLabel & 0xffff]
+  movi  moh, [(ptrLabel & 0xffff0000) >> 16]
 }

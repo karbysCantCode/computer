@@ -1,0 +1,6 @@
+@define inc(rT) {
+  adi rT, rT, 1
+}
+@define dec(rT) {
+  sbi rT, rT, 1
+}
