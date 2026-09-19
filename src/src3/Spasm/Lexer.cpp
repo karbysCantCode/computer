@@ -474,7 +474,7 @@ TokenHolder SpasmLexer::run(const std::string& source, const std::filesystem::pa
       }
       default: {
         if (isdigit(peek())) {
-          const auto nt = getNicheTypeAndSetSliceOverNumber();
+          const auto nt = getNicheTypeAndSetSliceOverNumber(sliceStartIndex, sliceStartLocation);
           const size_t length = p_index - sliceStartIndex;
           output.m_tokens.emplace_back(
             std::string_view{sliceStartPtr, length}, 
@@ -552,7 +552,7 @@ void SpasmLexer::consumeUntilNotHex() {
   while (std::isxdigit(peek()) && notAtEnd()) {consume();}
 }
 
-Token::NicheType SpasmLexer::getNicheTypeAndSetSliceOverNumber() {
+Token::NicheType SpasmLexer::getNicheTypeAndSetSliceOverNumber(size_t& sliceStartIndex, SourceLocation& sliceStartLocation) {
   Token::NicheType type = Token::NicheType::UNASSIGNED;
   
   if (match('0')) {
@@ -560,11 +560,13 @@ Token::NicheType SpasmLexer::getNicheTypeAndSetSliceOverNumber() {
       consume();
       type = Token::NicheType::NUMBER_HEX;
       consume();
+      setSliceStart;
       consumeUntilNotHex();
     } else if (match('b', 1)) {
       consume();
       type = Token::NicheType::NUMBER_BIN;
       consume();
+      setSliceStart;
       consumeUntilNotNumber();
     // } else if (isdigit(peek()) || isAtWordBoundary()) {
     } else {

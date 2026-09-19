@@ -158,9 +158,9 @@ namespace Spasm {
       LabelObject(const std::filesystem::path& srcPath, LabelObject* parnt, StatementSymbol* symbol) : IdentifierObject(srcPath, parnt), symbolObject(dynamic_cast<LabelSymbol*>(symbol)) {if (symbolObject) addressPtr = &symbolObject->address;}
     };
     struct DataObject : IdentifierObject {
-      size_t elementCount; // in elements
+      unsigned long long elementCount; // in elements
       std::unique_ptr<Expr> elementCountExpression;
-      size_t elementSize; // in bytes
+      unsigned long long elementSize; // in bytes
       std::unique_ptr<Expr> elementSizeExpression;
       std::vector<uint8_t> data;
       bool rawDataValid = false;
@@ -178,8 +178,8 @@ namespace Spasm {
         const std::filesystem::path& srcPath,
         IdentifierObject* parnt,
         StatementSymbol* symbolObj,
-        const size_t elemSize,
-        const size_t elemCount = 0)
+        const unsigned long long elemSize,
+        const unsigned long long elemCount = 0)
         : IdentifierObject(srcPath, parnt),
         elementCount(elemCount),
         elementSize(elemSize),
@@ -396,7 +396,7 @@ namespace Spasm {
 
     struct RegisterOperand : Operand {
       const Arch::Architecture::RegisterDefinition& reg;
-      virtual int getValue() const override {return reg.m_operandValue;}
+      virtual int getValue() const override {return (int)reg.m_operandValue;}
       virtual Kind getKind() const override {return Kind::REGISTER;}
       RegisterOperand(const SourceLocation& loc, const Arch::Architecture::RegisterDefinition& r) : reg(r), Operand(loc) {}
     };
@@ -424,7 +424,7 @@ namespace Spasm {
       // void generate() override {}
       Kind getKind() const override {return Kind::INSTRUCTION;}
 
-      size_t getByteSize() override {return instruction.m_byteLength + instruction.m_byteLength%2;}
+      size_t getByteSize() override {return (size_t)(instruction.m_byteLength + instruction.m_byteLength%(unsigned long long)2);}
 
       InstructionSymbol(const SourceLocation loc, const Arch::Architecture::InstructionDefinition& instr, std::vector<std::unique_ptr<Operand>>& initOperands) : operands(std::move(initOperands)), StatementSymbol(loc), instruction(instr) {}
       InstructionSymbol(const SourceLocation loc, const Arch::Architecture::InstructionDefinition& instr) : StatementSymbol(loc), instruction(instr) {}

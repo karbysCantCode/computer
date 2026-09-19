@@ -179,6 +179,8 @@ void Linker::placeSymbols(LinkedResult& linkedResult, Program::TranslationUnit& 
     auto& labelObjectPtr = labelSymbol.labelObject;
     if (!labelObjectPtr) return; //should already habve an error?
 
+    linkedResult.addressLabelHolder.insert(new addressLabelPointerPair(labelSymbol.address, &labelSymbol));
+
     //surely i dont need any of this anymore...
     
     // const auto it = translationUnit.m_identifierFullNameMap.find(labelObject.fullName());
@@ -486,7 +488,7 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
     }
       
       
-    if (thisRelaxor.relaxor.options.size() <= thisRelaxor.optionIndex) {
+    if ((int)thisRelaxor.relaxor.options.size() <= thisRelaxor.optionIndex) {
       thisRelaxor.optionIndex = -1;
       continue;
     } else if (thisRelaxor.optionIndex == original) {
@@ -539,30 +541,33 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
       
       // get all labels beyond the address of relaxor, 
 
-    auto labelIt = std::lower_bound(
-      linked.addressLabelHolder.begin(), 
-      linked.addressLabelHolder.end(), 
-      nextAddress,
-      [](const addressLabelPointerPair& item, int value) {
-        return *item.addressPtr < value;
-      }
-    );
+      auto it = linked.addressLabelHolder.find(nextAddress);
+
+    // auto labelIt = std::lower_bound(
+    //   linked.addressLabelHolder.begin(), 
+    //   linked.addressLabelHolder.end(), 
+    //   nextAddress,
+    //   [](const addressLabelPointerPair& item, size_t value) {
+    //     return *item.addressPtr < value;
+    //   }
+    // );
     
     // mass increment
     if (sizeChange != 0) {
       for (; nextAddressIterator != linked.statementMap.end(); ++nextAddressIterator) {
         // linked.addressHolder[i] -= sizeChange;
+        auto& t = *nextAddressIterator;
         nextAddressIterator->stmt->address -= sizeChange;
       }
     }
 
     
     std::vector<std::string> labelNames;
-    labelNames.resize(labelIt - linked.addressLabelHolder.begin());
+    labelNames.resize(it.getRemainingNodesInIterator());
     
     size_t labelIndex = 0;
-    for (auto it2 = labelIt; it2 != linked.addressLabelHolder.end(); ++it2) {
-      labelNames[labelIndex++] = it2->labelPtr->labelObject->fullName();
+    for (auto& wrap : it) {
+      labelNames[labelIndex++] = wrap.labelPtr->labelObject->fullName();
     }
     //then evaluate dependant exprs
     auto exprs = expressionHelper.getExpressionsReferencingTheseLabels(labelNames);
@@ -595,29 +600,29 @@ void Linker::fillDataStructures() {
       dataPtr->elementSize = dataPtr->elementSizeExpression->value;
     }
 
-    dataPtr->data.resize(dataPtr->elementCount * dataPtr->elementSize);
+    dataPtr->data.resize((size_t)(dataPtr->elementCount * dataPtr->elementSize));
 
     if (dataPtr->initialisingExpression) {
       const int* value = &dataPtr->initialisingExpression->value;
-      const size_t length = std::min(sizeof(*value), dataPtr->elementSize);
+      const unsigned long long length = std::min((unsigned long long)sizeof(*value), dataPtr->elementSize);
       for (int i = 0; i < dataPtr->elementCount; i++) {
         std::memcpy(
-          &dataPtr->data[i * dataPtr->elementSize],
+          &dataPtr->data[(unsigned int)((unsigned int)i * dataPtr->elementSize)],
           value,
-          length
+          (size_t)length
         );
       }
     } else if (!dataPtr->exprData.empty()) {
-      const size_t lowest = std::min(dataPtr->elementCount, dataPtr->exprData.size());
+      const unsigned long long lowest = std::min(dataPtr->elementCount, (unsigned long long)dataPtr->exprData.size());
       if (dataPtr->elementCount != dataPtr->exprData.size()) {
         logWarning(definitionSymbol->location, std::format("Data structure \"{}\" defined size and provided number of elements do not match. Defaulted to the lower: {}", definitionSymbol->name, lowest));
       }
       for (int i = 0; i < lowest; i++) {
         const int* value = &dataPtr->exprData[i]->value;
         std::memcpy(
-          &dataPtr->data[i * dataPtr->elementSize],
+          &dataPtr->data[(unsigned int)((unsigned int)i * dataPtr->elementSize)],
           value,
-          std::min(sizeof(*value), dataPtr->elementSize)
+          (size_t)std::min((unsigned long long)sizeof(*value), dataPtr->elementSize)
         );
       }
     }

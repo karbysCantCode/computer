@@ -94,6 +94,6 @@ namespace Spasm {
     bool isAtWordBoundary();
     void consumeUntilNotNumber();
     void consumeUntilNotHex();
-    Token::NicheType getNicheTypeAndSetSliceOverNumber();
+    Token::NicheType getNicheTypeAndSetSliceOverNumber(size_t& sliceStartIndex, SourceLocation& sliceStartLocation);
   };
 }

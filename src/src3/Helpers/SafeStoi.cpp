@@ -3,11 +3,11 @@
 #include <format>
 
 //namespace std {
-  std::pair<long, std::string> safe_stol(const std::string& str) {
+  std::pair<long long, std::string> safe_stoll(const std::string& str) {
     if (str.length() < 1) return {0,""};
     try
     {
-      return {std::stol(str), ""};
+      return {std::stoll(str), ""};
     }
     catch(const std::exception& e)
     {
@@ -16,10 +16,10 @@
     
   }
 
-  std::pair<long, std::string> safe_stol(const std::string& str, int base) {
+  std::pair<long long , std::string> safe_stoll(const std::string& str, int base) {
     try
     {
-      return {std::stol(str, nullptr, base), ""};
+      return {std::stoll(str, nullptr, base), ""};
     }
     catch(const std::exception& e)
     {

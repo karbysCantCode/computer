@@ -17,11 +17,11 @@ class Architecture {
 
   struct RegisterDefinition {
     const std::string m_registerName;
-    const int m_operandValue;
-    const int m_bitwidthValue;
+    const unsigned long long m_operandValue;
+    const unsigned long long m_bitwidthValue;
 
     RegisterDefinition(
-      const std::string& registerName, int operandValue, int bitwidthValue) 
+      const std::string& registerName, unsigned long long operandValue, unsigned long long bitwidthValue) 
       : m_registerName(registerName), m_operandValue(operandValue), m_bitwidthValue(bitwidthValue) {}
   };
 
@@ -87,11 +87,11 @@ class Architecture {
     std::string m_name;
     std::vector<std::variant<RegisterOperand, ExternalImmediateOperand, ImmediateOperand, ConstantIntOperand, ConstantStringOperand>> m_operands;
     int m_opcode = -1;
-    int m_byteLength = 2;
+    unsigned long long m_byteLength = 2;
 
     const FormatDefinition& m_format;
 
-    InstructionDefinition(const std::string name, int opcode, int byteLength, const FormatDefinition& format) : m_name(name), m_opcode(opcode), m_byteLength(byteLength), m_format(format) {}
+    InstructionDefinition(const std::string name, int opcode, unsigned long long byteLength, const FormatDefinition& format) : m_name(name), m_opcode(opcode), m_byteLength(byteLength), m_format(format) {}
   };
 
   Architecture(TokenHolder& sourceHolder, Debug::FullLogger* logger);

@@ -26,7 +26,7 @@ inline bool notAtEnd(int dist) const {return (m_index + dist) < m_tokens.size();
 inline size_t getIndex(int offset) const {return offset + m_index;}
 inline TokenT& peek(int distance = 0) {
   int pos = m_index + distance;
-  pos = pos >= m_tokens.size() ? m_tokens.size()-1 : pos;
+  pos = pos >= (int)m_tokens.size() ? m_tokens.size()-1 : pos;
   pos = pos < 0 ? 0 : pos;
   return m_tokens[pos];
 }

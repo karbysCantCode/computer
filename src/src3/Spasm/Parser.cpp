@@ -253,6 +253,7 @@ std::unique_ptr<Program::Operand> Parser::convertConstantStringToOperand(const A
   }
   assert(false);
   //undefined case
+  return nullptr;
 }
 
 std::unique_ptr<Program::Operand> Parser::makeErrorOperand(const Token& errToken, const std::string& message, size_t* address, size_t expressionOffset, Program::IdentifierMapType* identifierMap) {
@@ -260,27 +261,27 @@ std::unique_ptr<Program::Operand> Parser::makeErrorOperand(const Token& errToken
   return std::make_unique<Program::ExpressionOperand>(errToken.location, std::make_unique<Program::NumberExpr>(errToken.location, 0, address, expressionOffset, identifierMap));
 }
 
-int Parser::parseNumberString(const Token& token) {
+long long Parser::parseNumberString(const Token& token) {
   if (!(token.value.size() > 0)) {logError(token, "Number token size is 0"); return 0;}
 
   switch (token.nicheType)
   {
   case Token::NicheType::NUMBER_DEC:{
-    auto [num, errm] = safe_stol((std::string)token.value, 10);
+    auto [num, errm] = safe_stoll((std::string)token.value, 10);
     if (!errm.empty()) {
       logError(token, errm);
     }
     return num;}
     break;
   case Token::NicheType::NUMBER_HEX:{
-    auto [num, errm] = safe_stol((std::string)token.value, 16);
+    auto [num, errm] = safe_stoll((std::string)token.value, 16);
     if (!errm.empty()) {
       logError(token, errm);
     }
     return num;}
     break;
   case Token::NicheType::NUMBER_BIN:{
-    auto [num, errm] = safe_stol((std::string)token.value, 2);
+    auto [num, errm] = safe_stoll((std::string)token.value, 2);
     if (!errm.empty()) {
       logError(token, errm);
     }
@@ -917,7 +918,7 @@ void Parser::parseArrayData(Program::TranslationUnit& translationUnit, TokenHold
       std::memcpy(
         &dataPtr->data[i * dataPtr->elementSize],
         &number,
-        std::min(sizeof(number), dataPtr->elementSize)
+        std::min((unsigned long long)sizeof(number), dataPtr->elementSize)
       );
     }
     dataPtr->rawDataValid = true;
@@ -968,9 +969,9 @@ void Parser::parseTextData(Program::TranslationUnit& translationUnit, TokenHolde
       
       for (size_t i = 0; i < dataPtr->elementCount; i++) {
         std::memcpy(
-          &dataPtr->data[i * dataPtr->elementSize],
+          &dataPtr->data[(unsigned long long)i * dataPtr->elementSize],
           &number,
-          std::min(sizeof(number), dataPtr->elementSize)
+          std::min((unsigned long long)sizeof(number), dataPtr->elementSize)
         );
       }
 

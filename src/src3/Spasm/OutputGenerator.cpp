@@ -67,6 +67,7 @@ void OutputGenerator::run(
         while (!p_logger->Errors.isEmpty()) {
           std::cout << p_logger->Errors.consumeMessage() << std::endl;
         }
+        size_t addr = relaxorStatement.address;
         for (const auto& instruction : relaxorStatement.relaxor.options[relaxorStatement.optionIndex].optionStatements) {
           assert(instruction);
           if (instruction->getKind() != Program::StatementSymbol::Kind::INSTRUCTION) {
@@ -75,7 +76,8 @@ void OutputGenerator::run(
           }
 
           auto& instructionStatement = *static_cast<Program::InstructionSymbol*>(instruction.get());
-          fillInstruction(linkedResult, instructionStatement, binaryData);
+          fillInstruction(linkedResult, instructionStatement, binaryData, addr);
+          addr += instructionStatement.getByteSize();
           // fillInstruction(linkedResult, instructionStatement, binaryData, instructionByteOffset);
           // instructionByteOffset += instructionStatement.byteSize;
           // //align if not aligned
@@ -128,7 +130,7 @@ void OutputGenerator::fillBytesFromDataDeclarations(const Linker::LinkedResult& 
     auto& dataObject = *statement->dataObject;
     if (!dataObject.rawDataValid) {
       //make raw data valid
-      dataObject.data.resize(dataObject.elementCount * dataObject.elementSize, 0);
+      dataObject.data.resize((size_t)(dataObject.elementCount * dataObject.elementSize), 0);
 
       size_t exprIndex = 0;
       for (const auto& expr : dataObject.exprData) {
@@ -137,7 +139,7 @@ void OutputGenerator::fillBytesFromDataDeclarations(const Linker::LinkedResult& 
         if (unsignedValue > std::pow(2,8*dataObject.elementSize)) {
           logError(expr->location, std::format("Number \"{}\" exceeds the unsigned limit of {} bytes", expr->getValue(), dataObject.elementSize));
         } else {
-          std::memcpy(dataObject.data.data() + exprIndex * dataObject.elementSize, &unsignedValue, std::min(sizeof(uint32_t),dataObject.elementSize));
+          std::memcpy(dataObject.data.data() + exprIndex * dataObject.elementSize, &unsignedValue, (size_t)std::min((unsigned long long)sizeof(unsigned long long),dataObject.elementSize));
         }
         exprIndex++;
       }

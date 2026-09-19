@@ -4,7 +4,7 @@
 #include <utility>
 
 //namespace std {
-  std::pair<long, std::string> safe_stol(const std::string& str);
+  std::pair<long long, std::string> safe_stoll(const std::string& str);
 
-  std::pair<long, std::string> safe_stol(const std::string& str, int base);
-//}
+  std::pair<long long, std::string> safe_stoll(const std::string& str, int base);
+//} 

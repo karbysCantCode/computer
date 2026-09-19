@@ -65,7 +65,7 @@ void Architecture::consumeControlSignal(TokenHolder& sourceHolder) {
   const auto& identifierToken = sourceHolder.peek();
   const auto& bitIndexToken = sourceHolder.peek(1);
 
-  auto [num, errm] = safe_stol((std::string)bitIndexToken.value);
+  auto [num, errm] = safe_stoll((std::string)bitIndexToken.value);
   if (!errm.empty()) {
     logError(bitIndexToken, errm);
   }
@@ -81,12 +81,12 @@ void Architecture::consumeRegister(TokenHolder& sourceHolder) {
   const auto& bitwidthToken = sourceHolder.peek(1);
   const auto& minimumMachineOperandValueToken = sourceHolder.peek(2);
 
-  auto [bitwidth, errm] = safe_stol((std::string)bitwidthToken.value);
+  auto [bitwidth, errm] = safe_stoll((std::string)bitwidthToken.value);
   if (!errm.empty()) {
     logError(bitwidthToken, errm);
   }
 
-  auto [minimumMachineOperandValue, errmb] = safe_stol((std::string)minimumMachineOperandValueToken.value);
+  auto [minimumMachineOperandValue, errmb] = safe_stoll((std::string)minimumMachineOperandValueToken.value);
   if (!errmb.empty()) {
     logError(minimumMachineOperandValueToken, errmb);
   }
@@ -103,7 +103,7 @@ void Architecture::consumeRegister(TokenHolder& sourceHolder) {
     size_t currentIndex = info.lowValue;
     size_t offset = 0;
     while (currentIndex <= info.highValue) {
-      RegisterDefinition reg(info.prefix + std::to_string(currentIndex), minimumMachineOperandValue+offset, bitwidth);
+      RegisterDefinition reg(info.prefix + std::to_string(currentIndex), minimumMachineOperandValue+(unsigned long long)offset, bitwidth);
       if (m_keywordByTypeMap.find(reg.m_registerName) != m_keywordByTypeMap.end()) {
         logError(identifierToken, std::format("Register \"{}\" already defined.", reg.m_registerName));
       } else {
@@ -142,11 +142,11 @@ void Architecture::consumeFormat(TokenHolder& sourceHolder) {
   FormatDefinition format(std::string(identifierToken.value));
   while (sourceHolder.match(Token::Type::IDENTIFIER)) {
     const auto tk = sourceHolder.consume();
-    auto [opsize, errm] = safe_stol((std::string)tk.value);
+    auto [opsize, errm] = safe_stoll((std::string)tk.value);
     if (!errm.empty()) {
       logError(tk, errm);
     }
-    format.insertOperandSize(opsize);
+    format.insertOperandSize((size_t)opsize);
   }
 
   if (m_keywordByTypeMap.find(format.m_formatName) != m_keywordByTypeMap.end()) {
@@ -161,12 +161,12 @@ void Architecture::consumeBitwidth(TokenHolder& sourceHolder) {
   sourceHolder.skip(); //skip keyword
   const auto& bitwidthToken = sourceHolder.peek();
 
-  auto [bitwidth, errm] = safe_stol((std::string)bitwidthToken.value);
+  auto [bitwidth, errm] = safe_stoll((std::string)bitwidthToken.value);
   if (!errm.empty()) {
     logError(bitwidthToken, errm);
   }
 
-  m_bitwidth = bitwidth;
+  m_bitwidth = (size_t)bitwidth;
 
   sourceHolder.skip();
 }
@@ -183,18 +183,18 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
     logError(formatToken, std::format("Unknown format \"{}\" referenced.", formatToken.value));
     return;
   }
-  auto [opcodeNumber, errm] = safe_stol((std::string)opcodeToken.value);
+  auto [opcodeNumber, errm] = safe_stoll((std::string)opcodeToken.value);
   if (!errm.empty()) {
     logError(opcodeToken, errm);
   }
-  auto [byteLengthNumber, errmb] = safe_stol((std::string)byteLengthToken.value);
-  int remainingFreeBytesInInstruction = byteLengthNumber - 2;
+  auto [byteLengthNumber, errmb] = safe_stoll((std::string)byteLengthToken.value);
+  int remainingFreeBytesInInstruction = (int)byteLengthNumber - 2;
   if (!errmb.empty()) {
     logError(byteLengthToken, errmb);
   }
   // std::cout << "Adding instruction: " << identifierToken.value << "\n";
   InstructionDefinition instruction(std::string(identifierToken.value), 
-                                    opcodeNumber,
+                                    (int)opcodeNumber,
                                     byteLengthNumber,
                                     it->second);
 
@@ -261,11 +261,11 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
       const auto immediateToken = sourceHolder.consume();
       
       if (immediateToken.value.size() > 0 && isdigit(immediateToken.value[0])) {
-        auto [opnum, errm] = safe_stol((std::string)immediateToken.value);
+        auto [opnum, errm] = safe_stoll((std::string)immediateToken.value);
         if (!errm.empty()) {
           logError(immediateToken, errm);
         }
-        ConstantIntOperand operand(opnum);
+        ConstantIntOperand operand((int)opnum);
         instruction.m_operands.push_back(std::move(operand));
         
       } else {
@@ -286,7 +286,7 @@ void Architecture::consumeInstruction(TokenHolder& sourceHolder) {
 
       const auto& immxByteLengthToken = sourceHolder.consume();
 
-      auto [immxByteLength, errm] = safe_stol((std::string)immxByteLengthToken.value);
+      auto [immxByteLength, errm] = safe_stoll((std::string)immxByteLengthToken.value);
       if (!errm.empty()) {
         logError(opcodeToken, errm);
       }
@@ -332,7 +332,7 @@ Architecture::RegisterRangeInfo Architecture::parseRegisterRange(const std::stri
       if (info.hasDash) {
         logError(errToken, "Register range has multiple dashes in definition.");
       } else {
-        auto [lowValue, errm] = safe_stol(currentValue);
+        auto [lowValue, errm] = safe_stoll(currentValue);
         if (!errm.empty()) {
           logError(errToken, errm);
         }
@@ -348,7 +348,7 @@ Architecture::RegisterRangeInfo Architecture::parseRegisterRange(const std::stri
   //   logError(errToken, "no length argument");
   //   return info;
   // }
-  auto [highValue, errm] = safe_stol(currentValue);
+  auto [highValue, errm] = safe_stoll(currentValue);
   if (!errm.empty() && info.hasDash) {
     logError(errToken, errm);
   }
@@ -388,7 +388,7 @@ std::pair<int,int> Arch::Architecture::parseImmediateRange(const Token& immediat
         return {0,0};
       }
       hasHalfed = true;
-      auto [minNum, errm] = safe_stol(currentSlice);
+      auto [minNum, errm] = safe_stoll(currentSlice);
       if (!errm.empty()) {
         logError(immediateToken, errm);
       }
@@ -399,7 +399,7 @@ std::pair<int,int> Arch::Architecture::parseImmediateRange(const Token& immediat
     }
     indx++;
   }
-  auto [maxNum, errm] = safe_stol(currentSlice);
+  auto [maxNum, errm] = safe_stoll(currentSlice);
   if (!errm.empty()) {
     logError(immediateToken, errm);
   }

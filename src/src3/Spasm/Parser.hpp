@@ -57,7 +57,7 @@ class Parser {
   std::unique_ptr<Program::Expr> makeErrorExpression(const Token&, const std::string&, ExpressionParserArgumentTypes);
   std::unique_ptr<Program::Operand> makeErrorOperand(const Token&, const std::string&, size_t*, size_t, Program::IdentifierMapType*);
   
-  int parseNumberString(const Token&);
+  long long parseNumberString(const Token&);
   std::unique_ptr<Program::Expr> parseSquareExpression(ExpressionParserArgumentTypes);
   std::unique_ptr<Program::Expr> parseBooleanOr(ExpressionParserArgumentTypes);
   std::unique_ptr<Program::Expr> parseBooleanAnd(ExpressionParserArgumentTypes);

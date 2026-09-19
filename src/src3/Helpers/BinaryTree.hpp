@@ -47,6 +47,26 @@ public:
       : m_tree(tree) {
       pushLeft(root);
     }
+
+    size_t getRemainingNodesInIterator() const {
+      std::stack<Node*> stack = m_stack;
+      size_t count = 0;
+
+      while (!stack.empty()) {
+        Node* node = stack.top();
+        stack.pop();
+        ++count;
+
+        Node* current = node->right;
+
+        while (current) {
+          stack.push(current);
+          current = current->left;
+        }
+      }
+
+      return count;
+    }
     
     Iterator(BinarySearchTree* tree, Node* node, Node* root)
       : m_tree(tree) {
@@ -90,6 +110,14 @@ public:
       }
 
       return *this;
+    }
+
+    Iterator& begin() {
+      return *this;
+    }
+
+    Iterator end() {
+      return Iterator(m_tree, nullptr);
     }
 
     bool operator==(const Iterator& other) const {

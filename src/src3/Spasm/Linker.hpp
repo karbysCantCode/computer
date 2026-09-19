@@ -19,10 +19,23 @@ class Linker {
 public:
 
 struct addressLabelPointerPair {
-  size_t* addressPtr = nullptr;
+  size_t& addressRef;
   Program::LabelSymbol* labelPtr = nullptr;
+
+  addressLabelPointerPair(size_t& addressref, Program::LabelSymbol* labelptr) : addressRef(addressref), labelPtr(labelptr) {}
 };
 
+struct compareAddressLabelPointerPair {
+  bool operator()(addressLabelPointerPair* a, addressLabelPointerPair* b) const {
+    return a->addressRef < b->addressRef;
+  }
+  bool operator()(size_t a, addressLabelPointerPair* b) const {
+    return a < b->addressRef;
+  }
+  bool operator()(addressLabelPointerPair* a, size_t b) const {
+    return a->addressRef < b;
+  }
+};
 struct LinkedResult {
   std::queue<Program::TranslationUnit*> translationUnitQueue;
   size_t currentHighestAddress = 0;
@@ -30,7 +43,8 @@ struct LinkedResult {
   // size_t programDataStartAddress = 0;
   // size_t nAddressesEntered = 0;
   // std::vector<size_t> addressHolder;
-  std::vector<addressLabelPointerPair> addressLabelHolder;
+  BinarySearchTree<addressLabelPointerPair, size_t, compareAddressLabelPointerPair> addressLabelHolder;
+  // std::vector<addressLabelPointerPair> addressLabelHolder;
   // same index as address is the corresponding statement symnol
   std::vector<Program::StatementSymbol*> statementHolder;
 };
