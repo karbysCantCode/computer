@@ -11,7 +11,7 @@ std_init_all_registers
 
 ; trashes: r1, r2, r3, mol
 ; invalidate every line of Cache
-movi  r2, 50           ; tag is 11 bits, therefore 2048 cache lines
+movi  r2, 2048           ; tag is 11 bits, therefore 2048 cache lines
 cache_init_loop:
 invalichclina mo         ; inval line r1 of Icache set A
 invalichclinb mo         ; inval line r1 of Icache set b
@@ -48,7 +48,7 @@ jmp boot
 
 boot:
 
-.org 0x2000
+; .org 0x2000
 add r1, r1, r1
 
 bootend:
