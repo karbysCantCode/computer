@@ -351,6 +351,9 @@ void Linker::placeSymbols(LinkedResult& linkedResult, Program::TranslationUnit& 
     // linkedResult.maxAddress += linkedResult.maxAddress % 2 == 1; //pad for 2byte alignment of instructions
     break;
   }
+  case KIND::ORG: {
+    break;
+  }
   default:
     assert(false);
     //just shouldnt happen and i raely cba to implement this error
@@ -506,7 +509,7 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
     //   std::cout << it->stmt->address << '\n';
     // }
     
-    auto nextAddressIterator = linked.statementMap.find(thisRelaxor.address);
+    auto nextAddressIterator = linked.statementMap.find_after(thisRelaxor.address);
     
     // auto copy = nextAddressIterator.getStack();
 
@@ -517,11 +520,11 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
 
     // std::cout << '\n';
     
-    if (nextAddressIterator == linked.statementMap.end()) {
-      continue;
-    }
+    // if (nextAddressIterator == linked.statementMap.end()) {
+    //   continue;
+    // }
 
-    ++nextAddressIterator;
+    // ++nextAddressIterator;
 
     // if (nextAddressIterator != linked.statementMap.end()) {
     //   std::cout << "NEXT = " << nextAddressIterator->stmt->address << '\n';
@@ -541,7 +544,7 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
       
       // get all labels beyond the address of relaxor, 
 
-      auto it = linked.addressLabelHolder.find(nextAddress);
+      auto it = linked.addressLabelHolder.find_after(nextAddress);
 
     // auto labelIt = std::lower_bound(
     //   linked.addressLabelHolder.begin(), 
@@ -553,10 +556,14 @@ void Linker::resolveRelaxors(Program& program, LinkedResult& linked, Expressions
     // );
     
     // mass increment
+    // std::cout << "this address: " << thisRelaxor.address << std::endl;
     if (sizeChange != 0) {
       for (; nextAddressIterator != linked.statementMap.end(); ++nextAddressIterator) {
-        // linked.addressHolder[i] -= sizeChange;
-        auto& t = *nextAddressIterator;
+
+        if (nextAddressIterator->stmt->getKind() == Spasm::Program::StatementSymbol::Kind::ORG) {
+          linked.currentHighestAddress += sizeChange; // reverse buffer size change.
+          break;
+        }
         nextAddressIterator->stmt->address -= sizeChange;
       }
     }

@@ -607,8 +607,8 @@ def build_read_control_pla():
     })
     pla.register_bit("NOP Next cycle (PC still incs, used for next-word immediates)", 21)
     pla.register_bit("Stack pointer full write enable", 22)
-    pla.register_bit("Interrupt Return", 23)
-    pla.register_bit("Trigger Interrupt", 24)
+    pla.register_bit("Interrupt Mode Enable", 23)
+    pla.register_bit("UNUSED", 24)
 
     return pla
 

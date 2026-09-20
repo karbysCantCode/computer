@@ -36,7 +36,8 @@ namespace Spasm {
         LABEL,
         DEFINITION,
         INSTRUCTION,
-        RELAXOR
+        RELAXOR,
+        ORG
       };
 
       virtual size_t getByteSize() = 0;
@@ -45,6 +46,39 @@ namespace Spasm {
       virtual Kind getKind() const {assert(false); return Kind::LABEL;}
 
       // virtual void generate() = 0;
+
+      void print() const {
+        const char* kindString = "UNKNOWN";
+
+        switch (getKind()) {
+          case Kind::LABEL:
+            kindString = "LABEL";
+            break;
+          case Kind::DEFINITION:
+            kindString = "DEFINITION";
+            break;
+          case Kind::INSTRUCTION:
+            kindString = "INSTRUCTION";
+            break;
+          case Kind::RELAXOR:
+            kindString = "RELAXOR";
+            break;
+        }
+
+        std::cout
+          << "StatementSymbol {\n"
+          << "  kind:     " << kindString << '\n'
+          << "  source:   " << source << '\n'
+          << "  address:  " << address << '\n'
+          << "  byteSize: " << byteSize << '\n'
+          << "}\n";
+      }
+    };
+
+    struct OrgSymbol : StatementSymbol {
+      size_t getByteSize() override {return 0;}
+      Kind getKind() const override {return Kind::ORG;}
+      OrgSymbol(const SourceLocation loc) : StatementSymbol(loc) {}
     };
 
     struct LabelSymbol : StatementSymbol {

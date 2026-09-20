@@ -1036,6 +1036,8 @@ void Parser::parseOrg(TokenHolder& tokenHolder, Arch::Architecture& arch, Progra
     return;
   }
   translationUnit.setCurrentAddress(eval.value);
+  auto org = std::make_unique<Spasm::Program::OrgSymbol>(btok.location);
+  translationUnit.addStatementToUnit(std::move(org));
 }
 
 void Parser::parseRelaxor(TokenHolder& tokenHolder, Arch::Architecture& arch, Program::TranslationUnit& translationUnit, Program& program) {

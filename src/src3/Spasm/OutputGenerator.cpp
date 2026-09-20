@@ -93,17 +93,17 @@ void OutputGenerator::run(
     }
   }
 
-  std::cout << "\nHex Dump:";
-  for (size_t byteIndex = 0; byteIndex < binaryData.size(); byteIndex++) {
+  // std::cout << "\nHex Dump:";
+  // for (size_t byteIndex = 0; byteIndex < binaryData.size(); byteIndex++) {
 
-    if (! (byteIndex % 8) ) {
-      std::cout << '\n' << std::hex << std::setw(4) << std::setfill('0') << byteIndex << ":";
-    }
-    std::cout << ' ' 
-              << std::hex << std::uppercase
-              << std::setw(2) << std::setfill('0')
-              << static_cast<int>(binaryData[byteIndex]);
-  }
+  //   if (! (byteIndex % 8) ) {
+  //     std::cout << '\n' << std::hex << std::setw(4) << std::setfill('0') << byteIndex << ":";
+  //   }
+  //   std::cout << ' ' 
+  //             << std::hex << std::uppercase
+  //             << std::setw(2) << std::setfill('0')
+  //             << static_cast<int>(binaryData[byteIndex]);
+  // }
 
   std::cout << "\nRaw Hex Dump:\n";
   for (const auto& byte : binaryData) {

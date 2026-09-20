@@ -149,20 +149,42 @@ public:
   }
 
   Iterator find(const Key& key) {
-  Node* current = m_root;
+    Node* current = m_root;
 
-  while (current) {
-    if (m_compare(key, current->value)) {
-      current = current->left;
-    } else if (m_compare(current->value, key)) {
-      current = current->right;
-    } else {
-      return Iterator(this, current, m_root);
+    while (current) {
+      if (m_compare(key, current->value)) {
+        current = current->left;
+      } else if (m_compare(current->value, key)) {
+        current = current->right;
+      } else {
+        return Iterator(this, current, m_root);
+      }
     }
-  }
 
-  return end();
-}
+    return end();
+  }
+  Iterator find_after(const Key& key) {
+
+    Node* current = m_root;
+    Node* successor = nullptr;
+
+    while (current) {
+
+      if (m_compare(key, current->value)) {
+        // current is greater than key, so it's a candidate.
+        successor = current;
+        current = current->left;
+      } else {
+        // current <= key, so the successor must be to the right.
+        current = current->right;
+      }
+    }
+
+    if (!successor)
+      return end();
+
+    return Iterator(this, successor, m_root);
+  }
 
   Iterator last() {
     Node* current = m_root;

@@ -31,6 +31,7 @@
 .format memtwo   6 1 4 5        ; AUTO TWO BYTE DATA OPERATION IS ON THIS FIRST ARG BIT!
 .format memnarg  6 4 1 5        ; AUTO TWO BYTE DATA OPERATION IS ON THIS 2ND ARG BIT **IF** "disable msb of 6lsb immediate (effectively 5lsb)" is set!!
 .format immfull  6 10
+.format bits     6 1 1 1 1 1 1 1 1 1 1
 
 ; #######
 ; Arithmetic
@@ -158,5 +159,8 @@ mmuf 2 45 bitsel CONST 1 CONST 0 CONST 0 CONST 0 CONST 1 IMM flagmask 0:8
 ;10XX1 turns the 2nd into flagmask
 ; instruction with -> bits lower flag mask en, ival targ page en, ival trans page en
 
-interrupt 2 49 two NON NON
-iret 2 51 two NON NON
+interrupt 2 49 bits CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 1  ; software interrupt
+iret 2 49 bits CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0       ; interupt return
+dint 2 49 bits CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 1 CONST 0       ; disable interrupts
+aint 2 49 bits CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 0 CONST 1 CONST 1       ; enable interrupts
+; iret 2 51 two NON NON

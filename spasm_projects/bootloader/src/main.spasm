@@ -47,7 +47,8 @@ jmp boot
 
 
 boot:
-jmp boot
 
+.org 0x2000
+add r1, r1, r1
 
 bootend:

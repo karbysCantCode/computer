@@ -1046,8 +1046,8 @@
                     0,
                     1,
                     1,
-                    1,
                     0,
+                    1,
                     0,
                     0,
                     1,
@@ -1115,8 +1115,8 @@
                     0,
                     1,
                     1,
-                    1,
                     0,
+                    1,
                     0,
                     0,
                     1,
@@ -3383,7 +3383,7 @@
         },
         {
             "input": 49,
-            "comment": "interrupt",
+            "comment": "intrptmode",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -3409,8 +3409,8 @@
                     0,
                     0,
                     0,
-                    0,
-                    1
+                    1,
+                    0
                 ],
                 "Execute Control": [
                     1,
@@ -3521,7 +3521,7 @@
         },
         {
             "input": 51,
-            "comment": "iret",
+            "comment": "",
             "plas": {
                 "Read and Decode control": [
                     0,
@@ -3547,7 +3547,7 @@
                     0,
                     0,
                     0,
-                    1,
+                    0,
                     0
                 ],
                 "Execute Control": [
