@@ -55750,15 +55750,15 @@
       <a name="spacing" val="4"/>
     </comp>
     <comp lib="0" loc="(860,1170)" name="Splitter">
-      <a name="fanout" val="16"/>
-      <a name="incoming" val="16"/>
-    </comp>
-    <comp lib="0" loc="(860,1170)" name="Splitter">
       <a name="appear" val="right"/>
       <a name="facing" val="west"/>
       <a name="fanout" val="16"/>
       <a name="incoming" val="16"/>
       <a name="spacing" val="4"/>
+    </comp>
+    <comp lib="0" loc="(860,1170)" name="Splitter">
+      <a name="fanout" val="16"/>
+      <a name="incoming" val="16"/>
     </comp>
     <comp lib="0" loc="(890,980)" name="Tunnel">
       <a name="label" val="Search_Enable"/>
@@ -100047,6 +100047,10 @@
       <a name="facing" val="east"/>
       <a name="label" val="reset"/>
     </comp>
+    <comp lib="0" loc="(1720,4530)" name="Tunnel">
+      <a name="facing" val="east"/>
+      <a name="label" val="Permit_Interrupts"/>
+    </comp>
     <comp lib="0" loc="(1750,4790)" name="Splitter">
       <a name="facing" val="north"/>
       <a name="fanout" val="5"/>
@@ -100058,7 +100062,7 @@
       <a name="fanout" val="5"/>
       <a name="incoming" val="5"/>
     </comp>
-    <comp lib="0" loc="(1760,4520)" name="Tunnel">
+    <comp lib="0" loc="(1760,4540)" name="Tunnel">
       <a name="facing" val="north"/>
       <a name="label" val="SREG_Interrupt_Restore"/>
     </comp>
@@ -100220,6 +100224,9 @@
     </comp>
     <comp lib="0" loc="(1920,4970)" name="Tunnel">
       <a name="label" val="Software_Interrupt"/>
+    </comp>
+    <comp lib="0" loc="(1960,4170)" name="Tunnel">
+      <a name="label" val="Inhibit_Interrupts"/>
     </comp>
     <comp lib="0" loc="(1960,5500)" name="Splitter">
       <a name="facing" val="north"/>
@@ -100970,17 +100977,23 @@
     <comp lib="0" loc="(3140,5100)" name="Tunnel">
       <a name="label" val="NOP_Writeback"/>
     </comp>
-    <comp lib="0" loc="(3180,3170)" name="Tunnel">
-      <a name="facing" val="east"/>
+    <comp lib="0" loc="(3320,3350)" name="Splitter">
+      <a name="facing" val="south"/>
+    </comp>
+    <comp lib="0" loc="(3460,3170)" name="Tunnel">
       <a name="label" val="SREG_Interrupt_Restore"/>
     </comp>
-    <comp lib="0" loc="(3180,3200)" name="Tunnel">
-      <a name="facing" val="east"/>
+    <comp lib="0" loc="(3460,3200)" name="Tunnel">
       <a name="label" val="Read_Interrupt_Register"/>
     </comp>
-    <comp lib="0" loc="(3180,3230)" name="Tunnel">
-      <a name="facing" val="east"/>
+    <comp lib="0" loc="(3460,3230)" name="Tunnel">
       <a name="label" val="Software_Interrupt"/>
+    </comp>
+    <comp lib="0" loc="(3460,3260)" name="Tunnel">
+      <a name="label" val="Inhibit_Interrupts"/>
+    </comp>
+    <comp lib="0" loc="(3460,3290)" name="Tunnel">
+      <a name="label" val="Permit_Interrupts"/>
     </comp>
     <comp lib="0" loc="(3470,3370)" name="Splitter">
       <a name="facing" val="west"/>
@@ -101136,6 +101149,8 @@
       <a name="facing" val="east"/>
       <a name="label" val="SREG_Interrupt_Restore"/>
     </comp>
+    <comp lib="0" loc="(4210,3650)" name="Pull Resistor"/>
+    <comp lib="0" loc="(4210,3750)" name="Pull Resistor"/>
     <comp lib="0" loc="(4230,3370)" name="Splitter">
       <a name="bit0" val="4"/>
       <a name="bit1" val="3"/>
@@ -101874,6 +101889,9 @@
       <a name="label" val="Next_Instruction_Address"/>
       <a name="width" val="26"/>
     </comp>
+    <comp lib="0" loc="(9100,5110)" name="Power">
+      <a name="facing" val="south"/>
+    </comp>
     <comp lib="0" loc="(9160,3960)" name="Splitter">
       <a name="bit1" val="0"/>
       <a name="bit10" val="1"/>
@@ -101954,6 +101972,11 @@
     <comp lib="0" loc="(9740,5590)" name="Tunnel">
       <a name="label" val="reset"/>
     </comp>
+    <comp lib="0" loc="(9940,5080)" name="Tunnel">
+      <a name="facing" val="east"/>
+      <a name="label" val="ICache_Result"/>
+      <a name="width" val="16"/>
+    </comp>
     <comp lib="0" loc="(9940,5130)" name="Tunnel">
       <a name="facing" val="east"/>
       <a name="label" val="ICache_Stall"/>
@@ -101998,6 +102021,7 @@
     </comp>
     <comp lib="1" loc="(1750,4450)" name="OR Gate">
       <a name="facing" val="north"/>
+      <a name="inputs" val="3"/>
       <a name="size" val="30"/>
     </comp>
     <comp lib="1" loc="(1790,3200)" name="PLA">
@@ -102044,8 +102068,8 @@
 100101 0000000000000001000000100
 100110 0100010010000000000000011
 100111 0100010000000000000000001
-101000 0100110010000000000000011
-101001 0100110000000000000000011
+101000 0100110010000000000000001
+101001 0100110000000000000000001
 101010 0100010000000000000000011
 101011 0100110000000000000000011
 101100 0000000101001000000010100
@@ -102159,8 +102183,8 @@
 001100 0001000000100110010010000
 001101 0000100000000010001110000
 001110 0001000000100110010110000
-001111 0001000000100110001110000
-010000 0001000000100110001110000
+001111 0001000000100110010110000
+010000 0001000000100110010110000
 010001 0001000000100110010110000
 010010 0001000000000010000110000
 010011 0000000000000010000110000
@@ -102193,9 +102217,9 @@
 101110 0000000000000000000000000
 101111 0000000010100010000010000
 110000 0000000010100000000110000
-110001 1000000000000000000000000
+110001 0100000000000000000000000
 110010 0000000000000010000110000
-110011 0100000000000000000000000
+110011 0000000000000000000000000
 110100 0000000000000000000000000
 110101 0000000000000000000000000
 110110 0000000000000000000000000
@@ -102209,6 +102233,10 @@
 111110 0000000000000000000000000
 111111 0001000001000000000000000
 </a>
+    </comp>
+    <comp lib="1" loc="(1820,4270)" name="OR Gate">
+      <a name="facing" val="west"/>
+      <a name="size" val="30"/>
     </comp>
     <comp lib="1" loc="(1860,4210)" name="AND Gate">
       <a name="negate0" val="true"/>
@@ -102373,6 +102401,12 @@
     <comp lib="1" loc="(4150,4330)" name="AND Gate">
       <a name="facing" val="south"/>
       <a name="size" val="30"/>
+    </comp>
+    <comp lib="1" loc="(4180,3650)" name="Controlled Buffer">
+      <a name="width" val="5"/>
+    </comp>
+    <comp lib="1" loc="(4180,3750)" name="Controlled Buffer">
+      <a name="width" val="5"/>
     </comp>
     <comp lib="1" loc="(4190,4330)" name="AND Gate">
       <a name="facing" val="south"/>
@@ -102886,6 +102920,9 @@
     <comp lib="2" loc="(2890,3570)" name="Multiplexer">
       <a name="facing" val="south"/>
     </comp>
+    <comp lib="2" loc="(3330,3220)" name="Demultiplexer">
+      <a name="select" val="2"/>
+    </comp>
     <comp lib="2" loc="(3850,4620)" name="Decoder">
       <a name="facing" val="south"/>
       <a name="select" val="4"/>
@@ -103168,14 +103205,7 @@
       <a name="addrWidth" val="12"/>
       <a name="appearance" val="logisim_evolution"/>
       <a name="contents">addr/data: 12 16
-2068 4068 6068 8068 a068 c068 e068 69
-2069 4069 6069 8069 a069 c069 e069 206b
-a06b 606b e06b 6b 806b c06f ff03 406f
-feff 406c 3200 50b7 10b7 50b5 10b5 492c
-1955 36b 110c c8a1 206c 1000 4068 6f
-8000 806f 4 e278 6f 10 806f 0
-e284 922c a0c cca1 3468 2140 10 816a
-0 79c
+3468 2140 10 816a 0 79c
 </a>
       <a name="dataWidth" val="16"/>
     </comp>
@@ -103492,7 +103522,7 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(1690,4770)" to="(1690,4860)"/>
     <wire from="(1700,4330)" to="(1740,4330)"/>
     <wire from="(1710,4340)" to="(1710,4370)"/>
-    <wire from="(1710,4340)" to="(1920,4340)"/>
+    <wire from="(1710,4340)" to="(1810,4340)"/>
     <wire from="(1710,4370)" to="(1720,4370)"/>
     <wire from="(1710,4390)" to="(1710,4430)"/>
     <wire from="(1710,4390)" to="(1720,4390)"/>
@@ -103500,17 +103530,19 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(1720,4410)" to="(1720,4440)"/>
     <wire from="(1720,4440)" to="(1830,4440)"/>
     <wire from="(1720,4500)" to="(1740,4500)"/>
+    <wire from="(1720,4530)" to="(1750,4530)"/>
     <wire from="(1740,4310)" to="(1740,4330)"/>
     <wire from="(1740,4480)" to="(1740,4500)"/>
     <wire from="(1750,4420)" to="(1750,4430)"/>
     <wire from="(1750,4430)" to="(1750,4450)"/>
     <wire from="(1750,4430)" to="(1870,4430)"/>
+    <wire from="(1750,4480)" to="(1750,4530)"/>
     <wire from="(1750,4790)" to="(1760,4790)"/>
     <wire from="(1750,4810)" to="(1750,4840)"/>
     <wire from="(1750,4810)" to="(1800,4810)"/>
     <wire from="(1760,4310)" to="(1760,4330)"/>
     <wire from="(1760,4330)" to="(1910,4330)"/>
-    <wire from="(1760,4480)" to="(1760,4520)"/>
+    <wire from="(1760,4480)" to="(1760,4540)"/>
     <wire from="(1760,4790)" to="(1760,4830)"/>
     <wire from="(1760,4830)" to="(1800,4830)"/>
     <wire from="(1770,4190)" to="(1800,4190)"/>
@@ -103520,6 +103552,8 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(1800,4830)" to="(1800,4840)"/>
     <wire from="(1800,4880)" to="(1840,4880)"/>
     <wire from="(1800,4900)" to="(1840,4900)"/>
+    <wire from="(1810,4270)" to="(1810,4340)"/>
+    <wire from="(1810,4270)" to="(1820,4270)"/>
     <wire from="(1810,4370)" to="(1810,4470)"/>
     <wire from="(1810,4370)" to="(1840,4370)"/>
     <wire from="(1810,4470)" to="(1820,4470)"/>
@@ -103528,6 +103562,8 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(1830,4410)" to="(1830,4440)"/>
     <wire from="(1830,4410)" to="(1840,4410)"/>
     <wire from="(1830,4440)" to="(1920,4440)"/>
+    <wire from="(1850,4260)" to="(1890,4260)"/>
+    <wire from="(1850,4280)" to="(1920,4280)"/>
     <wire from="(1850,4910)" to="(1850,4950)"/>
     <wire from="(1850,4950)" to="(1860,4950)"/>
     <wire from="(1860,4210)" to="(1920,4210)"/>
@@ -103548,8 +103584,8 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(1870,3020)" to="(2320,3020)"/>
     <wire from="(1870,3030)" to="(2640,3030)"/>
     <wire from="(1870,3040)" to="(2100,3040)"/>
-    <wire from="(1870,3050)" to="(3210,3050)"/>
-    <wire from="(1870,3060)" to="(3240,3060)"/>
+    <wire from="(1870,3050)" to="(3270,3050)"/>
+    <wire from="(1870,3060)" to="(3830,3060)"/>
     <wire from="(1870,4420)" to="(1870,4430)"/>
     <wire from="(1870,4890)" to="(1890,4890)"/>
     <wire from="(1880,5210)" to="(2260,5210)"/>
@@ -103577,6 +103613,8 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(1880,5430)" to="(2300,5430)"/>
     <wire from="(1880,5440)" to="(2300,5440)"/>
     <wire from="(1880,5450)" to="(2300,5450)"/>
+    <wire from="(1890,4170)" to="(1890,4260)"/>
+    <wire from="(1890,4170)" to="(1960,4170)"/>
     <wire from="(1900,4370)" to="(1910,4370)"/>
     <wire from="(1910,4330)" to="(1910,4370)"/>
     <wire from="(1910,4390)" to="(1910,4450)"/>
@@ -103588,9 +103626,8 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(1920,4210)" to="(1920,4240)"/>
     <wire from="(1920,4240)" to="(1920,4280)"/>
     <wire from="(1920,4240)" to="(2060,4240)"/>
-    <wire from="(1920,4280)" to="(1920,4340)"/>
+    <wire from="(1920,4280)" to="(1920,4370)"/>
     <wire from="(1920,4280)" to="(1930,4280)"/>
-    <wire from="(1920,4340)" to="(1920,4370)"/>
     <wire from="(1920,4410)" to="(1920,4440)"/>
     <wire from="(1920,4440)" to="(2000,4440)"/>
     <wire from="(1940,5320)" to="(1940,5480)"/>
@@ -104291,11 +104328,11 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(3090,3400)" to="(3450,3400)"/>
     <wire from="(3090,4370)" to="(3090,4580)"/>
     <wire from="(3100,3390)" to="(3100,3640)"/>
-    <wire from="(3100,3390)" to="(3450,3390)"/>
+    <wire from="(3100,3390)" to="(3330,3390)"/>
     <wire from="(3100,4280)" to="(3120,4280)"/>
     <wire from="(3100,4370)" to="(3100,4610)"/>
     <wire from="(3110,3380)" to="(3110,3640)"/>
-    <wire from="(3110,3380)" to="(3450,3380)"/>
+    <wire from="(3110,3380)" to="(3340,3380)"/>
     <wire from="(3110,4370)" to="(3110,4640)"/>
     <wire from="(3120,4280)" to="(3120,4350)"/>
     <wire from="(3120,5110)" to="(3120,5180)"/>
@@ -104303,25 +104340,37 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(3130,5160)" to="(3130,5250)"/>
     <wire from="(3130,5160)" to="(3150,5160)"/>
     <wire from="(3150,5200)" to="(3150,5230)"/>
-    <wire from="(3180,3170)" to="(3210,3170)"/>
-    <wire from="(3180,3200)" to="(3210,3200)"/>
-    <wire from="(3180,3230)" to="(3240,3230)"/>
-    <wire from="(3210,3050)" to="(3210,3170)"/>
-    <wire from="(3210,3050)" to="(3830,3050)"/>
-    <wire from="(3210,3170)" to="(3210,3200)"/>
     <wire from="(3210,5160)" to="(3250,5160)"/>
-    <wire from="(3240,3060)" to="(3240,3230)"/>
-    <wire from="(3240,3060)" to="(3830,3060)"/>
     <wire from="(3250,5160)" to="(3250,5280)"/>
+    <wire from="(3270,3050)" to="(3270,3220)"/>
+    <wire from="(3270,3050)" to="(3830,3050)"/>
+    <wire from="(3270,3220)" to="(3330,3220)"/>
+    <wire from="(3320,3240)" to="(3320,3350)"/>
+    <wire from="(3320,3240)" to="(3350,3240)"/>
+    <wire from="(3330,3370)" to="(3330,3390)"/>
+    <wire from="(3330,3390)" to="(3450,3390)"/>
     <wire from="(3340,2500)" to="(3340,2900)"/>
     <wire from="(3340,2500)" to="(3500,2500)"/>
     <wire from="(3340,2900)" to="(3830,2900)"/>
+    <wire from="(3340,3370)" to="(3340,3380)"/>
+    <wire from="(3340,3380)" to="(3450,3380)"/>
     <wire from="(3350,2590)" to="(3350,2890)"/>
     <wire from="(3350,2590)" to="(3500,2590)"/>
     <wire from="(3350,2890)" to="(3830,2890)"/>
     <wire from="(3360,2660)" to="(3360,2880)"/>
     <wire from="(3360,2660)" to="(3500,2660)"/>
     <wire from="(3360,2880)" to="(3830,2880)"/>
+    <wire from="(3370,3200)" to="(3460,3200)"/>
+    <wire from="(3370,3210)" to="(3450,3210)"/>
+    <wire from="(3370,3220)" to="(3440,3220)"/>
+    <wire from="(3370,3230)" to="(3430,3230)"/>
+    <wire from="(3430,3230)" to="(3430,3290)"/>
+    <wire from="(3430,3290)" to="(3460,3290)"/>
+    <wire from="(3440,3220)" to="(3440,3260)"/>
+    <wire from="(3440,3260)" to="(3460,3260)"/>
+    <wire from="(3450,3210)" to="(3450,3230)"/>
+    <wire from="(3450,3230)" to="(3460,3230)"/>
+    <wire from="(3460,3170)" to="(3460,3200)"/>
     <wire from="(3480,2520)" to="(3480,2610)"/>
     <wire from="(3480,2520)" to="(3500,2520)"/>
     <wire from="(3480,2610)" to="(3480,2680)"/>
@@ -104455,11 +104504,11 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(4040,3520)" to="(4250,3520)"/>
     <wire from="(4050,3240)" to="(4050,3750)"/>
     <wire from="(4050,3750)" to="(4050,4290)"/>
-    <wire from="(4050,3750)" to="(4230,3750)"/>
+    <wire from="(4050,3750)" to="(4160,3750)"/>
     <wire from="(4050,4290)" to="(4060,4290)"/>
     <wire from="(4060,3230)" to="(4060,3650)"/>
     <wire from="(4060,3650)" to="(4060,4260)"/>
-    <wire from="(4060,3650)" to="(4230,3650)"/>
+    <wire from="(4060,3650)" to="(4160,3650)"/>
     <wire from="(4080,3200)" to="(4080,3400)"/>
     <wire from="(4080,3400)" to="(4080,3890)"/>
     <wire from="(4080,3400)" to="(4250,3400)"/>
@@ -104486,6 +104535,7 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(4120,3510)" to="(4120,3860)"/>
     <wire from="(4120,3510)" to="(4230,3510)"/>
     <wire from="(4120,3940)" to="(4120,4200)"/>
+    <wire from="(4120,3940)" to="(4170,3940)"/>
     <wire from="(4120,4200)" to="(4120,4300)"/>
     <wire from="(4120,4200)" to="(4200,4200)"/>
     <wire from="(4140,4250)" to="(4140,4300)"/>
@@ -104493,11 +104543,17 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(4150,4330)" to="(4150,4360)"/>
     <wire from="(4150,4360)" to="(4860,4360)"/>
     <wire from="(4160,4010)" to="(4160,4160)"/>
+    <wire from="(4160,4010)" to="(4190,4010)"/>
     <wire from="(4160,4160)" to="(4160,4300)"/>
     <wire from="(4160,4160)" to="(4240,4160)"/>
+    <wire from="(4170,3660)" to="(4190,3660)"/>
+    <wire from="(4170,3760)" to="(4170,3940)"/>
     <wire from="(4170,5860)" to="(4190,5860)"/>
+    <wire from="(4180,3650)" to="(4210,3650)"/>
+    <wire from="(4180,3750)" to="(4210,3750)"/>
     <wire from="(4180,4280)" to="(4180,4290)"/>
     <wire from="(4180,5780)" to="(4350,5780)"/>
+    <wire from="(4190,3660)" to="(4190,4010)"/>
     <wire from="(4190,4330)" to="(4190,4520)"/>
     <wire from="(4190,4520)" to="(4430,4520)"/>
     <wire from="(4190,5800)" to="(4190,5860)"/>
@@ -104514,6 +104570,8 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(4200,5540)" to="(4470,5540)"/>
     <wire from="(4200,5980)" to="(5800,5980)"/>
     <wire from="(4200,6510)" to="(4310,6510)"/>
+    <wire from="(4210,3650)" to="(4230,3650)"/>
+    <wire from="(4210,3750)" to="(4230,3750)"/>
     <wire from="(4220,4250)" to="(4220,4290)"/>
     <wire from="(4220,4500)" to="(4220,4750)"/>
     <wire from="(4220,4500)" to="(4430,4500)"/>
@@ -105632,7 +105690,7 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(8490,4630)" to="(8490,4750)"/>
     <wire from="(8490,4630)" to="(9200,4630)"/>
     <wire from="(8500,4560)" to="(8570,4560)"/>
-    <wire from="(8500,4570)" to="(8850,4570)"/>
+    <wire from="(8500,4570)" to="(8870,4570)"/>
     <wire from="(8500,4780)" to="(8500,4980)"/>
     <wire from="(8500,4980)" to="(9090,4980)"/>
     <wire from="(8510,4670)" to="(8510,4750)"/>
@@ -105690,19 +105748,19 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(8780,4340)" to="(8930,4340)"/>
     <wire from="(8820,4750)" to="(8840,4750)"/>
     <wire from="(8840,4730)" to="(8840,4750)"/>
-    <wire from="(8840,4730)" to="(8870,4730)"/>
-    <wire from="(8850,4570)" to="(8850,4750)"/>
-    <wire from="(8850,4570)" to="(8890,4570)"/>
+    <wire from="(8840,4730)" to="(8850,4730)"/>
+    <wire from="(8850,4730)" to="(8850,4750)"/>
+    <wire from="(8850,4730)" to="(8910,4730)"/>
     <wire from="(8860,4780)" to="(8860,4860)"/>
     <wire from="(8860,4860)" to="(9090,4860)"/>
     <wire from="(8870,3900)" to="(8870,3940)"/>
     <wire from="(8870,3900)" to="(8890,3900)"/>
     <wire from="(8870,4070)" to="(8880,4070)"/>
-    <wire from="(8870,4730)" to="(8870,4740)"/>
-    <wire from="(8870,4730)" to="(8910,4730)"/>
+    <wire from="(8870,4570)" to="(8870,4740)"/>
+    <wire from="(8870,4740)" to="(8890,4740)"/>
     <wire from="(8880,3920)" to="(8880,4070)"/>
     <wire from="(8880,3920)" to="(8890,3920)"/>
-    <wire from="(8890,4570)" to="(8890,4750)"/>
+    <wire from="(8890,4740)" to="(8890,4750)"/>
     <wire from="(8900,3930)" to="(8900,4300)"/>
     <wire from="(8900,4300)" to="(8940,4300)"/>
     <wire from="(8900,4780)" to="(8900,4850)"/>
@@ -105896,7 +105954,9 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(9700,5590)" to="(9700,5630)"/>
     <wire from="(9700,5590)" to="(9740,5590)"/>
     <wire from="(9700,5630)" to="(10030,5630)"/>
+    <wire from="(9940,5080)" to="(9970,5080)"/>
     <wire from="(9940,5130)" to="(9980,5130)"/>
+    <wire from="(9940,5180)" to="(9970,5180)"/>
     <wire from="(9940,5190)" to="(10050,5190)"/>
     <wire from="(9940,5200)" to="(9980,5200)"/>
     <wire from="(9940,5320)" to="(10000,5320)"/>
@@ -105906,6 +105966,7 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(9940,5360)" to="(10080,5360)"/>
     <wire from="(9940,5370)" to="(10030,5370)"/>
     <wire from="(9940,5520)" to="(9980,5520)"/>
+    <wire from="(9970,5080)" to="(9970,5180)"/>
     <wire from="(9980,5130)" to="(9980,5200)"/>
     <wire from="(9980,5200)" to="(10050,5200)"/>
     <wire from="(9980,5350)" to="(10040,5350)"/>
@@ -110393,9 +110454,40 @@ e284 922c a0c cca1 3468 2140 10 816a
     <a name="circuit" val="fullcore"/>
     <a name="circuitnamedboxfixedsize" val="true"/>
     <a name="simulationFrequency" val="10000.0"/>
+    <comp lib="1" loc="(1950,410)" name="NOT Gate"/>
+    <comp lib="4" loc="(1950,360)" name="RAM">
+      <a name="addrWidth" val="24"/>
+      <a name="appearance" val="logisim_evolution"/>
+      <a name="asyncread" val="true"/>
+      <a name="type" val="nonvolatile"/>
+    </comp>
     <comp lib="5" loc="(1100,780)" name="TTY"/>
     <comp lib="5" loc="(1110,970)" name="Keyboard"/>
+    <comp loc="(1700,400)" name="sdcard">
+      <a name="appearance" val="evolution"/>
+    </comp>
     <comp loc="(870,610)" name="core4real"/>
+    <wire from="(1540,450)" to="(1540,640)"/>
+    <wire from="(1540,450)" to="(1570,450)"/>
+    <wire from="(1540,640)" to="(2190,640)"/>
+    <wire from="(1700,420)" to="(1720,420)"/>
+    <wire from="(1700,430)" to="(1720,430)"/>
+    <wire from="(1700,440)" to="(1890,440)"/>
+    <wire from="(1700,450)" to="(1950,450)"/>
+    <wire from="(1700,460)" to="(1900,460)"/>
+    <wire from="(1700,470)" to="(1910,470)"/>
+    <wire from="(1700,480)" to="(1880,480)"/>
+    <wire from="(1700,500)" to="(1710,500)"/>
+    <wire from="(1700,520)" to="(1710,520)"/>
+    <wire from="(1880,410)" to="(1880,480)"/>
+    <wire from="(1880,410)" to="(1920,410)"/>
+    <wire from="(1890,370)" to="(1890,440)"/>
+    <wire from="(1890,370)" to="(1950,370)"/>
+    <wire from="(1900,430)" to="(1900,460)"/>
+    <wire from="(1900,430)" to="(1950,430)"/>
+    <wire from="(1910,420)" to="(1910,470)"/>
+    <wire from="(1910,420)" to="(1950,420)"/>
+    <wire from="(2190,450)" to="(2190,640)"/>
   </circuit>
   <circuit name="SR_Latch">
     <a name="appearance" val="evolution"/>
@@ -111975,4 +112067,894 @@ e284 922c a0c cca1 3468 2140 10 816a
     <wire from="(990,330)" to="(1060,330)"/>
     <wire from="(990,330)" to="(990,2130)"/>
   </circuit>
+  <vhdl name="sdcard">--------------------------------------------------------------------------------
+-- Project : SD Card Emulator (slave-side)
+-- File    : sdcard.vhd
+-- Autor   :
+-- Date    :
+--
+--------------------------------------------------------------------------------
+-- Description :
+--   Emulates the bus-facing behaviour of an SD memory card (SDHC/SDXC,
+--   block addressed). The card boots into native 4-bit-capable SD mode and
+--   permanently falls back to SPI mode if CS (DAT3) is sampled low during
+--   the very first command frame (CMD0) after reset -- exactly how a real
+--   card decides which mode to use.
+--
+--   Storage is not modeled internally: the card's "flash" is an external
+--   async SRAM wired to mem_addr/mem_dout/mem_din/mem_we_n/mem_oe_n/mem_ce_n.
+--   Block size is fixed at 512 bytes; addressing on CMD17/18/24/25 is by
+--   block number (CCS=1 in OCR), matching modern SDHC/SDXC cards.
+--
+--   SIMPLIFICATION NOTES (read before relying on this for anything real):
+--     * CID/CSD contents below are placeholders. Their low byte packs a
+--       stop bit + CRC7 that must be recomputed if you change the fields.
+--     * Native mode data bus width starts at 1 bit and only widens to 4
+--       bits after a valid ACMD6 (SET_BUS_WIDTH); this keeps one CRC16
+--       datapath doing double duty instead of hard-coding 4 lanes always on.
+--     * SPI-mode CRC (CMD59 CRC_ON_OFF) is not implemented -- CRC bytes are
+--       always sent on the wire but never required/checked from the host
+--       in SPI mode, matching the common "CRC disabled" default.
+--     * Voltage window / UHS / DDR / erase timing are not modeled; ACMD41
+--       reports "busy" for a fixed number of polls then "ready".
+--     * This is a single-card, single-slice emulator: no CID collision
+--       resolution, RCA is fixed at 0x0001 once ident completes.
+--   Simulate (e.g. with GHDL) against a real host controller model before
+--   trusting this on real hardware.
+--
+--   PORT NOTE -- INOUT REMOVED:
+--     The original design used bidirectional (INOUT) ports for sd_cmd and
+--     sd_dat, matching the real SD bus's open-drain/shared lines. Some
+--     synthesis/PnR flows and some board-level top-level wrappers don't
+--     accept INOUT at this level (or you're feeding this into a hierarchy
+--     where the tristate must be built at the actual pad). To fix that,
+--     every bidirectional pin below has been split into three unidirectional
+--     signals:
+--       &lt;pin&gt;_i  : IN  -- value sampled FROM the pin (drive this from
+--                       whatever external tristate/IOBUF sits on the pin)
+--       &lt;pin&gt;_o  : OUT -- value the card wants to drive onto the pin
+--       &lt;pin&gt;_oe : OUT -- output-enable, '1' = card is driving &lt;pin&gt;_o
+--                        onto the pin, '0' = card is released (Hi-Z)
+--     At the very top level (or in a testbench), instantiate a tristate
+--     buffer per pin, e.g. for a Xilinx/generic style:
+--         sd_cmd_pad &lt;= sd_cmd_o when sd_cmd_oe = '1' else 'Z';
+--         sd_cmd_i   &lt;= sd_cmd_pad;
+--     or use your target's IOBUF primitive (I=sd_cmd_o, O=sd_cmd_i,
+--     T=not sd_cmd_oe, IO=sd_cmd_pad). Same pattern for each sd_dat(i).
+--     Internal logic/behaviour is otherwise unchanged.
+--------------------------------------------------------------------------------
+
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.numeric_std.all;
+
+ENTITY sdcard IS
+  PORT (
+  ------------------------------------------------------------------------------
+  --Insert input ports below
+    clock      : IN  std_logic;                     -- free-running system clock (NOT the SD clock); used only to sync the async reset
+    rst_n      : IN  std_logic;                     -- asynchronous reset, active low (emulated power-on)
+
+    sd_clk     : IN    std_logic;                    -- host-supplied bus clock (SDCLK in native mode / SCLK in SPI mode)
+  ------------------------------------------------------------------------------
+  --Insert output/bidir ports below
+    -- CMD line (native, open-drain) / MOSI+card-driven response (SPI).
+    -- Split from the original INOUT sd_cmd (see PORT NOTE in the header).
+    sd_cmd_i   : IN    std_logic;                    -- sampled value of the CMD pin
+    sd_cmd_o   : OUT   std_logic;                    -- value the card wants to drive
+    sd_cmd_oe  : OUT   std_logic;                    -- '1' = card is driving sd_cmd_o onto the pin
+
+    -- DAT3:DAT0. In SPI mode dat(3)=CS_n (host-driven), dat(0)=MISO (card-driven).
+    -- Split from the original INOUT sd_dat (see PORT NOTE in the header).
+    sd_dat_i   : IN    std_logic_vector(3 DOWNTO 0); -- sampled value of the DAT pins
+    sd_dat_o   : OUT   std_logic_vector(3 DOWNTO 0); -- value the card wants to drive per pin
+    sd_dat_oe  : OUT   std_logic_vector(3 DOWNTO 0); -- '1' per bit = card is driving sd_dat_o(i)
+
+    mem_addr   : OUT std_logic_vector(23 DOWNTO 0);  -- byte address into external SRAM (16 MB emulated card)
+    mem_dout   : OUT std_logic_vector(7 DOWNTO 0);   -- data written to SRAM (host-&gt;card write)
+    mem_din    : IN  std_logic_vector(7 DOWNTO 0);   -- data read from SRAM (card-&gt;host read)
+    mem_we_n   : OUT std_logic;                      -- SRAM write enable, active low
+    mem_oe_n   : OUT std_logic;                      -- SRAM output enable, active low
+    mem_ce_n   : OUT std_logic;                      -- SRAM chip enable, active low
+
+    spi_mode   : OUT std_logic;                      -- '1' once the card has latched into SPI mode
+    card_state : OUT std_logic_vector(3 DOWNTO 0);   -- debug: current native-mode card state
+    max        : OUT std_logic;                      -- '1' once card has left idle state (kept from template: "reached max/ready")
+    cpt        : OUT std_logic_vector(3 DOWNTO 0)    -- debug: low nibble of last received command index
+    );
+END sdcard;
+
+--------------------------------------------------------------------------------
+--Complete your VHDL description below
+--------------------------------------------------------------------------------
+
+ARCHITECTURE TypeArchitecture OF sdcard IS
+
+  ------------------------------------------------------------------------------
+  -- Card state machine (SD Physical Layer states, simplified: no "dis")
+  TYPE card_state_t IS (ST_IDLE, ST_READY, ST_IDENT, ST_STBY, ST_TRAN, ST_SENDDATA, ST_RCV, ST_PRG);
+  SIGNAL state : card_state_t := ST_IDLE;
+
+  ------------------------------------------------------------------------------
+  -- Command receiver (native + SPI share the same 48-bit frame layout:
+  -- [47]=start(0) [46]=transmission(1,host-&gt;card) [45:40]=cmd index
+  -- [39:8]=argument [7:1]=CRC7 [0]=stop(1))
+  TYPE cmd_rx_t IS (CRX_WAIT_START, CRX_SHIFT, CRX_DONE);
+  SIGNAL cmd_rx_state : cmd_rx_t := CRX_WAIT_START;
+  SIGNAL cmd_shift    : std_logic_vector(47 DOWNTO 0) := (others =&gt; '1');
+  SIGNAL cmd_bit_cnt  : integer range 0 to 47 := 0;
+  SIGNAL cmd_crc_calc : std_logic_vector(6 DOWNTO 0) := (others =&gt; '0');
+  SIGNAL cmd_valid    : std_logic := '0';           -- one-cycle pulse: frame captured &amp; CRC7 ok
+  SIGNAL cmd_index    : unsigned(5 DOWNTO 0);
+  SIGNAL cmd_arg      : std_logic_vector(31 DOWNTO 0);
+  SIGNAL is_acmd_next : std_logic := '0';           -- set for one command after CMD55
+  SIGNAL cmd_rx_inhibit : std_logic := '0';         -- '1' while SPI-mode write data is using the CMD/DI line, so it isn't mistaken for a command
+
+  ------------------------------------------------------------------------------
+  -- Mode latch: native (default) vs SPI (permanent once entered)
+  SIGNAL mode_spi        : std_logic := '0';
+  SIGNAL first_cmd_done  : std_logic := '0';
+
+  ------------------------------------------------------------------------------
+  -- Card registers (placeholders -- see file header notes)
+  CONSTANT C_OCR : std_logic_vector(31 DOWNTO 0) := x"C0FF8000"; -- busy=1(ready), CCS=1(block addressing), 3.2-3.4V window set
+  CONSTANT C_CID : std_logic_vector(127 DOWNTO 0) := x"AA544D4D4330303010012345000000FF"; -- TODO: recompute low-byte CRC7+stop if you edit this
+  CONSTANT C_CSD : std_logic_vector(127 DOWNTO 0) := x"400E00325B590000EDC87F800A400015"; -- TODO: recompute low-byte CRC7+stop if you edit this
+  CONSTANT C_RCA : std_logic_vector(15 DOWNTO 0) := x"0001";
+  SIGNAL   card_status : std_logic_vector(31 DOWNTO 0) := (others =&gt; '0');
+  SIGNAL   r2_is_cid   : std_logic := '1';          -- selects C_CID vs C_CSD as the content of the next R2 response
+
+  ------------------------------------------------------------------------------
+  -- Response builder (covers R1/R1b, R3, R7 as 48-bit; R2 as 136-bit)
+  TYPE resp_type_t IS (RESP_NONE, RESP_R1, RESP_R1B, RESP_R2, RESP_R3, RESP_R7);
+  SIGNAL resp_sel      : resp_type_t := RESP_NONE;
+  SIGNAL resp_shift    : std_logic_vector(135 DOWNTO 0) := (others =&gt; '1');
+  SIGNAL resp_len      : integer range 0 to 136 := 0;
+  SIGNAL resp_bit_cnt  : integer range 0 to 136 := 0;
+  SIGNAL resp_active   : std_logic := '0';
+  SIGNAL cmd_drive     : std_logic := '0';          -- '1' while the card is driving sd_cmd
+  SIGNAL cmd_drive_val : std_logic := '1';
+
+  ------------------------------------------------------------------------------
+  -- Transfer / data-path control
+  SIGNAL block_len     : unsigned(11 DOWNTO 0) := to_unsigned(512, 12);
+  SIGNAL cur_addr      : unsigned(23 DOWNTO 0) := (others =&gt; '0');
+  SIGNAL bus_width4     : std_logic := '0';         -- '0'=1-bit native, '1'=4-bit native (set by ACMD6)
+  SIGNAL multi_block    : std_logic := '0';
+  SIGNAL xfer_is_write  : std_logic := '0';         -- status: '1' if the in-progress/most recent transfer was a write
+  SIGNAL stop_req       : std_logic := '0';         -- CMD12 received
+
+  TYPE data_fsm_t IS (DFSM_IDLE, DFSM_TX_TOKEN, DFSM_TX_FETCH, DFSM_TX, DFSM_TX_CRC, DFSM_TX_END,
+                       DFSM_RX_TOKEN, DFSM_RX, DFSM_RX_WRITE, DFSM_RX_CRC, DFSM_RX_CRC_CHECK, DFSM_RX_RESP, DFSM_BUSY);
+  SIGNAL dfsm : data_fsm_t := DFSM_IDLE;
+  SIGNAL busy_cnt   : integer range 0 to 15 := 0;
+
+  SIGNAL dat_drive     : std_logic := '0';          -- '1' while card drives sd_dat
+  SIGNAL dat_drive_val : std_logic_vector(3 DOWNTO 0) := (others =&gt; '1');
+
+  -- one CRC16 lane per DAT bit; lane 0 doubles as the SPI/1-bit CRC
+  TYPE crc16_arr_t IS ARRAY (0 TO 3) OF std_logic_vector(15 DOWNTO 0);
+  SIGNAL crc16_lane : crc16_arr_t := (others =&gt; (others =&gt; '0'));
+
+  SIGNAL busy_n_out : std_logic := '1';             -- open-drain "card busy" indication on DAT0
+
+  ------------------------------------------------------------------------------
+  -- Block transfer engine.
+  --   SIMPLIFICATION: 4-bit native mode is modeled as 4 independent
+  --   byte-serial lanes running in lock-step (lane i carries byte (n+i) of
+  --   the block, each with its own CRC16), rather than the exact nibble-
+  --   per-clock bit interleave the SD spec uses within a single byte. This
+  --   still gives a genuine 4x throughput gain and a real per-lane CRC16,
+  --   it just groups whole bytes per lane instead of interleaving nibbles.
+  --   Also assumes the external SRAM answers within one sd_clk period
+  --   (true for typical async SRAM at default/high SD speed clock rates);
+  --   add wait states in DFSM_TX_FETCH/DFSM_RX_WRITE if you clock faster
+  --   than your SRAM can follow.
+  CONSTANT C_LANES : integer := 4;
+  TYPE byte_arr_t IS ARRAY (0 TO C_LANES - 1) OF std_logic_vector(7 DOWNTO 0);
+  SIGNAL lane_buf     : byte_arr_t := (others =&gt; (others =&gt; '0'));
+  SIGNAL active_lanes : integer range 1 to C_LANES := 1;
+  SIGNAL bitpos       : integer range 0 to 7 := 0;   -- bit index within the current byte-group / crc / token byte
+  SIGNAL crc_bitpos   : integer range 0 to 15 := 0;
+  SIGNAL fetch_idx    : integer range 0 to C_LANES - 1 := 0;
+  SIGNAL bytes_done   : integer range 0 to 511 := 0; -- bytes transferred so far in the current block
+  SIGNAL tok_cnt      : integer range 0 to 7 := 0;
+  SIGNAL crc_err      : std_logic := '0';
+  SIGNAL rx_shift_byte : std_logic_vector(7 DOWNTO 0) := (others =&gt; '0');
+  SIGNAL rx_crc_recv   : crc16_arr_t := (others =&gt; (others =&gt; '0'));
+  SIGNAL spi_resp_byte : std_logic_vector(7 DOWNTO 0) := x"05";
+  CONSTANT C_TOKEN     : std_logic_vector(7 DOWNTO 0) := "11111110"; -- SPI single-block data start token (0xFE)
+
+  ------------------------------------------------------------------------------
+  -- ACMD41 "power up" polling counter, so GO_IDLE -&gt; READY takes a few polls
+  SIGNAL acmd41_polls : integer range 0 to 3 := 0;
+
+  ------------------------------------------------------------------------------
+  FUNCTION crc7_next(crc_in : std_logic_vector(6 DOWNTO 0); bit_in : std_logic)
+    RETURN std_logic_vector IS
+    VARIABLE din : std_logic;
+    VARIABLE co  : std_logic_vector(6 DOWNTO 0);
+  BEGIN
+    din    := bit_in XOR crc_in(6);
+    co(0)  := din;
+    co(1)  := crc_in(0);
+    co(2)  := crc_in(1);
+    co(3)  := crc_in(2) XOR din;
+    co(4)  := crc_in(3);
+    co(5)  := crc_in(4);
+    co(6)  := crc_in(5);
+    RETURN co;
+  END FUNCTION;
+
+  FUNCTION crc16_next(crc_in : std_logic_vector(15 DOWNTO 0); bit_in : std_logic)
+    RETURN std_logic_vector IS
+    VARIABLE din : std_logic;
+    VARIABLE co  : std_logic_vector(15 DOWNTO 0);
+  BEGIN
+    din := bit_in XOR crc_in(15);
+    co(0)           := din;
+    co(4 DOWNTO 1)  := crc_in(3 DOWNTO 0);
+    co(5)           := crc_in(4) XOR din;
+    co(11 DOWNTO 6) := crc_in(10 DOWNTO 5);
+    co(12)          := crc_in(11) XOR din;
+    co(15 DOWNTO 13):= crc_in(14 DOWNTO 12);
+    RETURN co;
+  END FUNCTION;
+
+BEGIN
+
+  ------------------------------------------------------------------------------
+  -- Drivers for the shared/open-drain lines.
+  -- Previously these assigned 'Z' onto an INOUT port; now each pin drives
+  -- a dedicated _o (value) / _oe (output-enable) pair instead. Build the
+  -- actual tristate/IOBUF at the top level from these (see PORT NOTE above).
+  ------------------------------------------------------------------------------
+  sd_cmd_o  &lt;= cmd_drive_val;
+  sd_cmd_oe &lt;= cmd_drive;
+
+  sd_dat_o(0)  &lt;= dat_drive_val(0) WHEN (dat_drive = '1') ELSE
+                  busy_n_out       WHEN (mode_spi = '0' AND dfsm = DFSM_BUSY) ELSE
+                  '1';
+  sd_dat_oe(0) &lt;= '1' WHEN (dat_drive = '1') OR (mode_spi = '0' AND dfsm = DFSM_BUSY) ELSE '0';
+
+  sd_dat_o(1)  &lt;= dat_drive_val(1);
+  sd_dat_oe(1) &lt;= '1' WHEN (dat_drive = '1' AND bus_width4 = '1' AND mode_spi = '0') ELSE '0';
+
+  sd_dat_o(2)  &lt;= dat_drive_val(2);
+  sd_dat_oe(2) &lt;= '1' WHEN (dat_drive = '1' AND bus_width4 = '1' AND mode_spi = '0') ELSE '0';
+
+  sd_dat_o(3)  &lt;= dat_drive_val(3);
+  sd_dat_oe(3) &lt;= '1' WHEN (dat_drive = '1' AND bus_width4 = '1' AND mode_spi = '0') ELSE '0'; -- host owns dat(3) as CS_n in SPI mode
+
+  spi_mode   &lt;= mode_spi;
+  card_state &lt;= std_logic_vector(to_unsigned(card_state_t'pos(state), 4));
+  max        &lt;= '0' WHEN state = ST_IDLE ELSE '1';
+  cpt        &lt;= std_logic_vector(cmd_index(3 DOWNTO 0));
+
+  ------------------------------------------------------------------------------
+  -- Command frame receiver: shift register clocked by the host-supplied
+  -- sd_clk. In SPI mode the frame is qualified by CS_n=dat(3) being low.
+  ------------------------------------------------------------------------------
+  PROCESS (sd_clk, rst_n)
+    VARIABLE next_crc : std_logic_vector(6 DOWNTO 0);
+    VARIABLE line_in   : std_logic;
+  BEGIN
+    IF rst_n = '0' THEN
+      cmd_rx_state &lt;= CRX_WAIT_START;
+      cmd_bit_cnt  &lt;= 0;
+      cmd_crc_calc &lt;= (others =&gt; '0');
+      cmd_valid    &lt;= '0';
+      cmd_shift    &lt;= (others =&gt; '1');
+    ELSIF rising_edge(sd_clk) THEN
+      cmd_valid &lt;= '0';
+      line_in := sd_cmd_i;
+
+      IF (mode_spi = '1' AND sd_dat_i(3) = '1') THEN
+        -- SPI mode but CS_n deasserted: no frame in progress
+        cmd_rx_state &lt;= CRX_WAIT_START;
+      ELSIF cmd_rx_inhibit = '1' THEN
+        NULL; -- SPI write-data phase owns the DI line right now; don't decode it as a command
+      ELSE
+        CASE cmd_rx_state IS
+          WHEN CRX_WAIT_START =&gt;
+            IF line_in = '0' THEN
+              cmd_shift    &lt;= (47 DOWNTO 1 =&gt; '1') &amp; '0';
+              cmd_crc_calc &lt;= (others =&gt; '0');
+              cmd_bit_cnt  &lt;= 1;
+              cmd_rx_state &lt;= CRX_SHIFT;
+            END IF;
+
+          WHEN CRX_SHIFT =&gt;
+            cmd_shift &lt;= cmd_shift(46 DOWNTO 0) &amp; line_in;
+            IF cmd_bit_cnt &lt; 40 THEN
+              -- CRC7 is computed over start+transmission+index+argument (first 40 bits)
+              cmd_crc_calc &lt;= crc7_next(cmd_crc_calc, line_in);
+            END IF;
+            IF cmd_bit_cnt = 47 THEN
+              cmd_rx_state &lt;= CRX_DONE;
+            ELSE
+              cmd_bit_cnt &lt;= cmd_bit_cnt + 1;
+            END IF;
+
+          WHEN CRX_DONE =&gt;
+            -- full 48-bit frame now sits in cmd_shift (post final shift below)
+            IF (cmd_shift(6 DOWNTO 0) = cmd_crc_calc(6 DOWNTO 1) &amp; '1') OR mode_spi = '1' THEN
+              -- native mode: enforce CRC7; SPI mode command CRC is optional/ignored by convention here
+              cmd_valid &lt;= '1';
+            END IF;
+            cmd_rx_state &lt;= CRX_WAIT_START;
+        END CASE;
+      END IF;
+    END IF;
+  END PROCESS;
+
+  cmd_index &lt;= unsigned(cmd_shift(45 DOWNTO 40));
+  cmd_arg   &lt;= cmd_shift(39 DOWNTO 8);
+
+  ------------------------------------------------------------------------------
+  -- Mode-detect: latch SPI mode if CS (dat3) is low the first time a valid
+  -- command frame (which will be CMD0) completes.
+  ------------------------------------------------------------------------------
+  PROCESS (sd_clk, rst_n)
+  BEGIN
+    IF rst_n = '0' THEN
+      mode_spi       &lt;= '0';
+      first_cmd_done &lt;= '0';
+    ELSIF rising_edge(sd_clk) THEN
+      IF cmd_valid = '1' AND first_cmd_done = '0' THEN
+        first_cmd_done &lt;= '1';
+        IF sd_dat_i(3) = '0' THEN
+          mode_spi &lt;= '1';
+        END IF;
+      END IF;
+    END IF;
+  END PROCESS;
+
+  ------------------------------------------------------------------------------
+  -- Command decode + card state machine + response selection
+  ------------------------------------------------------------------------------
+  PROCESS (sd_clk, rst_n)
+    VARIABLE idx : integer;
+  BEGIN
+    IF rst_n = '0' THEN
+      state         &lt;= ST_IDLE;
+      resp_sel      &lt;= RESP_NONE;
+      resp_active   &lt;= '0';
+      is_acmd_next  &lt;= '0';
+      multi_block   &lt;= '0';
+      stop_req      &lt;= '0';
+      xfer_is_write &lt;= '0';
+      bus_width4    &lt;= '0';
+      block_len     &lt;= to_unsigned(512, 12);
+      acmd41_polls  &lt;= 0;
+      card_status   &lt;= (others =&gt; '0');
+    ELSIF rising_edge(sd_clk) THEN
+      resp_active &lt;= '0';
+      stop_req    &lt;= '0';
+
+      IF cmd_valid = '1' THEN
+        idx := to_integer(cmd_index);
+
+        IF is_acmd_next = '1' THEN
+          ----------------------------------------------------------------
+          -- Application-specific commands (preceded by CMD55)
+          ----------------------------------------------------------------
+          CASE idx IS
+            WHEN 6 =&gt;  -- ACMD6: SET_BUS_WIDTH
+              bus_width4 &lt;= cmd_arg(1);
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+            WHEN 41 =&gt; -- ACMD41: SD_SEND_OP_COND
+              IF acmd41_polls &lt; 2 THEN
+                acmd41_polls &lt;= acmd41_polls + 1; -- report busy a couple of times, like a real card
+              ELSIF state = ST_IDLE THEN
+                state &lt;= ST_READY;
+              END IF;
+              resp_sel &lt;= RESP_R3; resp_active &lt;= '1';
+            WHEN OTHERS =&gt;
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1'; -- unsupported ACMD: R1 with illegal-command bit could be set here
+          END CASE;
+          is_acmd_next &lt;= '0';
+
+        ELSE
+          is_acmd_next &lt;= '0';
+          CASE idx IS
+            WHEN 0 =&gt;  -- CMD0: GO_IDLE_STATE
+              state &lt;= ST_IDLE;
+              acmd41_polls &lt;= 0;
+              resp_sel &lt;= RESP_NONE; -- no response to CMD0
+
+            WHEN 8 =&gt;  -- CMD8: SEND_IF_COND
+              resp_sel &lt;= RESP_R7; resp_active &lt;= '1';
+
+            WHEN 2 =&gt;  -- CMD2: ALL_SEND_CID
+              IF state = ST_READY THEN
+                state &lt;= ST_IDENT;
+              END IF;
+              r2_is_cid &lt;= '1';
+              resp_sel &lt;= RESP_R2; resp_active &lt;= '1';
+
+            WHEN 3 =&gt;  -- CMD3: SEND_RELATIVE_ADDR
+              IF state = ST_IDENT THEN
+                state &lt;= ST_STBY;
+              END IF;
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1'; -- (real R6 packs RCA+status; simplified to R1 here)
+
+            WHEN 7 =&gt;  -- CMD7: SELECT/DESELECT_CARD
+              IF cmd_arg(31 DOWNTO 16) = C_RCA THEN
+                IF state = ST_STBY THEN state &lt;= ST_TRAN; END IF;
+              ELSE
+                IF state = ST_TRAN THEN state &lt;= ST_STBY; END IF;
+              END IF;
+              resp_sel &lt;= RESP_R1B; resp_active &lt;= '1';
+
+            WHEN 9 =&gt;  -- CMD9: SEND_CSD
+              r2_is_cid &lt;= '0';
+              resp_sel &lt;= RESP_R2; resp_active &lt;= '1';
+
+            WHEN 10 =&gt; -- CMD10: SEND_CID
+              r2_is_cid &lt;= '1';
+              resp_sel &lt;= RESP_R2; resp_active &lt;= '1';
+
+            WHEN 12 =&gt; -- CMD12: STOP_TRANSMISSION
+              multi_block &lt;= '0';
+              stop_req &lt;= '1';
+              state &lt;= ST_TRAN;
+              resp_sel &lt;= RESP_R1B; resp_active &lt;= '1';
+
+            WHEN 13 =&gt; -- CMD13: SEND_STATUS
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+
+            WHEN 16 =&gt; -- CMD16: SET_BLOCKLEN
+              block_len &lt;= unsigned(cmd_arg(11 DOWNTO 0));
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+
+            WHEN 17 =&gt; -- CMD17: READ_SINGLE_BLOCK
+              cur_addr &lt;= unsigned(cmd_arg(23 DOWNTO 0));
+              multi_block   &lt;= '0';
+              xfer_is_write &lt;= '0';
+              IF state = ST_TRAN THEN state &lt;= ST_SENDDATA; END IF;
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+
+            WHEN 18 =&gt; -- CMD18: READ_MULTIPLE_BLOCK
+              cur_addr &lt;= unsigned(cmd_arg(23 DOWNTO 0));
+              multi_block   &lt;= '1';
+              xfer_is_write &lt;= '0';
+              IF state = ST_TRAN THEN state &lt;= ST_SENDDATA; END IF;
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+
+            WHEN 24 =&gt; -- CMD24: WRITE_BLOCK
+              cur_addr &lt;= unsigned(cmd_arg(23 DOWNTO 0));
+              multi_block   &lt;= '0';
+              xfer_is_write &lt;= '1';
+              IF state = ST_TRAN THEN state &lt;= ST_RCV; END IF;
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+
+            WHEN 25 =&gt; -- CMD25: WRITE_MULTIPLE_BLOCK
+              cur_addr &lt;= unsigned(cmd_arg(23 DOWNTO 0));
+              multi_block   &lt;= '1';
+              xfer_is_write &lt;= '1';
+              IF state = ST_TRAN THEN state &lt;= ST_RCV; END IF;
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+
+            WHEN 32 =&gt; -- CMD32: ERASE_WR_BLK_START
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+            WHEN 33 =&gt; -- CMD33: ERASE_WR_BLK_END
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+            WHEN 38 =&gt; -- CMD38: ERASE (not implemented against SRAM; just acked)
+              resp_sel &lt;= RESP_R1B; resp_active &lt;= '1';
+
+            WHEN 55 =&gt; -- CMD55: APP_CMD
+              is_acmd_next &lt;= '1';
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+
+            WHEN 59 =&gt; -- CMD59: CRC_ON_OFF (accepted, not acted on -- see file header)
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1';
+
+            WHEN OTHERS =&gt;
+              resp_sel &lt;= RESP_R1; resp_active &lt;= '1'; -- unsupported command, R1 (illegal-cmd bit not modeled)
+          END CASE;
+        END IF;
+      END IF;
+
+      -- return to ST_TRAN once a single-block data phase completes
+      IF dfsm = DFSM_IDLE AND (state = ST_SENDDATA OR state = ST_RCV) AND multi_block = '0' THEN
+        state &lt;= ST_TRAN;
+      END IF;
+    END IF;
+  END PROCESS;
+
+  ------------------------------------------------------------------------------
+  -- Response transmitter: drives sd_cmd with the selected response frame.
+  -- Frame is (re)loaded combinationally from resp_sel/registers below, then
+  -- shifted out MSB-first on sd_clk falling edges (per SD spec the card
+  -- changes CMD after the falling edge so the host samples on the rising edge).
+  ------------------------------------------------------------------------------
+  PROCESS (sd_clk, rst_n)
+    VARIABLE frame48   : std_logic_vector(47 DOWNTO 0);
+    VARIABLE bits40    : std_logic_vector(39 DOWNTO 0);
+    VARIABLE crc       : std_logic_vector(6 DOWNTO 0);
+  BEGIN
+    IF rst_n = '0' THEN
+      cmd_drive     &lt;= '0';
+      resp_bit_cnt  &lt;= 0;
+      resp_len      &lt;= 0;
+      cmd_drive_val &lt;= '1';
+    ELSIF falling_edge(sd_clk) THEN
+      IF resp_active = '1' AND resp_sel /= RESP_NONE THEN
+        -- build &amp; load the frame
+        CASE resp_sel IS
+          WHEN RESP_R2 =&gt;
+            IF r2_is_cid = '1' THEN
+              resp_shift &lt;= '0' &amp; '0' &amp; "111111" &amp; C_CID;
+            ELSE
+              resp_shift &lt;= '0' &amp; '0' &amp; "111111" &amp; C_CSD;
+            END IF;
+            resp_len   &lt;= 136;
+
+          WHEN RESP_R3 =&gt;
+            frame48 := '0' &amp; '0' &amp; "111111" &amp; C_OCR &amp; "1111111" &amp; '1'; -- R3 carries no real CRC7 (field is all 1s + stop)
+            resp_shift(47 DOWNTO 0) &lt;= frame48;
+            resp_len &lt;= 48;
+
+          WHEN RESP_R7 =&gt;
+            frame48 := '0' &amp; '0' &amp; std_logic_vector(to_unsigned(8, 6)) &amp; cmd_arg &amp; "1111111" &amp; '1'; -- echo-back voltage/check-pattern
+            resp_shift(47 DOWNTO 0) &lt;= frame48;
+            resp_len &lt;= 48;
+
+          WHEN OTHERS =&gt; -- R1 / R1b
+            bits40 := '0' &amp; '0' &amp; std_logic_vector(cmd_index) &amp; card_status;
+            crc := (others =&gt; '0');
+            FOR k IN 39 DOWNTO 0 LOOP
+              crc := crc7_next(crc, bits40(k));
+            END LOOP;
+            frame48 := bits40 &amp; crc &amp; '1';
+            resp_shift(47 DOWNTO 0) &lt;= frame48;
+            resp_len &lt;= 48;
+        END CASE;
+        resp_bit_cnt &lt;= 1;
+        cmd_drive    &lt;= '1';
+      ELSIF cmd_drive = '1' THEN
+        IF resp_bit_cnt &lt; resp_len THEN
+          resp_bit_cnt &lt;= resp_bit_cnt + 1;
+        ELSE
+          cmd_drive &lt;= '0';
+        END IF;
+      END IF;
+
+      IF cmd_drive = '1' THEN
+        cmd_drive_val &lt;= resp_shift(resp_len - resp_bit_cnt);
+      END IF;
+    END IF;
+  END PROCESS;
+
+  ------------------------------------------------------------------------------
+  -- Block transfer engine: reads/writes the external SRAM to serve CMD17/18
+  -- (read) and CMD24/25 (write). See the SIMPLIFICATION note on the signal
+  -- declarations above for what this does and doesn't model exactly.
+  ------------------------------------------------------------------------------
+  cmd_rx_inhibit &lt;= '1' WHEN (mode_spi = '1' AND (dfsm = DFSM_RX_TOKEN OR dfsm = DFSM_RX OR dfsm = DFSM_RX_CRC)) ELSE '0';
+
+  PROCESS (sd_clk, rst_n)
+    VARIABLE err_v : std_logic;
+  BEGIN
+    IF rst_n = '0' THEN
+      dfsm         &lt;= DFSM_IDLE;
+      dat_drive    &lt;= '0';
+      dat_drive_val&lt;= (others =&gt; '1');
+      busy_n_out   &lt;= '1';
+      bytes_done   &lt;= 0;
+      bitpos       &lt;= 0;
+      crc_bitpos   &lt;= 0;
+      fetch_idx    &lt;= 0;
+      tok_cnt      &lt;= 0;
+      crc_err      &lt;= '0';
+      busy_cnt     &lt;= 0;
+      active_lanes &lt;= 1;
+      crc16_lane   &lt;= (others =&gt; (others =&gt; '0'));
+      rx_crc_recv  &lt;= (others =&gt; (others =&gt; '0'));
+
+    ELSIF rising_edge(sd_clk) THEN
+      CASE dfsm IS
+
+        WHEN DFSM_IDLE =&gt;
+          dat_drive  &lt;= '0';
+          busy_n_out &lt;= '1';
+          IF state = ST_SENDDATA THEN
+            IF bus_width4 = '1' AND mode_spi = '0' THEN active_lanes &lt;= 4; ELSE active_lanes &lt;= 1; END IF;
+            bytes_done &lt;= 0;
+            crc_err    &lt;= '0';
+            tok_cnt    &lt;= 0;
+            crc16_lane &lt;= (others =&gt; (others =&gt; '0'));
+            dfsm       &lt;= DFSM_TX_TOKEN;
+          ELSIF state = ST_RCV THEN
+            IF bus_width4 = '1' AND mode_spi = '0' THEN active_lanes &lt;= 4; ELSE active_lanes &lt;= 1; END IF;
+            bytes_done &lt;= 0;
+            crc_err    &lt;= '0';
+            tok_cnt    &lt;= 0;
+            crc16_lane &lt;= (others =&gt; (others =&gt; '0'));
+            dfsm       &lt;= DFSM_RX_TOKEN;
+          END IF;
+
+        ------------------------------------------------------------------
+        -- READ path (card -&gt; host)
+        ------------------------------------------------------------------
+        WHEN DFSM_TX_TOKEN =&gt;
+          dat_drive &lt;= '1';
+          IF mode_spi = '1' THEN
+            dat_drive_val(0) &lt;= C_TOKEN(7 - tok_cnt);
+            IF tok_cnt = 7 THEN
+              tok_cnt   &lt;= 0;
+              fetch_idx &lt;= 0;
+              dfsm      &lt;= DFSM_TX_FETCH;
+            ELSE
+              tok_cnt &lt;= tok_cnt + 1;
+            END IF;
+          ELSE
+            dat_drive_val(0) &lt;= '0';
+            IF active_lanes = 4 THEN
+              dat_drive_val(1) &lt;= '0'; dat_drive_val(2) &lt;= '0'; dat_drive_val(3) &lt;= '0';
+            END IF;
+            fetch_idx &lt;= 0;
+            dfsm      &lt;= DFSM_TX_FETCH;
+          END IF;
+
+        WHEN DFSM_TX_FETCH =&gt; -- read active_lanes bytes from SRAM, one per cycle (see timing note above)
+          lane_buf(fetch_idx) &lt;= mem_din;
+          IF fetch_idx = active_lanes - 1 THEN
+            fetch_idx &lt;= 0;
+            bitpos    &lt;= 7;
+            dfsm      &lt;= DFSM_TX;
+          ELSE
+            fetch_idx &lt;= fetch_idx + 1;
+          END IF;
+
+        WHEN DFSM_TX =&gt;
+          dat_drive &lt;= '1';
+          FOR i IN 0 TO C_LANES - 1 LOOP
+            IF i &lt; active_lanes THEN
+              dat_drive_val(i) &lt;= lane_buf(i)(bitpos);
+              crc16_lane(i)    &lt;= crc16_next(crc16_lane(i), lane_buf(i)(bitpos));
+            END IF;
+          END LOOP;
+          IF bitpos = 0 THEN
+            IF bytes_done + active_lanes &gt;= to_integer(block_len) THEN
+              bytes_done &lt;= 0;
+              crc_bitpos &lt;= 15;
+              dfsm       &lt;= DFSM_TX_CRC;
+            ELSE
+              bytes_done &lt;= bytes_done + active_lanes;
+              fetch_idx  &lt;= 0;
+              dfsm       &lt;= DFSM_TX_FETCH;
+            END IF;
+          ELSE
+            bitpos &lt;= bitpos - 1;
+          END IF;
+
+        WHEN DFSM_TX_CRC =&gt;
+          dat_drive &lt;= '1';
+          FOR i IN 0 TO C_LANES - 1 LOOP
+            IF i &lt; active_lanes THEN
+              dat_drive_val(i) &lt;= crc16_lane(i)(crc_bitpos);
+            END IF;
+          END LOOP;
+          IF crc_bitpos = 0 THEN
+            dfsm &lt;= DFSM_TX_END;
+          ELSE
+            crc_bitpos &lt;= crc_bitpos - 1;
+          END IF;
+
+        WHEN DFSM_TX_END =&gt;
+          IF mode_spi = '1' THEN
+            dat_drive &lt;= '0'; -- SPI: no explicit stop bit, just release the line
+          ELSE
+            dat_drive &lt;= '1';
+            dat_drive_val(0) &lt;= '1';
+            IF active_lanes = 4 THEN
+              dat_drive_val(1) &lt;= '1'; dat_drive_val(2) &lt;= '1'; dat_drive_val(3) &lt;= '1';
+            END IF;
+          END IF;
+          IF stop_req = '1' OR multi_block = '0' THEN
+            dfsm &lt;= DFSM_IDLE;
+          ELSE
+            cur_addr   &lt;= cur_addr + resize(block_len, cur_addr'length);
+            bytes_done &lt;= 0;
+            crc16_lane &lt;= (others =&gt; (others =&gt; '0'));
+            tok_cnt    &lt;= 0;
+            dfsm       &lt;= DFSM_TX_TOKEN; -- CMD18: next block starts automatically until CMD12
+          END IF;
+
+        ------------------------------------------------------------------
+        -- WRITE path (host -&gt; card)
+        ------------------------------------------------------------------
+        WHEN DFSM_RX_TOKEN =&gt;
+          IF mode_spi = '1' THEN
+            rx_shift_byte &lt;= rx_shift_byte(6 DOWNTO 0) &amp; sd_cmd_i;
+            IF (rx_shift_byte(6 DOWNTO 0) &amp; sd_cmd_i) = C_TOKEN THEN
+              fetch_idx &lt;= 0;
+              bitpos    &lt;= 7;
+              dfsm      &lt;= DFSM_RX;
+            END IF;
+          ELSE
+            IF sd_dat_i(0) = '0' THEN -- start bit consumed this cycle
+              fetch_idx &lt;= 0;
+              bitpos    &lt;= 7;
+              dfsm      &lt;= DFSM_RX;
+            END IF;
+          END IF;
+
+        WHEN DFSM_RX =&gt;
+          FOR i IN 0 TO C_LANES - 1 LOOP
+            IF i &lt; active_lanes THEN
+              IF mode_spi = '1' THEN
+                lane_buf(i)(bitpos) &lt;= sd_cmd_i;
+                crc16_lane(i)       &lt;= crc16_next(crc16_lane(i), sd_cmd_i);
+              ELSE
+                lane_buf(i)(bitpos) &lt;= sd_dat_i(i);
+                crc16_lane(i)       &lt;= crc16_next(crc16_lane(i), sd_dat_i(i));
+              END IF;
+            END IF;
+          END LOOP;
+          IF bitpos = 0 THEN
+            fetch_idx &lt;= 0;
+            dfsm      &lt;= DFSM_RX_WRITE;
+          ELSE
+            bitpos &lt;= bitpos - 1;
+          END IF;
+
+        WHEN DFSM_RX_WRITE =&gt; -- commit buffered bytes to SRAM, one per cycle
+          IF fetch_idx = active_lanes - 1 THEN
+            IF bytes_done + active_lanes &gt;= to_integer(block_len) THEN
+              bytes_done &lt;= 0;
+              crc_bitpos &lt;= 15;
+              rx_crc_recv&lt;= (others =&gt; (others =&gt; '0'));
+              dfsm       &lt;= DFSM_RX_CRC;
+            ELSE
+              bytes_done &lt;= bytes_done + active_lanes;
+              fetch_idx  &lt;= 0;
+              bitpos     &lt;= 7;
+              dfsm       &lt;= DFSM_RX;
+            END IF;
+          ELSE
+            fetch_idx &lt;= fetch_idx + 1;
+          END IF;
+
+        WHEN DFSM_RX_CRC =&gt;
+          FOR i IN 0 TO C_LANES - 1 LOOP
+            IF i &lt; active_lanes THEN
+              IF mode_spi = '1' THEN
+                rx_crc_recv(i) &lt;= rx_crc_recv(i)(14 DOWNTO 0) &amp; sd_cmd_i;
+              ELSE
+                rx_crc_recv(i) &lt;= rx_crc_recv(i)(14 DOWNTO 0) &amp; sd_dat_i(i);
+              END IF;
+            END IF;
+          END LOOP;
+          IF crc_bitpos = 0 THEN
+            dfsm &lt;= DFSM_RX_CRC_CHECK; -- extra cycle so the last shifted-in bit is settled before comparing
+          ELSE
+            crc_bitpos &lt;= crc_bitpos - 1;
+          END IF;
+
+        WHEN DFSM_RX_CRC_CHECK =&gt;
+          err_v := '0';
+          FOR i IN 0 TO C_LANES - 1 LOOP
+            IF i &lt; active_lanes THEN
+              IF rx_crc_recv(i) /= crc16_lane(i) THEN
+                err_v := '1';
+              END IF;
+            END IF;
+          END LOOP;
+          crc_err &lt;= err_v;
+          IF err_v = '1' THEN
+            spi_resp_byte &lt;= "1110" &amp; "1011"; -- CRC error data-response token
+          ELSE
+            spi_resp_byte &lt;= "1110" &amp; "0101"; -- data accepted
+          END IF;
+          bitpos &lt;= 7;
+          dfsm   &lt;= DFSM_RX_RESP;
+
+        WHEN DFSM_RX_RESP =&gt;
+          IF mode_spi = '1' THEN
+            dat_drive        &lt;= '1';
+            dat_drive_val(0) &lt;= spi_resp_byte(bitpos);
+            IF bitpos = 0 THEN
+              busy_cnt &lt;= 8;
+              dfsm     &lt;= DFSM_BUSY;
+            ELSE
+              bitpos &lt;= bitpos - 1;
+            END IF;
+          ELSE
+            dat_drive &lt;= '0'; -- native: no response token, busy is signaled by pulling DAT0 low next
+            busy_cnt  &lt;= 8;
+            dfsm      &lt;= DFSM_BUSY;
+          END IF;
+
+        WHEN DFSM_BUSY =&gt; -- emulated program time; DAT0 held low (native) via the busy_n_out mux at top
+          IF mode_spi = '1' THEN
+            dat_drive        &lt;= '1';
+            dat_drive_val(0) &lt;= '0';
+          ELSE
+            dat_drive &lt;= '0'; -- busy_n_out mux (see concurrent assignment) drives DAT0 low instead
+          END IF;
+          IF busy_cnt = 0 THEN
+            dat_drive &lt;= '0';
+            IF stop_req = '1' OR multi_block = '0' THEN
+              dfsm &lt;= DFSM_IDLE;
+            ELSE
+              cur_addr   &lt;= cur_addr + resize(block_len, cur_addr'length);
+              bytes_done &lt;= 0;
+              crc16_lane &lt;= (others =&gt; (others =&gt; '0'));
+              dfsm       &lt;= DFSM_RX_TOKEN; -- CMD25: wait for the next block token
+            END IF;
+          ELSE
+            busy_cnt &lt;= busy_cnt - 1;
+          END IF;
+
+      END CASE;
+    END IF;
+  END PROCESS;
+
+  ------------------------------------------------------------------------------
+  -- External SRAM control: combinational, derived from the transfer engine
+  -- above. Address = block base (cur_addr) + bytes already moved + lane offset.
+  ------------------------------------------------------------------------------
+  PROCESS (dfsm, cur_addr, bytes_done, fetch_idx, lane_buf)
+  BEGIN
+    mem_ce_n &lt;= '0';
+    mem_we_n &lt;= '1';
+    mem_oe_n &lt;= '1';
+    mem_dout &lt;= (others =&gt; '0');
+    CASE dfsm IS
+      WHEN DFSM_TX_FETCH =&gt;
+        mem_oe_n &lt;= '0';
+      WHEN DFSM_RX_WRITE =&gt;
+        mem_we_n &lt;= '0';
+        mem_dout &lt;= lane_buf(fetch_idx);
+      WHEN OTHERS =&gt;
+        mem_ce_n &lt;= '1';
+    END CASE;
+  END PROCESS;
+
+  mem_addr &lt;= std_logic_vector(cur_addr + to_unsigned(bytes_done, cur_addr'length) + to_unsigned(fetch_idx, cur_addr'length))
+              WHEN (dfsm = DFSM_TX_FETCH OR dfsm = DFSM_RX_WRITE)
+              ELSE std_logic_vector(cur_addr);
+
+END ARCHITECTURE TypeArchitecture;</vhdl>
+  <vhdl name="k">--------------------------------------------------------------------------------
+-- Project :
+-- File    :
+-- Autor   :
+-- Date    :
+--
+--------------------------------------------------------------------------------
+-- Description :
+--
+--------------------------------------------------------------------------------
+
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+
+ENTITY k IS
+  PORT (
+  ------------------------------------------------------------------------------
+  --Insert input ports below
+    clock      : IN  std_logic;                    -- input bit example
+    val        : IN  std_logic_vector(3 DOWNTO 0); -- input vector example
+  ------------------------------------------------------------------------------
+  --Insert output ports below
+    max        : OUT std_logic;                    -- output bit example
+    cpt        : OUT std_logic_vector(3 DOWNTO 0)  -- output vector example
+    );
+END k;
+
+--------------------------------------------------------------------------------
+--Complete your VHDL description below
+--------------------------------------------------------------------------------
+
+ARCHITECTURE TypeArchitecture OF k IS
+
+BEGIN
+
+
+END TypeArchitecture;
+</vhdl>
 </project>
